@@ -13,7 +13,7 @@ class Player:
     last_seen: int
     hero: str
     treasures: list[str]
-    minions: dict[Card]
+    minions: dict[int, Card]
     spell: str
     health: int
     level: int
