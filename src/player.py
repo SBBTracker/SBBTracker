@@ -1,5 +1,10 @@
 from dataclasses import dataclass
 
+@dataclass
+class Card:
+    name: str
+    attack: int
+    health: int
 
 @dataclass
 class Player:
@@ -8,5 +13,9 @@ class Player:
     last_seen: int
     hero: str
     treasures: list[str]
-    minions: dict[str]
+    minions: dict[Card]
     spell: str
+    health: int
+    level: int
+
+
