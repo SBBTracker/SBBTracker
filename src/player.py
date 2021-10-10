@@ -5,6 +5,8 @@ class Card:
     name: str
     attack: int
     health: int
+    is_golden: bool
+    slot: int
 
 @dataclass
 class Player:
