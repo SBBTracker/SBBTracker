@@ -1,31 +1,14 @@
 #!/usr/bin/python3
 import os
 import threading
-import time
-from pathlib import Path, PurePath
+from pathlib import Path
 
 import PySimpleGUI as sg
-import psutil
 
 import LogParser
-from player import Player, Card
+from player import Player
 
 player_ids = []
-
-
-def simluate_sbb(window):
-    i = 0
-    time.sleep(4)
-    fakePlayer = Player("Isik", "20", 6, "Celestial Tiger", {1: "Mimic", 2: "Merlin's Hat",
-                                                             3: "Crystal Ball"},
-                        {1: Card("Aon", 0, 0, False, 1), 2: Card("Aon", 0, 0, False, 2),
-                         3: Card("Juliet", 0, 0, False, 3),
-                         # 4: Card("Prince Arthur", 0, 0), 5: Card("Court Wizard", 0, 0),
-                         6: Card("Court Wizard", 0, 0, False, 6), 7: Card("Romeo", 0, 0, False, 7)},
-                        "", 40, 6)
-    i += 1
-    print("test")
-    window.write_event_value('PLAYER UPDATE', fakePlayer)  # put a message into queue for GUI
 
 
 def get_card_path(card_name: str, is_golden: bool):
@@ -114,12 +97,9 @@ def the_gui():
     layout = [[sg.Text(text="Waiting for match to start...", font="Courier 32", k="-GameStatus-",
                        justification='center')], tabgroup]
 
-    # layout = tabgroup
-
-    window = sg.Window('SBBTracker', layout, resizable=True, finalize=True, size=(1920, 1080))
-    # threading.Thread(target=simluate_sbb, args=(window,), daemon=True).start()
+    window = sg.Window('SBBTracker', layout, resizable=True, finalize=True, size=(1920, 1080),
+                       icon="icon.png")
     threading.Thread(target=LogParser.run, args=(window,), daemon=True).start()
-    # threading.Thread(target=poll_sbb_process, args=(window,), daemon=True).start()
 
     # --------------------- EVENT LOOP ---------------------
     while True:
