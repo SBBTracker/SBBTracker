@@ -1,63 +1,63 @@
 from pygtail import Pygtail
 from pathlib import Path
+import sys
 import os
-from collections import defaultdict
-from queue import Queue
-import json
+import re
 
 appdata = Path(os.environ["APPDATA"])
 logfile = appdata.parent.joinpath("LocalLow/Good Luck Games/Storybook Brawl/Player.log")
+offsetfile = appdata.parent.joinpath("LocalLow/Good Luck Games/Storybook Brawl/Player.log.offset")
 
 try:
-    os.remove(appdata.parent.joinpath("LocalLow/Good Luck Games/Storybook Brawl/Player.log.offset"))
+    os.remove(offsetfile)
 except:
     pass
 
-VERYLARGE=2**20
-NOTFOUND=-1
+VERYLARGE = 2 ** 20
+NOTFOUND = -1
 
-EVENT_CHARACTER             = 'Character'
-EVENT_ADDPLAYER             = 'GLG.Transport.Actions.ActionAddPlayer'
-EVENT_ATTACK                = 'GLG.Transport.Actions.ActionAttack'
-EVENT_BRAWLCOMPLETE         = 'GLG.Transport.Actions.ActionBrawlComplete'
-EVENT_CASTSPELL             = 'GLG.Transport.Actions.ActionCastSpell'
-EVENT_CONNINFO              = 'GLG.Transport.Actions.ActionConnectionInfo'
-EVENT_CREATECARD            = 'GLG.Transport.Actions.ActionCreateCard'
-EVENT_DEALDAMAGE            = 'GLG.Transport.Actions.ActionDealDamage'
-EVENT_DEATH                 = 'GLG.Transport.Actions.ActionDeath'
-EVENT_DEATHTRIGGER          = 'GLG.Transport.Actions.ActionDeathTrigger'
-EVENT_ENTERBRAWLPHASE       = 'GLG.Transport.Actions.ActionEnterBrawlPhase'
-EVENT_ENTERINTROPHASE       = 'GLG.Transport.Actions.ActionEnterIntroPhase'
-EVENT_ENTERRESULTSPHASE     = 'GLG.Transport.Actions.ActionEnterResultsPhase'
-EVENT_ENTERSHOPPHASE        = 'GLG.Transport.Actions.ActionEnterShopPhase'
-EVENT_MODIFYGOLD            = 'GLG.Transport.Actions.ActionModifyGold'
-EVENT_MODIFYLEVEL           = 'GLG.Transport.Actions.ActionModifyLevel'
-EVENT_MODIFYNEXTLEVELXP     = 'GLG.Transport.Actions.ActionModifyNextLevelXP'
-EVENT_MODIFYXP              = 'GLG.Transport.Actions.ActionModifyXP'
-EVENT_MOVECARD              = 'GLG.Transport.Actions.ActionMoveCard'
-EVENT_PLAYFX                = 'GLG.Transport.Actions.ActionPlayFX'
-EVENT_PRESENTDISCOVER       = 'GLG.Transport.Actions.ActionPresentDiscover'
-EVENT_PRESENTHERODISCOVER   = 'GLG.Transport.Actions.ActionPresentHeroDiscover'
-EVENT_REMOVECARD            = 'GLG.Transport.Actions.ActionRemoveCard'
-EVENT_ROLL                  = 'GLG.Transport.Actions.ActionRoll'
-EVENT_SLAYTRIGGER           = 'GLG.Transport.Actions.ActionSlayTrigger'
-EVENT_SUMMONCHARACTER       = 'GLG.Transport.Actions.ActionSummonCharacter'
-EVENT_UPDATECARD            = 'GLG.Transport.Actions.ActionUpdateCard'
-EVENT_UPDATEEMOTES          = 'GLG.Transport.Actions.ActionUpdateEmotes'
-EVENT_UPDATETURNTIMER       = 'GLG.Transport.Actions.ActionUpdateTurnTimer'
-EVENT_SPELL                 = 'Spell'
+EVENT_CHARACTER = 'Character'
+EVENT_ADDPLAYER = 'GLG.Transport.Actions.ActionAddPlayer'
+EVENT_ATTACK = 'GLG.Transport.Actions.ActionAttack'
+EVENT_BRAWLCOMPLETE = 'GLG.Transport.Actions.ActionBrawlComplete'
+EVENT_CASTSPELL = 'GLG.Transport.Actions.ActionCastSpell'
+EVENT_CONNINFO = 'GLG.Transport.Actions.ActionConnectionInfo'
+EVENT_CREATECARD = 'GLG.Transport.Actions.ActionCreateCard'
+EVENT_DEALDAMAGE = 'GLG.Transport.Actions.ActionDealDamage'
+EVENT_DEATH = 'GLG.Transport.Actions.ActionDeath'
+EVENT_DEATHTRIGGER = 'GLG.Transport.Actions.ActionDeathTrigger'
+EVENT_ENTERBRAWLPHASE = 'GLG.Transport.Actions.ActionEnterBrawlPhase'
+EVENT_ENTERINTROPHASE = 'GLG.Transport.Actions.ActionEnterIntroPhase'
+EVENT_ENTERRESULTSPHASE = 'GLG.Transport.Actions.ActionEnterResultsPhase'
+EVENT_ENTERSHOPPHASE = 'GLG.Transport.Actions.ActionEnterShopPhase'
+EVENT_MODIFYGOLD = 'GLG.Transport.Actions.ActionModifyGold'
+EVENT_MODIFYLEVEL = 'GLG.Transport.Actions.ActionModifyLevel'
+EVENT_MODIFYNEXTLEVELXP = 'GLG.Transport.Actions.ActionModifyNextLevelXP'
+EVENT_MODIFYXP = 'GLG.Transport.Actions.ActionModifyXP'
+EVENT_MOVECARD = 'GLG.Transport.Actions.ActionMoveCard'
+EVENT_PLAYFX = 'GLG.Transport.Actions.ActionPlayFX'
+EVENT_PRESENTDISCOVER = 'GLG.Transport.Actions.ActionPresentDiscover'
+EVENT_PRESENTHERODISCOVER = 'GLG.Transport.Actions.ActionPresentHeroDiscover'
+EVENT_REMOVECARD = 'GLG.Transport.Actions.ActionRemoveCard'
+EVENT_ROLL = 'GLG.Transport.Actions.ActionRoll'
+EVENT_SLAYTRIGGER = 'GLG.Transport.Actions.ActionSlayTrigger'
+EVENT_SUMMONCHARACTER = 'GLG.Transport.Actions.ActionSummonCharacter'
+EVENT_UPDATECARD = 'GLG.Transport.Actions.ActionUpdateCard'
+EVENT_UPDATEEMOTES = 'GLG.Transport.Actions.ActionUpdateEmotes'
+EVENT_UPDATETURNTIMER = 'GLG.Transport.Actions.ActionUpdateTurnTimer'
+EVENT_SPELL = 'Spell'
 
 TASK_ADDPLAYER = "AddPlayer"
 TASK_GATHERIDS = "GatherIDs"
-TASK_GETROUND  = "GetRound"
-TASK_GETROUNDGATHER   = "GetRoundGather"
+TASK_GETROUND = "GetRound"
+TASK_GETROUNDGATHER = "GetRoundGather"
 TASK_ENDROUNDGATHER = "EndRoundGather"
 TASK_NEWGAME = "TaskNewGame"
 
 JOB_PLAYERINFO = "PlayerInfo"
-JOB_BOARDINFO  = "BoardInfo"
-JOB_ROUNDINFO  = "RoundInfo"
-JOB_NEWGAME    = "StateNewgame"
+JOB_BOARDINFO = "BoardInfo"
+JOB_ROUNDINFO = "RoundInfo"
+JOB_NEWGAME = "StateNewgame"
 
 
 def parse_list(line, delimiter):
@@ -90,12 +90,13 @@ def parse_list(line, delimiter):
     lastpipe = reverb.find(delimiter)
     items = line[:dis][:-lastpipe].split(delimiter)
     specval = [i.strip() for i in items]
-    
-    new_line = line[dis-lastpipe:].strip()    
-    
+
+    new_line = line[dis - lastpipe:].strip()
+
     return new_line, specval
 
-def process_line(line, ifs, dt = None, path = []):
+
+def process_line(line, ifs, dt=None, path=[]):
     """
     A fun recursive function for turning a log line into a dictionary.
     Log lines are kind of like flattened YAML, except they have mistakes
@@ -117,36 +118,36 @@ def process_line(line, ifs, dt = None, path = []):
     """
     specval = None
     brick = None
-    
+
     current_key = None if not path else path[-1]  # last item of path if exists
 
     # State dictionary invocation
     if dt is None:
         lb_dt = lambda: defaultdict(lb_dt)
         dt = defaultdict(lb_dt)
- 
+
     ### Get to the correct depth of the dictionary for state
     _dt = dt
-    for p in path[:len(path)-1]:
-        _dt = _dt[p]   
- 
-    ### If we're handling a list gather it here
+    for p in path[:len(path) - 1]:
+        _dt = _dt[p]
+
+        ### If we're handling a list gather it here
     if current_key in ['Keywords', 'Subtypes', 'ValidTargets']:
         line, specval = parse_list(line=line, delimiter='|')
         specval = specval[:-2]
     ### If we need to hunt for the next val do it here
     elif current_key in ['FrameOverride']:
         line, specval = parse_list(line=line, delimiter=' ')
-    else:            
+    else:
         # First find the distance to the first colon or pipe
         # colon means we go "in" a level
         # pipe means we go "up" a level
         coldis = line.find(':')
         pipedis = line.find('|')
-      
+
         if current_key == 'GameText':
             coldis = VERYLARGE
-    
+
         ### Handle game text having newlines
         ### By grabbing the next line and attaching it if we 
         ### Can't find a colon OR a pipe
@@ -155,7 +156,7 @@ def process_line(line, ifs, dt = None, path = []):
                 line = line + ifs.next()
                 coldis = VERYLARGE
                 pipedis = line.find('|')
-    
+
         ### Make sure -1s are handled appropriately for minmath
         if coldis == NOTFOUND:
             coldis = VERYLARGE
@@ -167,9 +168,9 @@ def process_line(line, ifs, dt = None, path = []):
     else:
         chop = min(coldis, pipedis)
         brick = line[:chop].strip()
-        line = line[chop+1:]
+        line = line[chop + 1:]
         val = brick
- 
+
     if specval is None and pipedis == coldis:
         if path and val:
             _dt[current_key] = val
@@ -186,17 +187,17 @@ def process_line(line, ifs, dt = None, path = []):
             # Frame overrides can have no discernible value sometimes
             if current_key == 'FrameOverride':
                 _dt[current_key] = val
-                
+
         path = path[:-1]
         process_line(line, ifs, dt, path)
     else:
         # we've found a colon, we must go deeper
         process_line(line, ifs, dt, [*path, brick])
-    
+
     # base case
     return dt
 
-        
+
 def parse(ifs):
     """
     Parse the log file into workable dictionaries. A nice function to 
@@ -223,14 +224,15 @@ def parse(ifs):
             info = process_line(line, ifs)
             yield Action(info)
 
+
 class Action:
     def __init__(self, info, newgame=False):
         if newgame:
             self.task = TASK_NEWGAME
             return
-        
+
         if info is not None:
-            
+
             self.action_type = info['Action']['Type']
             if self.action_type == EVENT_ADDPLAYER:
                 self.task = TASK_ADDPLAYER
@@ -238,17 +240,17 @@ class Action:
                 self.heroname = info['Hero']['Card']['DisplayName']
                 self.playerid = info['Hero']['Card']['PlayerId']
                 self.attrs = ['displayname', 'heroname', 'playerid']
-                
+
             elif self.action_type == EVENT_ENTERBRAWLPHASE:
                 self.task = TASK_GATHERIDS
                 self.player1 = info['Action']['FirstPlayerId']
                 self.player2 = info['Action']['SecondPlayerId']
                 self.attrs = ['player1', 'player2']
-                
+
             elif self.action_type == EVENT_CREATECARD:
                 self.task = TASK_GETROUNDGATHER
                 cardinfo = info['Action']['Card']['Card']
-                
+
                 self.playerid = cardinfo['PlayerId']
                 self.cardname = cardinfo['DisplayName']
                 self.cardattack = cardinfo['Attack']
@@ -257,30 +259,30 @@ class Action:
                 self.slot = cardinfo['Slot']
                 self.zone = cardinfo['Zone']
                 self.attrs = ['cardname', 'cardattack', 'cardhealth', 'is_golden', 'slot', 'zone']
-                
+
             elif self.action_type in [EVENT_BRAWLCOMPLETE, EVENT_SUMMONCHARACTER, EVENT_ATTACK, EVENT_DEALDAMAGE]:
                 self.task = TASK_ENDROUNDGATHER
                 self.attrs = []
-                
+
             elif self.action_type == EVENT_ENTERSHOPPHASE:
                 self.task = TASK_GETROUND
                 self.round = info['Round']
                 self.attrs = ['round']
             else:
                 self.task = None
-                self.attrs=[]
-                
+                self.attrs = []
+
     def __repr__(self):
-        return json.dumps({k:getattr(self, k) for k in ['task', *self.attrs]}, sort_keys=True, indent=4)
-        
-                
+        return json.dumps({k: getattr(self, k) for k in ['task', *self.attrs]}, sort_keys=True, indent=4)
+
 
 class Update:
     def __init__(self, job, state):
         self.job = job
         self.state = state
 
-def run(queue):
+
+def run(window):
     inbrawl = False
     current_round = None
     lastupdated = dict()
@@ -291,10 +293,10 @@ def run(queue):
                 inbrawl = False
                 current_round = None
                 lastupdated = dict()
-                
-                queue.put(Update(JOB_NEWGAME, None))
+
+                window.write_event_value(JOB_NEWGAME, Update(JOB_NEWGAME, None))
             elif not inbrawl and action.task == TASK_ADDPLAYER:
-                queue.put(Update(JOB_PLAYERINFO, action))
+                window.write_event_value(JOB_PLAYERINFO, Update(JOB_PLAYERINFO, action))
             elif not inbrawl and action.task == TASK_GATHERIDS:
                 inbrawl = True
                 brawldt = dict()
@@ -306,19 +308,9 @@ def run(queue):
                 if action.zone in ['Spell', 'Treasure', 'Character']:
                     brawldt[action.playerid].append(action)
             elif inbrawl and action.task == TASK_ENDROUNDGATHER:
-                queue.put(Update(JOB_BOARDINFO, brawldt))
+                window.write_event_value(JOB_BOARDINFO, Update(JOB_BOARDINFO, brawldt))
                 inbrawl = False
             elif action.task == TASK_GETROUND:
-                queue.put(Update(JOB_ROUNDINFO, action))
+                window.write_event_value(JOB_ROUNDINFO, (JOB_ROUNDINFO, action))
             else:
                 pass
-
-        break
-
-
-q = Queue()
-run(q)
-
-    
-
-
