@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 import os
+import sys
 import threading
 from pathlib import Path
 
@@ -11,8 +12,16 @@ from player import Player
 player_ids = []
 
 
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, relative_path)
+
+    return os.path.join(os.path.abspath(".."), relative_path)
+
+
 def get_card_path(card_name: str, is_golden: bool):
-    path = Path(__file__).parent.parent.joinpath("cards/")
+    path = Path(os.environ["APPDATA"]).joinpath("SBBTracker/assets/cards/")
     # what the fuck is this
     actually_is_golden = is_golden if isinstance(is_golden, bool) else is_golden == "True"
     if card_name == "empty":
@@ -27,6 +36,7 @@ def get_card_path(card_name: str, is_golden: bool):
 def construct_player_layout(player: Player, index: int):
     ind = str(index)
     layout = [
+        [sg.Text("Health: 40", font="Courier 20", key=f"{index}health")],
         [sg.Image(get_card_path(player.get_minion(1).name, False), pad=((300, 0), 0), key=ind + "0"),
          sg.Image(get_card_path(player.get_minion(2).name, False), key=ind + "1"),
          sg.Image(get_card_path(player.get_minion(3).name, False), key=ind + "2"),
@@ -50,8 +60,11 @@ def get_tab_key(index: int):
 def update_player(window: sg.Window, update: LogParser.Update):
     state = update.state
     index = get_player_index(state.playerid)
-    window[get_tab_key(index)].update(title=f"{state.displayname} - {state.heroname}")
+    player_tab = window[get_tab_key(index)]
+    title = f"{state.heroname}" if state.health > 0 else f"{state.heroname} *DEAD*"
+    player_tab.update(title=title)
     window[f"{index}{11}"].update(filename=get_card_path(state.heroname, False))
+    window[f"{index}health"].update(f"Health: {state.health}")
 
 
 def update_board(window: sg.Window, update: LogParser.Update):
@@ -98,7 +111,7 @@ def the_gui():
                        justification='center')], tabgroup]
 
     window = sg.Window('SBBTracker', layout, resizable=True, finalize=True, size=(1920, 1080),
-                       icon="icon.png")
+                       icon=resource_path("sbbt.ico"))
     threading.Thread(target=LogParser.run, args=(window,), daemon=True).start()
 
     # --------------------- EVENT LOOP ---------------------
