@@ -221,7 +221,10 @@ def parse(ifs):
             chop_idx = line.find('-') + 1
             line = line[chop_idx:]
             info = process_line(line, ifs)
+
             yield Action(info)
+            
+            
 
 class Action:
     def __init__(self, info, newgame=False):
@@ -236,8 +239,9 @@ class Action:
                 self.task = TASK_ADDPLAYER
                 self.displayname = info['DisplayName']
                 self.heroname = info['Hero']['Card']['DisplayName']
+                self.health = int(info['Hero']['Card']['Health'])
                 self.playerid = info['Hero']['Card']['PlayerId']
-                self.attrs = ['displayname', 'heroname', 'playerid']
+                self.attrs = ['displayname', 'heroname', 'playerid', 'health']
                 
             elif self.action_type == EVENT_ENTERBRAWLPHASE:
                 self.task = TASK_GATHERIDS
@@ -264,7 +268,7 @@ class Action:
                 
             elif self.action_type == EVENT_ENTERSHOPPHASE:
                 self.task = TASK_GETROUND
-                self.round = info['Round']
+                self.round = int(info['Round'])
                 self.attrs = ['round']
             else:
                 self.task = None
