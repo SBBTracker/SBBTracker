@@ -1,0 +1,8 @@
+filelock==3.3.0
+Pillow==8.3.2
+psutil==5.8.0
+pygtail==0.11.1
+PySimpleGUI==4.49.0
+PySocks==1.7.1
+six==1.16.0
+tqdm==4.62.3
