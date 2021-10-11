@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from pygtail import Pygtail
 from pathlib import Path
 import sys
