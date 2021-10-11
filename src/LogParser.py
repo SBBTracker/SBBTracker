@@ -1,10 +1,9 @@
+import json
+import os
 from collections import defaultdict
+from pathlib import Path
 
 from pygtail import Pygtail
-from pathlib import Path
-import sys
-import os
-import re
 
 appdata = Path(os.environ["APPDATA"])
 logfile = appdata.parent.joinpath("LocalLow/Good Luck Games/Storybook Brawl/Player.log")
@@ -224,6 +223,7 @@ def parse(ifs):
             chop_idx = line.find('-') + 1
             line = line[chop_idx:]
             info = process_line(line, ifs)
+
             yield Action(info)
 
 
@@ -240,8 +240,9 @@ class Action:
                 self.task = TASK_ADDPLAYER
                 self.displayname = info['DisplayName']
                 self.heroname = info['Hero']['Card']['DisplayName']
+                self.health = int(info['Hero']['Card']['Health'])
                 self.playerid = info['Hero']['Card']['PlayerId']
-                self.attrs = ['displayname', 'heroname', 'playerid']
+                self.attrs = ['displayname', 'heroname', 'playerid', 'health']
 
             elif self.action_type == EVENT_ENTERBRAWLPHASE:
                 self.task = TASK_GATHERIDS
@@ -268,7 +269,7 @@ class Action:
 
             elif self.action_type == EVENT_ENTERSHOPPHASE:
                 self.task = TASK_GETROUND
-                self.round = info['Round']
+                self.round = int(info['Round'])
                 self.attrs = ['round']
             else:
                 self.task = None
