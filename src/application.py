@@ -21,15 +21,15 @@ def resource_path(relative_path):
 
 
 def get_card_path(card_name: str, is_golden: bool):
-    path = Path(os.environ["APPDATA"]).joinpath("SBBTracker/assets/cards/")
+    assets_path = Path(os.environ["APPDATA"]).joinpath("SBBTracker/assets/cards/")
     # what the fuck is this
     actually_is_golden = is_golden if isinstance(is_golden, bool) else is_golden == "True"
-    if card_name == "empty":
-        path = path.joinpath("Empty.png")
-    elif card_name == "Triply":
-        path = path.joinpath("Dubly upgraded.png")
+    if card_name == "Triply":
+        path = assets_path.joinpath("Dubly upgraded.png")
     else:
-        path = path.joinpath(card_name.replace("'", "_") + (" upgraded" if actually_is_golden else "") + ".png")
+        path = assets_path.joinpath(card_name.replace("'", "_") + (" upgraded" if actually_is_golden else "") + ".png")
+    if not path.exists() or card_name == "empty":
+        path = assets_path.joinpath("Empty.png")
     return str(path)
 
 
