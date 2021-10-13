@@ -5,7 +5,7 @@ import threading
 
 import PySimpleGUI as sg
 
-import LogParser
+import log_parser
 from asset_utils import get_card_path
 from player import Player
 
@@ -44,7 +44,7 @@ def get_tab_key(index: int):
     return f"-{index}-"
 
 
-def update_player(window: sg.Window, update: LogParser.Update):
+def update_player(window: sg.Window, update: log_parser.Update):
     state = update.state
     index = get_player_index(state.playerid)
     player_tab = window[get_tab_key(index)]
@@ -54,7 +54,7 @@ def update_player(window: sg.Window, update: LogParser.Update):
     window[f"{index}health"].update(f"Health: {state.health}")
 
 
-def update_board(window: sg.Window, update: LogParser.Update):
+def update_board(window: sg.Window, update: log_parser.Update):
     for playerid, actions in update.state.items():
         for action in actions:
             slot = action.slot
@@ -98,35 +98,35 @@ def the_gui():
 
     window = sg.Window('SBBTracker', layout, resizable=True, finalize=True, size=(1920, 1080),
                        icon=resource_path("sbbt.ico"))
-    threading.Thread(target=LogParser.run, args=(window,), daemon=True).start()
+    threading.Thread(target=log_parser.run, args=(window,), daemon=True).start()
 
     # --------------------- EVENT LOOP ---------------------
     while True:
         event, values = window.read()
         if event in (sg.WIN_CLOSED, 'Exit'):
             break
-        elif event == LogParser.JOB_NEWGAME:
+        elif event == log_parser.JOB_NEWGAME:
             print("Game started!")
             for id in player_ids:
                 for pos in range(11):
                     update_card(window, id, pos, "empty", "", False)
             player_ids.clear()
             window["-GameStatus-"].update("Round: 0")
-        elif event == LogParser.JOB_ROUNDINFO:
+        elif event == log_parser.JOB_ROUNDINFO:
             print("Round info event")
             window["-GameStatus-"].update(f"Round: {values[event][1].round}")
-        elif event == LogParser.JOB_PLAYERINFO:
+        elif event == log_parser.JOB_PLAYERINFO:
             print("Player info event")
             updated_player = values[event]
             update_player(window, updated_player)
-        elif event == LogParser.JOB_BOARDINFO:
+        elif event == log_parser.JOB_BOARDINFO:
             print("Board info event")
             update_board(window, values[event])
 
     # if user exits the window, then close the window and exit the GUI func
     window.close()
     try:
-        os.remove(LogParser.offsetfile)
+        os.remove(log_parser.offsetfile)
     except:
         print("Couldn't delete offset!")
 
