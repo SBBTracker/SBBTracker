@@ -127,16 +127,16 @@ def process_line(line, ifs, dt=None, path=[]):
         lb_dt = lambda: defaultdict(lb_dt)
         dt = defaultdict(lb_dt)
 
-    ### Get to the correct depth of the dictionary for state
+    # Get to the correct depth of the dictionary for state
     _dt = dt
     for p in path[:len(path) - 1]:
         _dt = _dt[p]
 
-        ### If we're handling a list gather it here
+        # If we're handling a list gather it here
     if current_key in ['Keywords', 'Subtypes', 'ValidTargets']:
         line, specval = parse_list(line=line, delimiter='|')
         specval = specval[:-2]
-    ### If we need to hunt for the next val do it here
+    # If we need to hunt for the next val do it here
     elif current_key in ['FrameOverride']:
         line, specval = parse_list(line=line, delimiter=' ')
     else:
@@ -149,16 +149,16 @@ def process_line(line, ifs, dt=None, path=[]):
         if current_key == 'GameText':
             coldis = VERYLARGE
 
-        ### Handle game text having newlines
-        ### By grabbing the next line and attaching it if we 
-        ### Can't find a colon OR a pipe
+        # Handle game text having newlines
+        # By grabbing the next line and attaching it if we
+        # Can't find a colon OR a pipe
         if coldis in [NOTFOUND, VERYLARGE] and pipedis in [NOTFOUND]:
             if current_key == 'GameText':
                 line = line + ifs.next()
                 coldis = VERYLARGE
                 pipedis = line.find('|')
 
-        ### Make sure -1s are handled appropriately for minmath
+        # Make sure -1s are handled appropriately for minmath
         if coldis == NOTFOUND:
             coldis = VERYLARGE
         if pipedis == NOTFOUND:
@@ -240,9 +240,10 @@ class Action:
                 self.task = TASK_ADDPLAYER
                 self.displayname = info['DisplayName']
                 self.heroname = info['Hero']['Card']['DisplayName']
+                self.heroid = info['Hero']['Card']['ContentId']
                 self.health = int(info['Hero']['Card']['Health'])
                 self.playerid = info['Hero']['Card']['PlayerId']
-                self.attrs = ['displayname', 'heroname', 'playerid', 'health']
+                self.attrs = ['displayname', 'heroname', 'playerid', 'health', 'heroid']
 
             elif self.action_type == EVENT_ENTERBRAWLPHASE:
                 self.task = TASK_GATHERIDS
@@ -261,7 +262,8 @@ class Action:
                 self.is_golden = cardinfo['IsGolden']
                 self.slot = cardinfo['Slot']
                 self.zone = cardinfo['Zone']
-                self.attrs = ['cardname', 'cardattack', 'cardhealth', 'is_golden', 'slot', 'zone']
+                self.content_id = cardinfo['ContentId']
+                self.attrs = ['cardname', 'cardattack', 'cardhealth', 'is_golden', 'slot', 'zone', 'content_id']
 
             elif self.action_type in [EVENT_BRAWLCOMPLETE, EVENT_SUMMONCHARACTER, EVENT_ATTACK, EVENT_DEALDAMAGE]:
                 self.task = TASK_ENDROUNDGATHER
