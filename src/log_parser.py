@@ -6,7 +6,7 @@ from pathlib import Path
 from pygtail import Pygtail
 
 appdata = Path(os.environ["APPDATA"])
-logfile = appdata.parent.joinpath("LocalLow/Good Luck Games/Storybook Brawl/Player.log")
+logfile = appdata.parent.joinpath("C:\\Users\\ilyas\Downloads\\player2.log")
 offsetfile = appdata.parent.joinpath("LocalLow/Good Luck Games/Storybook Brawl/Player.log.offset")
 
 try:
@@ -146,8 +146,20 @@ def process_line(line, ifs, dt=None, path=[]):
         coldis = line.find(':')
         pipedis = line.find('|')
 
-        if current_key == 'GameText':
+        if current_key == 'GameText' or current_key == 'DisplayName':
             coldis = VERYLARGE
+            # I hope to god this code never does anything
+            healthstr = '| Health:'
+            if current_key == 'DisplayName' and line.find(healthstr) != line.rfind(healthstr):
+                instances = []
+                cpy = line
+                while cpy.find(healthstr) != -1: 
+                    loc = cpy.find(healthstr)
+                    instances.append(loc + len(instances)*len(healthstr))
+                    cpy = cpy.replace(healthstr, '', 1)
+
+                pipedis = instances[-2]
+
 
         # Handle game text having newlines
         # By grabbing the next line and attaching it if we
@@ -319,3 +331,7 @@ def run(window):
                 window.write_event_value(JOB_ROUNDINFO, (JOB_ROUNDINFO, action))
             else:
                 pass
+            
+import mock
+m = mock.Mock()
+run(m)
