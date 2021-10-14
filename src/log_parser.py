@@ -6,7 +6,7 @@ from pathlib import Path
 from pygtail import Pygtail
 
 appdata = Path(os.environ["APPDATA"])
-logfile = appdata.parent.joinpath("C:\\Users\\ilyas\Downloads\\player2.log")
+logfile = appdata.parent.joinpath("LocalLow/Good Luck Games/Storybook Brawl/Player.log")
 offsetfile = appdata.parent.joinpath("LocalLow/Good Luck Games/Storybook Brawl/Player.log.offset")
 
 try:
