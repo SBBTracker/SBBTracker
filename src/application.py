@@ -97,7 +97,7 @@ def the_gui():
                        justification='center')], tabgroup]
 
     window = sg.Window('SBBTracker', layout, resizable=True, finalize=True, size=(1920, 1080),
-                       icon=resource_path("sbbt.ico"))
+                       icon=resource_path("assets/sbbt.ico"))
     threading.Thread(target=log_parser.run, args=(window,), daemon=True).start()
 
     # --------------------- EVENT LOOP ---------------------
@@ -125,10 +125,6 @@ def the_gui():
 
     # if user exits the window, then close the window and exit the GUI func
     window.close()
-    try:
-        os.remove(log_parser.offsetfile)
-    except:
-        print("Couldn't delete offset!")
 
 
 if __name__ == '__main__':

@@ -5,3 +5,6 @@ cards/*
 dist/*
 build/*
 sbbtracker/*
+scripts/Output/*
+*.zip
+*.pyc

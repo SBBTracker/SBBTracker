@@ -4,7 +4,7 @@
 block_cipher = None
 
 
-a = Analysis(['src\\application.py', 'src\\log_parser.py'],
+a = Analysis(['src\\application.py'],
              binaries=[],
              datas=[],
              hiddenimports=[],
@@ -16,7 +16,7 @@ a = Analysis(['src\\application.py', 'src\\log_parser.py'],
              win_private_assemblies=False,
              cipher=block_cipher,
              noarchive=False)
-a.datas += [('sbbt.ico', '.\\assets\\sbbt.ico', 'DATA')]
+a.datas += [('assets/sbbt.ico', 'assets/sbbt.ico', 'DATA')]
 pyz = PYZ(a.pure, a.zipped_data,
              cipher=block_cipher)
 
@@ -37,4 +37,4 @@ exe = EXE(pyz,
           disable_windowed_traceback=False,
           target_arch=None,
           codesign_identity=None,
-          entitlements_file=None , icon='.\\assets\\sbbt.ico')
+          entitlements_file=None , icon='assets/sbbt.ico')
