@@ -332,6 +332,3 @@ def run(window):
             else:
                 pass
             
-import mock
-m = mock.Mock()
-run(m)
