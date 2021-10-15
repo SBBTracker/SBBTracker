@@ -34,7 +34,7 @@ def resize():
             result = cv2.bitwise_and(image, mask)
 
             # transparent background
-            tmp = cv2.cvtColor(result, cv2.COLOR_BGR2GRAY)
+            tmp = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
             _, alpha = cv2.threshold(tmp, 0, 255, cv2.THRESH_BINARY)
             b, g, r = cv2.split(result)
             rgba = [b, g, r, alpha]
