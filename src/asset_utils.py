@@ -35,7 +35,8 @@ def get_card_path(card_name: str, content_id: str, is_golden: bool):
     # what the fuck is this
     actually_is_golden = is_golden if isinstance(is_golden, bool) else is_golden == "True"
     asset_name = get_card_art_name(content_id, card_name)
-    path = assets_path.joinpath(asset_name.replace("'", "_") + (" upgraded" if actually_is_golden else "") + ".png")
+    # path = assets_path.joinpath(asset_name.replace("'", "_") + (" upgraded" if actually_is_golden else "") + ".png")
+    path = assets_path.joinpath(asset_name.replace("'", "_") + ".png")
     if not path.exists() or asset_name == "empty":
-        path = assets_path.joinpath("Empty.png")
+        path = Path("../assets/").joinpath("Empty.png")
     return str(path)

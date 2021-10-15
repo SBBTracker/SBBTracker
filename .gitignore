@@ -8,3 +8,5 @@ sbbtracker/*
 scripts/Output/*
 *.zip
 *.pyc
+ALL SBB ART/*
+old_Cards/*
