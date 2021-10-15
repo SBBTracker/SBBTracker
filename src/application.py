@@ -2,12 +2,14 @@
 import os
 import sys
 import threading
+from pathlib import Path
 
 import PySimpleGUI as sg
 
 import log_parser
 from asset_utils import get_card_path
 from player import Player
+from stats import PlayerStats
 
 player_ids = []
 
@@ -75,6 +77,33 @@ def get_player_index(player_id: str):
     return player_ids.index(player_id) + 1
 
 
+def construct_layout():
+    player_tabs = []
+    for num in range(1, 9):
+        name = "Player" + str(num)
+        player_tabs.append(sg.Tab(layout=construct_player_layout(Player(name=name, id="test", last_seen=0, hero="",
+                                                                        treasures={}, minions={}, spell="", health=40,
+                                                                        level=1), num), title=name,
+                                  k=get_tab_key(num)))
+
+    player_tab_group = [[sg.TabGroup(layout=[player_tabs])]]
+
+    application_tab_group = [[sg.TabGroup(layout=[[
+        sg.Tab(layout=player_tab_group, title="In-Game"),
+        sg.Tab(layout=[[sg.Col(layout=
+                               [[sg.Frame(layout=[[]], key="-Hero-", size=(150, 800), title="Hero"),
+                                 sg.Frame(layout=[[]], key="-Placement-", size=(150, 800), title="Placement")]],
+                               size=(300, 800), vertical_scroll_only=True)]],
+               title="Match History")
+    ]])]]
+
+    layout = [[sg.Menu([['&File', ['&Export Stats']], ['&Help']])],
+              [sg.Text(text="Waiting for match to start...", font="Courier 32", k="-GameStatus-",
+                       justification='center')], application_tab_group]
+
+    return layout
+
+
 def the_gui():
     """
     Starts and executes the GUI
@@ -83,28 +112,21 @@ def the_gui():
     """
     sg.theme('Dark Blue 14')
 
-    tabs_layout = []
-    for num in range(1, 9):
-        name = "Player" + str(num)
-        tabs_layout.append(sg.Tab(layout=construct_player_layout(Player(name=name, id="test", last_seen=0, hero="",
-                                                                        treasures={}, minions={}, spell="", health=40,
-                                                                        level=1), num), title=name,
-                                  k=get_tab_key(num)))
-
-    tabgroup = [[sg.TabGroup(layout=[tabs_layout])]]
-
-    layout = [[sg.Text(text="Waiting for match to start...", font="Courier 32", k="-GameStatus-",
-                       justification='center')], tabgroup]
-
-    window = sg.Window('SBBTracker', layout, resizable=True, finalize=True, size=(1920, 1080),
+    window = sg.Window('SBBTracker', construct_layout(), resizable=True, finalize=True, size=(1920, 1080),
                        icon=resource_path("assets/sbbt.ico"))
     threading.Thread(target=log_parser.run, args=(window,), daemon=True).start()
+    stats = PlayerStats(window)
 
     # --------------------- EVENT LOOP ---------------------
     while True:
         event, values = window.read()
         if event in (sg.WIN_CLOSED, 'Exit'):
             break
+        if event == 'Export Stats':
+            filename = sg.popup_get_file('Export stats to .csv', save_as=True, default_extension=".csv", no_window=True,
+                                         file_types=(("Text CSV", ".csv"),),
+                                         initial_folder=str(Path(os.environ['USERPROFILE']).joinpath("Documents")))
+            stats.export(filename)
         elif event == log_parser.JOB_NEWGAME:
             print("Game started!")
             for id in player_ids:
@@ -113,18 +135,20 @@ def the_gui():
             player_ids.clear()
             window["-GameStatus-"].update("Round: 0")
         elif event == log_parser.JOB_ROUNDINFO:
-            print("Round info event")
             window["-GameStatus-"].update(f"Round: {values[event][1].round}")
         elif event == log_parser.JOB_PLAYERINFO:
-            print("Player info event")
             updated_player = values[event]
             update_player(window, updated_player)
         elif event == log_parser.JOB_BOARDINFO:
-            print("Board info event")
             update_board(window, values[event])
+        elif event == log_parser.JOB_ENDGAME:
+            player = values[event]
+            if player:
+                stats.update_stats(player.heroname, player.place)
 
     # if user exits the window, then close the window and exit the GUI func
     window.close()
+    stats.save()
 
 
 if __name__ == '__main__':

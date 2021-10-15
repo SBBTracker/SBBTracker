@@ -1,18 +1,19 @@
 import json
 import os
 from collections import defaultdict
+from enum import Enum
 from pathlib import Path
 
 from pygtail import Pygtail
 
-appdata = Path(os.environ["APPDATA"])
-logfile = appdata.parent.joinpath("LocalLow/Good Luck Games/Storybook Brawl/Player.log")
-offsetfile = appdata.parent.joinpath("LocalLow/Good Luck Games/Storybook Brawl/Player.log.offset")
+sbb_root = Path(os.environ["APPDATA"]).parent.joinpath("LocalLow/Good Luck Games/Storybook Brawl")
+logfile = sbb_root.joinpath("Player.log")
+offsetfile = sbb_root.joinpath("Player.log.offset")
 
-try:
-    os.remove(offsetfile)
-except:
-    pass
+# try:
+#     os.remove(offsetfile)
+# except:
+#     pass
 
 VERYLARGE = 2 ** 20
 NOTFOUND = -1
@@ -54,11 +55,14 @@ TASK_GETROUND = "GetRound"
 TASK_GETROUNDGATHER = "GetRoundGather"
 TASK_ENDROUNDGATHER = "EndRoundGather"
 TASK_NEWGAME = "TaskNewGame"
+TASK_ENDGAME = "TaskEndGame"
+TASK_GETTHISPLAYER = "GetThisPlayer"
 
 JOB_PLAYERINFO = "PlayerInfo"
 JOB_BOARDINFO = "BoardInfo"
 JOB_ROUNDINFO = "RoundInfo"
 JOB_NEWGAME = "StateNewgame"
+JOB_ENDGAME = "StateEndGame"
 
 
 def parse_list(line, delimiter):
@@ -230,7 +234,9 @@ def parse(ifs):
     """
     for line in ifs:
         if 'NEW GAME STARTED' in line:
-            yield Action(info=None, newgame=True)
+            yield Action(info=None, game_state=GameState.START)
+        elif 'GAME SERVER DESTROYED!' in line:
+            yield Action(info=None, game_state=GameState.END)
         elif 'QueueActionRPC' in line:
             chop_idx = line.find('-') + 1
             line = line[chop_idx:]
@@ -239,10 +245,20 @@ def parse(ifs):
             yield Action(info)
 
 
+class GameState(Enum):
+    START = 1
+    END = 2
+    UNKNOWN = 3
+
+
 class Action:
-    def __init__(self, info, newgame=False):
-        if newgame:
+    def __init__(self, info, game_state=GameState.UNKNOWN):
+        if game_state == GameState.START:
             self.task = TASK_NEWGAME
+            return
+
+        if game_state == GameState.END:
+            self.task = TASK_ENDGAME
             return
 
         if info is not None:
@@ -255,7 +271,8 @@ class Action:
                 self.heroid = info['Hero']['Card']['ContentId']
                 self.health = int(info['Hero']['Card']['Health'])
                 self.playerid = info['Hero']['Card']['PlayerId']
-                self.attrs = ['displayname', 'heroname', 'playerid', 'health', 'heroid']
+                self.place = info['Place']
+                self.attrs = ['displayname', 'heroname', 'playerid', 'health', 'heroid', 'place']
 
             elif self.action_type == EVENT_ENTERBRAWLPHASE:
                 self.task = TASK_GATHERIDS
@@ -285,6 +302,10 @@ class Action:
                 self.task = TASK_GETROUND
                 self.round = int(info['Round'])
                 self.attrs = ['round']
+
+            elif self.action_type == EVENT_UPDATEEMOTES:
+                self.task = TASK_GETTHISPLAYER
+                self.attrs = []
             else:
                 self.task = None
                 self.attrs = []
@@ -299,12 +320,19 @@ class Update:
         self.state = state
 
 
+class SBBPygtal(Pygtail):
+    def _check_rotated_filename_candidates(self):
+        return self.filename
+
+
 def run(window):
     inbrawl = False
     current_round = None
+    current_player_stats = None
     lastupdated = dict()
     while True:
-        ifs = Pygtail(str(logfile))
+        prev_action = None
+        ifs = SBBPygtal(filename=str(logfile))
         for action in parse(ifs):
             if action.task == TASK_NEWGAME:
                 inbrawl = False
@@ -312,6 +340,9 @@ def run(window):
                 lastupdated = dict()
 
                 window.write_event_value(JOB_NEWGAME, Update(JOB_NEWGAME, None))
+            elif not current_player_stats and action.task == TASK_ADDPLAYER and prev_action.task == TASK_GETTHISPLAYER:
+                print("GOT PLAYER: " + action.displayname)
+                current_player_stats = action
             elif not inbrawl and action.task == TASK_ADDPLAYER:
                 window.write_event_value(JOB_PLAYERINFO, Update(JOB_PLAYERINFO, action))
             elif not inbrawl and action.task == TASK_GATHERIDS:
@@ -329,6 +360,11 @@ def run(window):
                 inbrawl = False
             elif action.task == TASK_GETROUND:
                 window.write_event_value(JOB_ROUNDINFO, (JOB_ROUNDINFO, action))
+            elif action.task == TASK_ENDGAME:
+                window.write_event_value(JOB_ENDGAME, current_player_stats)
             else:
                 pass
-            
+            if action.task == TASK_ADDPLAYER:
+                if current_player_stats and action.displayname == current_player_stats.displayname:
+                    current_player_stats = action
+            prev_action = action
