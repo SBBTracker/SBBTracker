@@ -17,23 +17,24 @@ player_ids = []
 board_indicies = []
 
 art_dim = (161, 204)
+
+
 # 161 x 204
 
 
 class Slot(Enum):
-    Char1 = 0,
-    Char2 = 1,
-    Char3 = 2,
-    Char4 = 3,
-    Char5 = 4,
-    Char6 = 5,
-    Char7 = 6,
-    Treasure1 = 7,
-    Treasure2 = 8,
-    Treasure3 = 9,
-    Spell = 10,
+    Char1 = 0
+    Char2 = 1
+    Char3 = 2
+    Char4 = 3
+    Char5 = 4
+    Char6 = 5
+    Char7 = 6
+    Treasure1 = 7
+    Treasure2 = 8
+    Treasure3 = 9
+    Spell = 10
     Hero = 11
-
 
 
 def resource_path(relative_path):
@@ -52,6 +53,9 @@ def get_graph_key(index: int):
     return f"-graph{index}-"
 
 
+graph_ids = { str(player): { str(slot.value): {} for slot in Slot } for player in range(0, 9)}
+
+
 def update_player(window: sg.Window, update: log_parser.Update):
     state = update.state
     index = get_player_index(state.playerid)
@@ -63,19 +67,26 @@ def update_player(window: sg.Window, update: log_parser.Update):
 
 def update_board(window: sg.Window, update: log_parser.Update):
     for playerid, actions in update.state.items():
+        used_slots = []
         for action in actions:
             slot = action.slot
             zone = action.zone
             position = 10 if zone == 'Spell' else (7 + int(slot)) if zone == "Treasure" else slot
-            update_card(window, playerid, position, action.cardname, action.content_id, action.cardhealth, action.cardattack, action.is_golden)
+            update_card(window, playerid, position, action.cardname, action.content_id, action.cardhealth,
+                        action.cardattack, action.is_golden)
+            used_slots.append(slot)
+        all_slots = [str(slot.value) for slot in Slot]
 
+        unused_slots = set(all_slots) - set(used_slots)
+        for slot in unused_slots:
+            update_card(window, playerid, slot, "empty", "", "", "", False)
 
 def get_image_location(position: int):
     if position < 4:
         x = (161 * position) + 300
         y = 0
     elif 4 <= position < 7:
-        x = (161 * (position - 4)) + 300 + (161/2)
+        x = (161 * (position - 4)) + 300 + (161 / 2)
         y = 210
     elif position == 7:
         x = (161 / 2)
@@ -99,22 +110,23 @@ att_loc = (26, 181)
 health_loc = (137, 181)
 
 
-def update_card_stats(graph: sg.Graph, slot: int, health: str, attack: str):
+def update_card_stats(graph: sg.Graph, playerid: str, slot: int, health: str, attack: str):
     card_location = get_image_location(slot)
     att_center = tuple(map(operator.add, att_loc, card_location))
     health_center = tuple(map(operator.add, health_loc, card_location))
     # att_circle_center = tuple(map(operator.sub, att_center, (21, 18)))
     # health_circle_center = tuple(map(operator.sub, health_center, (21, 18)))
+    slot_graph_ids = graph_ids[str(get_player_index(playerid))][str(slot)]
     if attack:
         if slot < 7:
-            graph.draw_circle(att_center, 20, '#856515')
+            slot_graph_ids['attcirc'] = graph.draw_circle(att_center, 20, '#856515')
             # graph.draw_image("../assets/attack_orb.png", location=att_circle_center)
-            graph.draw_text(str(attack), att_center, "white", "Arial 20")
+            slot_graph_ids['attval'] = graph.draw_text(str(attack), att_center, "white", "Arial 20")
     if health:
         if slot < 7 or slot == 11:
-            graph.draw_circle(health_center, 20, '#851717')
+            slot_graph_ids['healthcirc'] = graph.draw_circle(health_center, 20, '#851717')
             # graph.draw_image("../assets/health_orb.png", location=health_circle_center)
-            graph.draw_text(str(health), health_center, "white", "Arial 20")
+            slot_graph_ids['healthval'] =graph.draw_text(str(health), health_center, "white", "Arial 20")
 
 
 def draw_golden_overlay(graph: sg.Graph, position: (int, int)):
@@ -128,11 +140,17 @@ def update_card(window: sg.Window, playerid: str, slot, cardname: str, content_i
     if index >= 0:
         graph = window[get_graph_key(index)]
         card_loc = get_image_location(int(slot))
-        graph.draw_image(filename=get_card_path(cardname, content_id, is_golden),
-                         location=card_loc)
+        path = get_card_path(cardname, content_id, is_golden)
+        slot_graph_ids = graph_ids[str(index)][str(slot)]
+        if "Empty" in path and slot_graph_ids:
+            for graph_id in slot_graph_ids.values():
+                graph.delete_figure(graph_id)
+        id = graph.draw_image(filename=get_card_path(cardname, content_id, is_golden),
+                                                  location=card_loc)
+        slot_graph_ids['card'] = id
         if is_golden:
             draw_golden_overlay(graph, card_loc)
-        update_card_stats(graph, int(slot), health, attack)
+        update_card_stats(graph, playerid, int(slot), health, attack)
 
 
 def get_player_index(player_id: str):
