@@ -2,3 +2,5 @@
 A deck tracker for storybook brawl
 
 Current features include showing the round number and tracking the last seen comp of a player
+
+<img src="doc/sample-screenshot.png">
