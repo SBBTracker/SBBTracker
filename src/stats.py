@@ -1,9 +1,10 @@
 import os.path
+from pathlib import Path
 
 import PySimpleGUI
 import pandas as pd
 
-statsfile = "stats.csv"
+statsfile = Path(os.environ["APPDATA"]).joinpath("SBBTracker/stats.csv")
 
 
 def update_window(window: PySimpleGUI.Window, hero: str, place: str):
@@ -16,17 +17,19 @@ class PlayerStats:
     def __init__(self, window: PySimpleGUI.Window):
         self.window = window
         if os.path.exists(statsfile):
-            self.df = pd.read_csv(statsfile)
+            self.df = pd.read_csv(str(statsfile))
             for row in self.df.itertuples():
                 update_window(self.window, row.Hero, row.Placement)
         else:
             self.df = pd.DataFrame(columns=['Hero', 'Placement'])
 
-    def export(self, filepath: str):
+    def export(self, filepath: Path):
         try:
-            self.df.to_csv(filepath, index=False)
-        except:
-            pass
+            if not filepath.parent.exists():
+                os.makedirs(filepath)
+            self.df.to_csv(str(filepath), index=False)
+        except Exception as e:
+            print(e)
 
     def save(self):
         self.export(statsfile)
