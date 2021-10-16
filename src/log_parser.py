@@ -1,7 +1,9 @@
+import gzip
 import json
 import os
 from collections import defaultdict
 from enum import Enum
+from os.path import exists
 from pathlib import Path
 
 from pygtail import Pygtail
@@ -324,6 +326,23 @@ class SBBPygtal(Pygtail):
     def _check_rotated_filename_candidates(self):
         return self.filename
 
+    def _filehandle(self):
+        """
+        Return a filehandle to the file being tailed, with the position set
+        to the current offset.
+        """
+        if not self._fh or self._is_closed():
+            filename = self._rotated_logfile or self.filename
+            if filename.endswith('.gz'):
+                self._fh = gzip.open(filename, 'r', encoding="utf-8")
+            else:
+                self._fh = open(filename, "r", 1, encoding="utf-8")
+            if self.read_from_end and not exists(self._offset_file):
+                self._fh.seek(0, os.SEEK_END)
+            else:
+                self._fh.seek(self._offset)
+
+        return self._fh
 
 def run(window):
     inbrawl = False
