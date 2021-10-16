@@ -4,7 +4,7 @@ from pathlib import Path
 import PySimpleGUI
 import pandas as pd
 
-statsfile = Path(os.environ["APPDATA"]).joinpath("stats.csv")
+statsfile = Path(os.environ["APPDATA"]).joinpath("SBBTracker/stats.csv")
 
 
 def update_window(window: PySimpleGUI.Window, hero: str, place: str):

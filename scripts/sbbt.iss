@@ -41,6 +41,9 @@ Source: "..\cards\*"; DestDir: "{app}\cards\"; Flags: ignoreversion recursesubdi
 Source: "..\assets\Empty.png"; DestDir: "{app}\assets\"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
+[Dirs]
+Name: "{userappdata}\SBBTracker"
+
 [Icons]
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\bin\{#MyAppExeName}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\bin\{#MyAppExeName}"; Tasks: desktopicon
