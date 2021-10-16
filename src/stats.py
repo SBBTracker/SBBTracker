@@ -1,10 +1,11 @@
 import os.path
-from pathlib import Path
+from os.path import expanduser
+from pathlib import Path, WindowsPath
 
 import PySimpleGUI
 import pandas as pd
 
-statsfile = Path(os.environ["APPDATA"]).joinpath("SBBTracker/stats.csv")
+statsfile = WindowsPath(expanduser('~/Documents')).joinpath("SBBTracker/stats.csv")
 
 
 def update_window(window: PySimpleGUI.Window, hero: str, place: str):
@@ -26,7 +27,7 @@ class PlayerStats:
     def export(self, filepath: Path):
         try:
             if not filepath.parent.exists():
-                os.makedirs(filepath)
+                os.makedirs(filepath.parent)
             self.df.to_csv(str(filepath), index=False)
         except Exception as e:
             print(e)

@@ -74,12 +74,13 @@ def update_board(window: sg.Window, update: log_parser.Update):
             position = 10 if zone == 'Spell' else (7 + int(slot)) if zone == "Treasure" else slot
             update_card(window, playerid, position, action.cardname, action.content_id, action.cardhealth,
                         action.cardattack, action.is_golden)
-            used_slots.append(slot)
+            used_slots.append(str(position))
         all_slots = [str(slot.value) for slot in Slot]
 
         unused_slots = set(all_slots) - set(used_slots)
         for slot in unused_slots:
             update_card(window, playerid, slot, "empty", "", "", "", False)
+
 
 def get_image_location(position: int):
     if position < 4:
@@ -90,7 +91,7 @@ def get_image_location(position: int):
         y = 210
     elif position == 7:
         x = (161 / 2)
-        y = 440 - 161
+        y = 440 - 175
     elif 7 < position < 10:
         x = (161 * (position - 8))
         y = 440
