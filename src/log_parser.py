@@ -1,6 +1,7 @@
 import gzip
 import json
 import os
+import time
 from collections import defaultdict
 from enum import Enum
 from os.path import exists
@@ -344,6 +345,7 @@ class SBBPygtal(Pygtail):
 
         return self._fh
 
+
 def run(window):
     inbrawl = False
     current_round = None
@@ -387,3 +389,4 @@ def run(window):
                 if current_player_stats and action.displayname == current_player_stats.displayname:
                     current_player_stats = action
             prev_action = action
+        time.sleep(0.1)
