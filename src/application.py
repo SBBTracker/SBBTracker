@@ -9,7 +9,7 @@ from pathlib import Path
 import PySimpleGUI as sg
 
 import log_parser
-from asset_utils import get_card_path
+from asset_utils import get_card_path, get_card_art_name
 from player import Player
 from stats import PlayerStats
 
@@ -60,7 +60,8 @@ def update_player(window: sg.Window, update: log_parser.Update):
     state = update.state
     index = get_player_index(state.playerid)
     player_tab = window[get_tab_key(index)]
-    title = f"{state.heroname}" if state.health > 0 else f"{state.heroname} *DEAD*"
+    real_hero_name = get_card_art_name(state.heroid, state.heroname)
+    title = f"{real_hero_name}" if state.health > 0 else f"{real_hero_name} *DEAD*"
     player_tab.update(title=title)
     update_card(window, state.playerid, 11, state.heroname, state.heroid, state.health, "", False)
 
@@ -226,7 +227,7 @@ def the_gui():
         elif event == log_parser.JOB_ENDGAME:
             player = values[event]
             if player:
-                stats.update_stats(player.heroname, player.place)
+                stats.update_stats(get_card_art_name(player.heroid, player.heroname), player.place)
 
     # if user exits the window, then close the window and exit the GUI func
     window.close()
