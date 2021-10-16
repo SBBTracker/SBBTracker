@@ -9,7 +9,10 @@ import cv2
 # root directory of the repo, named "ALL SBB ART"
 # you also need to:
 # - generate the Loki art from the .psd file
-# - download the Mihri art from the wiki (and rename it to "Mihri, King Lion.png")
+# - download the missing art from the wiki (and rename it)
+# - - https://static.wikia.nocookie.net/storybook-brawl/images/9/96/Card_art_-_Fallen_Angel.png/revision/latest/scale-to-width-down/1000?cb=20210901042148
+# - - https://static.wikia.nocookie.net/storybook-brawl/images/8/8b/Card_art_-_Geppetto.png/revision/latest/scale-to-width-down/1000?cb=20210819221350
+# - - https://static.wikia.nocookie.net/storybook-brawl/images/b/bd/Card_art_-_Mihri%2C_King_Lion.png/revision/latest/scale-to-width-down/1000?cb=20210901042202
 path = Path("../All SBB ART")
 dirs = os.listdir(path)
 
