@@ -163,8 +163,8 @@ def construct_layout():
     player_tabs = []
     for num in range(0, 8):
         name = "Player" + str(num)
-        player_tabs.append(sg.Tab(layout=[[sg.Graph(canvas_size=(1920, 800), graph_bottom_left=(0, 800),
-                                                    graph_top_right=(1920, 0),
+        player_tabs.append(sg.Tab(layout=[[sg.Graph(canvas_size=(1350, 800), graph_bottom_left=(0, 800),
+                                                    graph_top_right=(1350, 0),
                                                     key=get_graph_key(num))]],
                                   title=name, k=get_tab_key(num)))
 
@@ -194,7 +194,7 @@ def the_gui():
     """
     sg.theme('Dark Blue 14')
 
-    window = sg.Window('SBBTracker', construct_layout(), resizable=True, finalize=True, size=(1920, 1080),
+    window = sg.Window('SBBTracker', construct_layout(), resizable=True, finalize=True, size=(1350, 800),
                        icon=resource_path("assets/sbbt.ico"))
     threading.Thread(target=log_parser.run, args=(window,), daemon=True).start()
     stats = PlayerStats(window)
