@@ -389,4 +389,4 @@ def run(window):
                 if current_player_stats and action.displayname == current_player_stats.displayname:
                     current_player_stats = action
             prev_action = action
-            time.sleep(0.1)
+        time.sleep(0.1)
