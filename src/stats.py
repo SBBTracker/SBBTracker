@@ -5,8 +5,6 @@ from pathlib import Path, WindowsPath
 import PySimpleGUI
 import pandas as pd
 
-from src import asset_utils
-
 statsfile = WindowsPath(expanduser('~/Documents')).joinpath("SBBTracker/stats.csv")
 
 headings = ["Hero", "# Matches", "Avg Place", "Top 4", "Wins"]
