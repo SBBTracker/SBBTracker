@@ -9,8 +9,8 @@ from pathlib import Path
 import PySimpleGUI as sg
 
 import log_parser
-from asset_utils import get_card_path, get_card_art_name
-from player import Player
+import asset_utils
+import stats
 from stats import PlayerStats
 
 player_ids = []
@@ -53,14 +53,14 @@ def get_graph_key(index: int):
     return f"-graph{index}-"
 
 
-graph_ids = { str(player): { str(slot.value): {} for slot in Slot } for player in range(0, 9)}
+graph_ids = {str(player): {str(slot.value): {} for slot in Slot} for player in range(0, 9)}
 
 
 def update_player(window: sg.Window, update: log_parser.Update):
     state = update.state
     index = get_player_index(state.playerid)
     player_tab = window[get_tab_key(index)]
-    real_hero_name = get_card_art_name(state.heroid, state.heroname)
+    real_hero_name = asset_utils.get_card_art_name(state.heroid, state.heroname)
     title = f"{real_hero_name}" if state.health > 0 else f"{real_hero_name} *DEAD*"
     player_tab.update(title=title)
     update_card(window, state.playerid, 11, state.heroname, state.heroid, state.health, "", False)
@@ -128,7 +128,7 @@ def update_card_stats(graph: sg.Graph, playerid: str, slot: int, health: str, at
         if slot < 7 or slot == 11:
             slot_graph_ids['healthcirc'] = graph.draw_circle(health_center, 20, '#851717')
             # graph.draw_image("../assets/health_orb.png", location=health_circle_center)
-            slot_graph_ids['healthval'] =graph.draw_text(str(health), health_center, "white", "Arial 20")
+            slot_graph_ids['healthval'] = graph.draw_text(str(health), health_center, "white", "Arial 20")
 
 
 def draw_golden_overlay(graph: sg.Graph, position: (int, int)):
@@ -142,13 +142,12 @@ def update_card(window: sg.Window, playerid: str, slot, cardname: str, content_i
     if index >= 0:
         graph = window[get_graph_key(index)]
         card_loc = get_image_location(int(slot))
-        path = get_card_path(cardname, content_id, is_golden)
+        path = asset_utils.get_card_path(cardname, content_id, is_golden)
         slot_graph_ids = graph_ids[str(index)][str(slot)]
         if "Empty" in path and slot_graph_ids:
             for graph_id in slot_graph_ids.values():
                 graph.delete_figure(graph_id)
-        id = graph.draw_image(filename=get_card_path(cardname, content_id, is_golden),
-                                                  location=card_loc)
+        id = graph.draw_image(filename=path, location=card_loc)
         slot_graph_ids['card'] = id
         if is_golden:
             draw_golden_overlay(graph, card_loc)
@@ -172,12 +171,25 @@ def construct_layout():
 
     player_tab_group = [[sg.TabGroup(layout=[player_tabs])]]
 
+    data = [['' for row in range(5)] for col in range(len(asset_utils.hero_ids))]
+    headings = stats.headings
+    table = sg.Table(values=data, headings=headings,
+                     # display_row_numbers=True,
+                     justification='center',
+                     # alternating_row_color='DarkBlue12',
+                     key='-HeroStats-',
+                     expand_y=True,
+                     # expand_x=True,
+                     auto_size_columns=False,
+                     vertical_scroll_only=True,
+                     col_widths=[19, 10, 10, 10, 10])
+
     application_tab_group = [[sg.TabGroup(layout=[[
         sg.Tab(layout=player_tab_group, title="In-Game"),
         sg.Tab(layout=[[sg.Col(layout=
                                [[sg.Frame(layout=[[]], key="-Hero-", size=(150, 800), title="Hero"),
                                  sg.Frame(layout=[[]], key="-Placement-", size=(150, 800), title="Placement")]],
-                               size=(300, 800), scrollable=True, vertical_scroll_only=True)]],
+                               size=(300, 800), scrollable=True, vertical_scroll_only=True), table]],
                title="Match History")
     ]])]]
 
@@ -228,7 +240,7 @@ def the_gui():
         elif event == log_parser.JOB_ENDGAME:
             player = values[event]
             if player:
-                stats.update_stats(get_card_art_name(player.heroid, player.heroname), player.place)
+                stats.update_stats(asset_utils.get_card_art_name(player.heroid, player.heroname), player.place)
 
     # if user exits the window, then close the window and exit the GUI func
     window.close()
