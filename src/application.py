@@ -211,7 +211,7 @@ def the_gui():
     window = sg.Window('SBBTracker', construct_layout(), resizable=True, finalize=True, size=(1350, 800),
                        icon=resource_path("assets/sbbt.ico"))
     threading.Thread(target=log_parser.run, args=(window,), daemon=True).start()
-    stats = PlayerStats(window)
+    player_stats = PlayerStats(window)
 
     # --------------------- EVENT LOOP ---------------------
     while True:
@@ -222,12 +222,14 @@ def the_gui():
             filename = sg.popup_get_file('Export stats to .csv', save_as=True, default_extension=".csv", no_window=True,
                                          file_types=(("Text CSV", ".csv"),),
                                          initial_folder=str(Path(os.environ['USERPROFILE']).joinpath("Documents")))
-            stats.export(filename)
+            player_stats.export(Path(filename))
         elif event == log_parser.JOB_NEWGAME:
             print("Game started!")
-            for id in player_ids:
-                for pos in range(11):
-                    update_card(window, id, pos, "empty", "", "", "", False)
+            for player_id in player_ids:
+                index = get_player_index(player_id)
+                graph = window[get_graph_key(index)]
+                graph.erase()
+
             player_ids.clear()
             window["-GameStatus-"].update("Round: 0")
         elif event == log_parser.JOB_ROUNDINFO:
@@ -240,11 +242,11 @@ def the_gui():
         elif event == log_parser.JOB_ENDGAME:
             player = values[event]
             if player:
-                stats.update_stats(asset_utils.get_card_art_name(player.heroid, player.heroname), player.place)
+                player_stats.update_stats(asset_utils.get_card_art_name(player.heroid, player.heroname), player.place)
 
     # if user exits the window, then close the window and exit the GUI func
     window.close()
-    stats.save()
+    player_stats.save()
 
 
 if __name__ == '__main__':

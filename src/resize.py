@@ -19,7 +19,7 @@ dirs = os.listdir(path)
 
 def resize():
     for item in dirs:
-        if os.path.isfile(path.joinpath(item)):
+        if "Card art -" in item and os.path.isfile(path.joinpath(item)):
 
             f, e = os.path.splitext(path.joinpath(item))
 
@@ -52,6 +52,6 @@ def resize():
             resized = cv2.resize(crop_img, dim, interpolation=cv2.INTER_AREA)
 
             # save
-            cv2.imwrite('..\\cards\\' + item, resized)
+            cv2.imwrite('..\\cards\\' + item.replace("Card art - ", "").replace("'", "_"), resized)
 
 resize()
