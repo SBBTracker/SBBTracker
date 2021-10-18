@@ -3,6 +3,7 @@ import operator
 import os
 import sys
 import threading
+import webbrowser
 from enum import Enum
 from pathlib import Path
 
@@ -11,6 +12,7 @@ import PySimpleGUI as sg
 import log_parser
 import asset_utils
 import stats
+import update_check
 from stats import PlayerStats
 
 player_ids = []
@@ -211,6 +213,7 @@ def the_gui():
     window = sg.Window('SBBTracker', construct_layout(), resizable=True, finalize=True, size=(1350, 800),
                        icon=resource_path("assets/sbbt.ico"))
     threading.Thread(target=log_parser.run, args=(window,), daemon=True).start()
+    threading.Thread(target=update_check.run, args=(window,), daemon=True).start()
     player_stats = PlayerStats(window)
 
     # --------------------- EVENT LOOP ---------------------
@@ -243,6 +246,10 @@ def the_gui():
             player = values[event]
             if player:
                 player_stats.update_stats(asset_utils.get_card_art_name(player.heroid, player.heroname), player.place)
+        elif event == "GITHUB-UPDATE":
+            choice = sg.popup_yes_no("New version available!\nWould you like to go to the download page?")
+            if choice == "Yes":
+                webbrowser.open_new_tab('https://github.com/SBBTracker/SBBTracker/releases/latest')
 
     # if user exits the window, then close the window and exit the GUI func
     window.close()
