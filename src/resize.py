@@ -7,20 +7,14 @@ import cv2
 # https://drive.google.com/drive/folders/1bA-tChpvQj39tN_0_72e_vJRdph1M_gI
 # before running this script, you need to downlaod the assets folder and place the art folder in the
 # root directory of the repo, named "ALL SBB ART"
-# you also need to:
-# - generate the Loki art from the .psd file
-# - download the missing art from the wiki (and rename it)
-# - - https://static.wikia.nocookie.net/storybook-brawl/images/9/96/Card_art_-_Fallen_Angel.png/revision/latest/scale-to-width-down/1000?cb=20210901042148
-# - - https://static.wikia.nocookie.net/storybook-brawl/images/8/8b/Card_art_-_Geppetto.png/revision/latest/scale-to-width-down/1000?cb=20210819221350
-# - - https://static.wikia.nocookie.net/storybook-brawl/images/b/bd/Card_art_-_Mihri%2C_King_Lion.png/revision/latest/scale-to-width-down/1000?cb=20210901042202
 path = Path("../All SBB ART")
 dirs = os.listdir(path)
 
 
 def resize():
     for item in dirs:
-        if "Card art -" in item and os.path.isfile(path.joinpath(item)):
-
+        # if "Card art -" in item and os.path.isfile(path.joinpath(item)): # this is if its the wiki art
+        if os.path.isfile(path.joinpath(item)):
             f, e = os.path.splitext(path.joinpath(item))
 
             # Load image and mask

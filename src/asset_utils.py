@@ -70,7 +70,8 @@ def get_card_path(card_name: str, content_id: str, is_golden: bool):
     input_content_id = content_id
     if actually_is_golden:
         input_content_id = input_content_id[7:]  # Skipping the "GOLDEN_"
-    asset_name = get_card_art_name(input_content_id, card_name)
+    # asset_name = get_card_art_name(input_content_id, card_name)
+    asset_name = input_content_id
     # path = assets_path.joinpath(asset_name.replace("'", "_") + (" upgraded" if actually_is_golden else "") + ".png")
     path = assets_path.joinpath(asset_name.replace("'", "_") + ".png")
     if not path.exists() or asset_name == "empty":
