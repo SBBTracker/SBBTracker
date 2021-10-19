@@ -1,7 +1,11 @@
 # SBBTracker <img src="assets/icon.png" width="50" height="50">
-A deck tracker for storybook brawl
+A game tracker for storybook brawl
 
-Current features include showing the round number and tracking the last seen comp of a player, as well as match results tracking + export.
+### Features
+* Keep track of previous opponent's boards
+* Record game placements
+* Stat analysis of your results
+* Export your stats to csv
 
 Get the installer for the latest release [here](https://github.com/SBBTracker/SBBTracker/releases/latest)
 
