@@ -57,3 +57,4 @@ class PlayerStats:
     def update_stats(self, hero: str, placement: str):
         self.df = self.df.append({"Hero": hero, "Placement": placement}, ignore_index=True)
         update_window(self.window, hero, placement)
+        generate_stats(self.window, self.df)
