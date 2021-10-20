@@ -34,6 +34,7 @@ hero_ids = {
     "SBB_HERO_MAIDMARIAN": "Snow Angel",
     "SBB_HERO_THEGREEDCURSED": "The Cursed King",
     "SBB_HERO_FATE": "The Fates",
+    "SBB_HERO_BLACKKNIGHT": "The Headless Horseman",
     "SBB_HERO_MILITARYLEADER": "Trophy Hunter",
     "SBB_HERO_WONDERWADDLE": "Wonder Waddle",
     "SBB_HERO_BIGDEAL": "Xelhua",
