@@ -175,23 +175,38 @@ def construct_layout():
 
     data = [['' for row in range(5)] for col in range(len(asset_utils.hero_ids))]
     headings = stats.headings
-    table = sg.Table(values=data, headings=headings,
-                     # display_row_numbers=True,
-                     justification='center',
-                     # alternating_row_color='DarkBlue12',
-                     key='-HeroStats-',
-                     expand_y=True,
-                     # expand_x=True,
-                     auto_size_columns=False,
-                     vertical_scroll_only=True,
-                     col_widths=[19, 10, 10, 10, 10])
+    starting_stats = sg.Table(values=data, headings=headings,
+                              justification='center',
+                              key='-StartingHeroStats-',
+                              expand_y=True,
+                              auto_size_columns=False,
+                              vertical_scroll_only=True,
+                              col_widths=[19, 10, 10, 10, 10])
+
+    ending_stats = sg.Table(values=data, headings=headings,
+                            justification='center',
+                            key='-EndingHeroStats-',
+                            expand_y=True,
+                            auto_size_columns=False,
+                            vertical_scroll_only=True,
+                            col_widths=[19, 10, 10, 10, 10])
+
+    hero_stats_tab = sg.TabGroup(layout=[[
+        sg.Tab(layout=[[
+            starting_stats
+        ]], title="Starting Hero Stats"),
+        sg.Tab(layout=[[
+            ending_stats
+        ]], title="Ending Hero Stats")
+    ]], expand_y=True)
 
     application_tab_group = [[sg.TabGroup(layout=[[
         sg.Tab(layout=player_tab_group, title="In-Game"),
         sg.Tab(layout=[[sg.Col(layout=
-                               [[sg.Frame(layout=[[]], key="-Hero-", size=(150, 800), title="Hero"),
+                               [[sg.Frame(layout=[[]], key="-StartingHero-", size=(150, 800), title="Starting Hero"),
+                                 sg.Frame(layout=[[]], key="-EndingHero-", size=(150, 800), title="Ending Hero"),
                                  sg.Frame(layout=[[]], key="-Placement-", size=(150, 800), title="Placement")]],
-                               size=(300, 800), scrollable=True, vertical_scroll_only=True), table]],
+                               size=(150 * 3, 800), scrollable=True, vertical_scroll_only=True), hero_stats_tab]],
                title="Match History")
     ]])]]
 
@@ -215,6 +230,7 @@ def the_gui():
     threading.Thread(target=log_parser.run, args=(window,), daemon=True).start()
     threading.Thread(target=update_check.run, args=(window,), daemon=True).start()
     player_stats = PlayerStats(window)
+    current_player = None
 
     # --------------------- EVENT LOOP ---------------------
     while True:
@@ -227,14 +243,16 @@ def the_gui():
                                          initial_folder=str(Path(os.environ['USERPROFILE']).joinpath("Documents")))
             player_stats.export(Path(filename))
         elif event == log_parser.JOB_NEWGAME:
-            print("Game started!")
             for player_id in player_ids:
                 index = get_player_index(player_id)
                 graph = window[get_graph_key(index)]
                 graph.erase()
 
             player_ids.clear()
+            current_player = None
             window["-GameStatus-"].update("Round: 0")
+        elif event == log_parser.JOB_INITCURRENTPLAYER:
+            current_player = values[event]
         elif event == log_parser.JOB_ROUNDINFO:
             window["-GameStatus-"].update(f"Round: {values[event][1].round}")
         elif event == log_parser.JOB_PLAYERINFO:
@@ -245,7 +263,8 @@ def the_gui():
         elif event == log_parser.JOB_ENDGAME:
             player = values[event]
             if player:
-                player_stats.update_stats(asset_utils.get_card_art_name(player.heroid, player.heroname), player.place)
+                player_stats.update_stats(asset_utils.get_card_art_name(current_player.heroid, current_player.heroname),
+                                          asset_utils.get_card_art_name(player.heroid, player.heroname), player.place)
         elif event == "GITHUB-UPDATE":
             choice = sg.popup_yes_no("New version available!\nWould you like to go to the download page?")
             if choice == "Yes":
