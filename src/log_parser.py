@@ -362,7 +362,7 @@ def run(window):
                 lastupdated = dict()
 
                 window.write_event_value(JOB_NEWGAME, Update(JOB_NEWGAME, None))
-            elif not inbrawl and not current_player_stats and action.task == TASK_ADDPLAYER and prev_action.task == TASK_GETTHISPLAYER:
+            elif not current_player_stats and action.task == TASK_ADDPLAYER and prev_action.task == TASK_GETTHISPLAYER:
                 current_player_stats = action
                 window.write_event_value(JOB_INITCURRENTPLAYER, current_player_stats)
             elif not inbrawl and action.task == TASK_ADDPLAYER:
