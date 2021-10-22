@@ -62,6 +62,7 @@ TASK_ENDGAME = "TaskEndGame"
 TASK_GETTHISPLAYER = "GetThisPlayer"
 
 JOB_PLAYERINFO = "PlayerInfo"
+JOB_INITCURRENTPLAYER = "InitCurrentPlayer"
 JOB_BOARDINFO = "BoardInfo"
 JOB_ROUNDINFO = "RoundInfo"
 JOB_NEWGAME = "StateNewgame"
@@ -361,9 +362,9 @@ def run(window):
                 lastupdated = dict()
 
                 window.write_event_value(JOB_NEWGAME, Update(JOB_NEWGAME, None))
-            elif not current_player_stats and action.task == TASK_ADDPLAYER and prev_action.task == TASK_GETTHISPLAYER:
-                print("GOT PLAYER: " + action.displayname)
+            elif not inbrawl and not current_player_stats and action.task == TASK_ADDPLAYER and prev_action.task == TASK_GETTHISPLAYER:
                 current_player_stats = action
+                window.write_event_value(JOB_INITCURRENTPLAYER, current_player_stats)
             elif not inbrawl and action.task == TASK_ADDPLAYER:
                 window.write_event_value(JOB_PLAYERINFO, Update(JOB_PLAYERINFO, action))
             elif not inbrawl and action.task == TASK_GATHERIDS:
