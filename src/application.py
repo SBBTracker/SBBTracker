@@ -4,10 +4,17 @@ import os
 import sys
 import threading
 import webbrowser
+from collections import defaultdict
 from enum import Enum
 from pathlib import Path
 
 import PySimpleGUI as sg
+import matplotlib
+import matplotlib.pyplot as plt
+import numpy as np
+import seaborn as sns
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.ticker import MaxNLocator
 
 import log_parser
 import asset_utils
@@ -20,6 +27,7 @@ board_indicies = []
 
 art_dim = (161, 204)
 
+sns.set_style("whitegrid")
 
 # 161 x 204
 
@@ -56,9 +64,41 @@ def get_graph_key(index: int):
 
 
 graph_ids = {str(player): {str(slot.value): {} for slot in Slot} for player in range(0, 9)}
+names_to_health = defaultdict(list)
+ids_to_heroes = {}
 
 
-def update_player(window: sg.Window, update: log_parser.Update):
+def draw_figure(canvas, figure):
+    figure_canvas_agg = FigureCanvasTkAgg(figure, canvas)
+    figure_canvas_agg.draw()
+    figure_canvas_agg.get_tk_widget().pack(side='top', fill='both', expand=1)
+    return figure_canvas_agg
+
+
+def delete_fig_agg(fig_agg):
+    fig_agg.get_tk_widget().forget()
+    plt.close('all')
+
+
+def make_health_graph():
+    fig, ax = plt.subplots()
+    for player in names_to_health.keys():
+        x = []
+        y = []
+        for index, health in enumerate(names_to_health[player]):
+            x.append(index + 1)
+            y.append(health)
+        ax.plot(x, y, label=ids_to_heroes[player])
+    ax.legend()
+    # plt.subplots(figsize=(13,8))
+    ax.set_xlabel("Turn")
+    ax.set_ylabel("Health")
+    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+    fig.set_size_inches(13.5, 18)
+    return plt.gcf()
+
+
+def update_player(window: sg.Window, update: log_parser.Update, is_first_player: bool):
     state = update.state
     index = get_player_index(state.playerid)
     player_tab = window[get_tab_key(index)]
@@ -66,6 +106,9 @@ def update_player(window: sg.Window, update: log_parser.Update):
     title = f"{real_hero_name}" if state.health > 0 else f"{real_hero_name} *DEAD*"
     player_tab.update(title=title)
     update_card(window, state.playerid, 11, state.heroname, state.heroid, state.health, "", False)
+    if not is_first_player:
+        names_to_health[state.playerid].append(state.health)
+        ids_to_heroes[state.playerid] = real_hero_name
 
 
 def update_board(window: sg.Window, update: log_parser.Update):
@@ -201,7 +244,8 @@ def construct_layout():
     ]], expand_y=True)
 
     application_tab_group = [[sg.TabGroup(layout=[[
-        sg.Tab(layout=player_tab_group, title="In-Game"),
+        sg.Tab(layout=player_tab_group, title="Board Comps"),
+        sg.Tab(layout=[[sg.Canvas(key="-HealthGraph-")]], title="Health Graph"),
         sg.Tab(layout=[[sg.Col(layout=
                                [[sg.Frame(layout=[[]], key="-StartingHero-", size=(150, 800), title="Starting Hero"),
                                  sg.Frame(layout=[[]], key="-EndingHero-", size=(150, 800), title="Ending Hero"),
@@ -231,6 +275,10 @@ def the_gui():
     threading.Thread(target=update_check.run, args=(window,), daemon=True).start()
     player_stats = PlayerStats(window)
     current_player = None
+    health_fig_agg = None
+    first_player = False
+    new_game = False
+    counter = 0
 
     # --------------------- EVENT LOOP ---------------------
     while True:
@@ -249,7 +297,11 @@ def the_gui():
                 graph.erase()
 
             player_ids.clear()
+            names_to_health.clear()
+            ids_to_heroes.clear()
             current_player = None
+            first_player = True
+            new_game = True
             window["-GameStatus-"].update("Round: 0")
         elif event == log_parser.JOB_INITCURRENTPLAYER:
             current_player = values[event]
@@ -257,7 +309,18 @@ def the_gui():
             window["-GameStatus-"].update(f"Round: {values[event][1].round}")
         elif event == log_parser.JOB_PLAYERINFO:
             updated_player = values[event]
-            update_player(window, updated_player)
+            update_player(window, updated_player, first_player)
+            if not first_player or not new_game:
+                if counter == 7:
+                    if health_fig_agg is not None:
+                        delete_fig_agg(health_fig_agg)
+                    health_fig_agg = draw_figure(window["-HealthGraph-"].TKCanvas, make_health_graph())
+                    window.refresh()
+                    counter = 0
+                else:
+                    counter += 1
+            else:
+                first_player = False
         elif event == log_parser.JOB_BOARDINFO:
             update_board(window, values[event])
         elif event == log_parser.JOB_ENDGAME:
