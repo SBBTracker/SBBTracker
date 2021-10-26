@@ -67,6 +67,7 @@ JOB_BOARDINFO = "BoardInfo"
 JOB_ROUNDINFO = "RoundInfo"
 JOB_NEWGAME = "StateNewgame"
 JOB_ENDGAME = "StateEndGame"
+JOB_ENDCOMBAT = "EndCombat"
 
 
 def parse_list(line, delimiter):
@@ -314,6 +315,10 @@ class Action:
                 self.task = None
                 self.attrs = []
 
+            self.timestamp = info["Action"]["Timestamp"]
+            self.attrs.append("timestamp")
+            self.attrs.append("action_type")
+
     def __repr__(self):
         return json.dumps({k: getattr(self, k) for k in ['task', *self.attrs]}, sort_keys=True, indent=4)
 
@@ -352,6 +357,7 @@ def run(window):
     current_round = None
     current_player_stats = None
     lastupdated = dict()
+    last_player_timestamp = -2
     while True:
         prev_action = None
         ifs = SBBPygtal(filename=str(logfile))
@@ -367,6 +373,7 @@ def run(window):
                 window.write_event_value(JOB_INITCURRENTPLAYER, current_player_stats)
             elif not inbrawl and action.task == TASK_ADDPLAYER:
                 window.write_event_value(JOB_PLAYERINFO, Update(JOB_PLAYERINFO, action))
+                last_player_timestamp = int(action.timestamp)
             elif not inbrawl and action.task == TASK_GATHERIDS:
                 inbrawl = True
                 brawldt = dict()
@@ -385,8 +392,11 @@ def run(window):
             elif action.task == TASK_ENDGAME:
                 window.write_event_value(JOB_ENDGAME, current_player_stats)
                 current_player_stats = None
+            elif action.action_type != EVENT_ADDPLAYER and int(action.timestamp) == (last_player_timestamp + 1):
+                window.write_event_value(JOB_ENDCOMBAT, action.timestamp)
             else:
                 pass
+
             if action.task == TASK_ADDPLAYER:
                 if current_player_stats and action.displayname == current_player_stats.displayname:
                     current_player_stats = action
