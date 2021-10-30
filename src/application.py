@@ -304,6 +304,7 @@ def the_gui():
             for player_id in player_ids:
                 index = get_player_index(player_id)
                 graph = window[app.get_graph_key(index)]
+                window[app.get_player_round_key(index)].update(f"Last seen round: 0")
                 graph.erase()
 
             player_ids.clear()
