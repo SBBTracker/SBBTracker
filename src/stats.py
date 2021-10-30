@@ -1,3 +1,4 @@
+import math
 import os.path
 from os.path import expanduser
 from pathlib import Path, WindowsPath
@@ -5,15 +6,11 @@ from pathlib import Path, WindowsPath
 import PySimpleGUI
 import pandas as pd
 
+from application_constants import Keys, stats_per_page
+
 statsfile = WindowsPath(expanduser('~/Documents')).joinpath("SBBTracker/stats.csv")
 
 headings = ["Hero", "# Matches", "Avg Place", "Top 4", "Wins"]
-
-
-def update_window(window: PySimpleGUI.Window, startinghero: str, endingHero: str, place: str):
-    window.extend_layout(window["-StartingHero-"], [[PySimpleGUI.T(startinghero)]])
-    window.extend_layout(window["-EndingHero-"], [[PySimpleGUI.T(endingHero)]])
-    window.extend_layout(window["-Placement-"], [[PySimpleGUI.T(place)]])
 
 
 def generate_stats(window: PySimpleGUI.Window, df: pd.DataFrame):
@@ -31,9 +28,21 @@ def generate_stats(window: PySimpleGUI.Window, df: pd.DataFrame):
                 total_wins = len(df.loc[bool_df & (df['Placement'] <= 1), 'Placement'])
                 data.append([hero, str(total_matches), str(avg), str(total_top4), str(total_wins)])
 
-            key = f"-{hero_type}Stats-"
-            table = window[key]
+            key = Keys.StartingHeroStats if hero_type == "StartingHero" else Keys.EndingHeroStats
+            table = window[key.value]
             table.update(values=data)
+
+
+def update_history(window: PySimpleGUI.Window, df: pd.DataFrame, page_number: int):
+    start_index = len(df.index) - stats_per_page * page_number
+    end_index = len(df.index) - stats_per_page * (page_number - 1)
+    adjusted_start = start_index if start_index > 0 else 0
+    window[Keys.MatchStats.value].update(df[adjusted_start:end_index][::-1].values.tolist())
+    window[Keys.StatsPageNum.value].update(f"Page: {page_number}")
+
+
+def get_num_pages(df: pd.DataFrame):
+    return math.ceil(len(df.index) / stats_per_page)
 
 
 class PlayerStats:
@@ -47,8 +56,7 @@ class PlayerStats:
                 self.df = self.df.rename({'Hero': "EndingHero"}, axis='columns')
                 self.df["StartingHero"] = " "
                 self.df = self.df[["StartingHero", "EndingHero", "Placement"]]
-            for row in self.df.itertuples():
-                update_window(self.window, row.StartingHero, row.EndingHero, row.Placement)
+            update_history(self.window, self.df, 1)
             generate_stats(self.window, self.df)
         else:
             self.df = pd.DataFrame(columns=['StartingHero', 'EndingHero', 'Placement'])
@@ -64,8 +72,11 @@ class PlayerStats:
     def save(self):
         self.export(statsfile)
 
+    def update_page(self, page_num: int):
+        update_history(self.window, self.df, page_num)
+
     def update_stats(self, startinghero: str, endinghero: str, placement: str):
         self.df = self.df.append({"StartingHero": startinghero, "EndingHero": endinghero, "Placement": placement},
                                  ignore_index=True)
-        update_window(self.window, startinghero, endinghero, placement)
+        update_history(self.window, self.df, 1)
         generate_stats(self.window, self.df)
