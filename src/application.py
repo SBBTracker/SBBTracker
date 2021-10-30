@@ -9,17 +9,17 @@ from enum import Enum
 from pathlib import Path
 
 import PySimpleGUI as sg
-import matplotlib
 import matplotlib.pyplot as plt
-import numpy as np
 import seaborn as sns
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.ticker import MaxNLocator
 
-import log_parser
+import application_constants as app
 import asset_utils
+import log_parser
 import stats
 import update_check
+from application_constants import Keys
 from stats import PlayerStats
 
 player_ids = []
@@ -27,9 +27,13 @@ board_indicies = []
 
 art_dim = (161, 204)
 
-sns.set_style("whitegrid")
+sns.set_style("darkgrid", {"axes.facecolor": "#21273d"})
 
-# 161 x 204
+plt.rcParams.update({'text.color': "white",
+                     'xtick.color': 'white',
+                     'ytick.color': 'white',
+                     'figure.facecolor': '#21273d',
+                     'axes.labelcolor': "white"})
 
 
 class Slot(Enum):
@@ -55,14 +59,6 @@ def resource_path(relative_path):
     return os.path.join(os.path.abspath(".."), relative_path)
 
 
-def get_tab_key(index: int):
-    return f"-tab{index}-"
-
-
-def get_graph_key(index: int):
-    return f"-graph{index}-"
-
-
 graph_ids = {str(player): {str(slot.value): {} for slot in Slot} for player in range(0, 9)}
 names_to_health = defaultdict(dict)
 ids_to_heroes = {}
@@ -82,6 +78,7 @@ def delete_fig_agg(fig_agg):
 
 def make_health_graph():
     fig, ax = plt.subplots()
+    last_values = []
     for player in names_to_health.keys():
         x = []
         y = []
@@ -89,20 +86,27 @@ def make_health_graph():
             x.append(round_num)
             y.append(names_to_health[player][round_num])
         ax.plot(x, y, label=ids_to_heroes[player])
+        last_values.append((x[-1], y[-1]))
+        ax.annotate(y[-1], (x[-1], y[-1]))
     ax.legend()
-    # plt.subplots(figsize=(13,8))
     ax.set_xlabel("Turn")
     ax.set_ylabel("Health")
+    plt.axhline(y=0, color='w', linewidth=2.0)
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     ax.yaxis.set_major_locator(MaxNLocator(integer=True))
     fig.set_size_inches(13.5, 18)
+    handles, labels = ax.get_legend_handles_labels()
+    healths = [health for (_, health) in last_values]
+    # sort both labels and handles by labels
+    _, labels, handles = zip(*sorted(zip(healths, labels, handles), key=lambda t: t[0], reverse=True))
+    ax.legend(handles, labels)
     return plt.gcf()
 
 
 def update_player(window: sg.Window, update: log_parser.Update, round_num: int):
     state = update.state
     index = get_player_index(state.playerid)
-    player_tab = window[get_tab_key(index)]
+    player_tab = window[app.get_tab_key(index)]
     real_hero_name = asset_utils.get_card_art_name(state.heroid, state.heroname)
     title = f"{real_hero_name}" if state.health > 0 else f"{real_hero_name} *DEAD*"
     player_tab.update(title=title)
@@ -185,15 +189,15 @@ def update_card(window: sg.Window, playerid: str, slot, cardname: str, content_i
                 is_golden: bool):
     index = get_player_index(playerid)
     if index >= 0:
-        graph = window[get_graph_key(index)]
+        graph = window[app.get_graph_key(index)]
         card_loc = get_image_location(int(slot))
         path = asset_utils.get_card_path(cardname, content_id, is_golden)
         slot_graph_ids = graph_ids[str(index)][str(slot)]
         if "Empty" in path and slot_graph_ids:
             for graph_id in slot_graph_ids.values():
                 graph.delete_figure(graph_id)
-        id = graph.draw_image(filename=path, location=card_loc)
-        slot_graph_ids['card'] = id
+        card_id = graph.draw_image(filename=path, location=card_loc)
+        slot_graph_ids['card'] = card_id
         if is_golden:
             draw_golden_overlay(graph, card_loc)
         update_card_stats(graph, playerid, int(slot), health, attack)
@@ -209,29 +213,31 @@ def construct_layout():
     player_tabs = []
     for num in range(0, 8):
         name = "Player" + str(num)
-        player_tabs.append(sg.Tab(layout=[[sg.Graph(canvas_size=(1350, 800), graph_bottom_left=(0, 800),
-                                                    graph_top_right=(1350, 0),
-                                                    key=get_graph_key(num))]],
-                                  title=name, k=get_tab_key(num)))
+        player_tabs.append(sg.Tab(layout=[
+            [sg.Text("Last seen round: 0", font="Arial 18", key=app.get_player_round_key(num))],
+            [sg.Graph(canvas_size=(1350, 800), graph_bottom_left=(0, 800),
+                      graph_top_right=(1350, 0),
+                      key=app.get_graph_key(num))]],
+            title=name, k=app.get_tab_key(num)))
 
     player_tab_group = [[sg.TabGroup(layout=[player_tabs])]]
 
-    data = [['' for row in range(5)] for col in range(len(asset_utils.hero_ids))]
+    data = [['' for __ in range(5)] for _ in range(len(asset_utils.hero_ids))]
     headings = stats.headings
     starting_stats = sg.Table(values=data, headings=headings,
                               justification='center',
-                              key='-StartingHeroStats-',
+                              key=Keys.StartingHeroStats.value,
                               expand_y=True,
                               auto_size_columns=False,
-                              vertical_scroll_only=True,
+                              hide_vertical_scroll=True,
                               col_widths=[19, 10, 10, 10, 10])
 
     ending_stats = sg.Table(values=data, headings=headings,
                             justification='center',
-                            key='-EndingHeroStats-',
+                            key=Keys.EndingHeroStats.value,
                             expand_y=True,
                             auto_size_columns=False,
-                            vertical_scroll_only=True,
+                            hide_vertical_scroll=True,
                             col_widths=[19, 10, 10, 10, 10])
 
     hero_stats_tab = sg.TabGroup(layout=[[
@@ -245,17 +251,21 @@ def construct_layout():
 
     application_tab_group = [[sg.TabGroup(layout=[[
         sg.Tab(layout=player_tab_group, title="Board Comps"),
-        sg.Tab(layout=[[sg.Canvas(key="-HealthGraph-")]], title="Health Graph"),
-        sg.Tab(layout=[[sg.Col(layout=
-                               [[sg.Frame(layout=[[]], key="-StartingHero-", size=(150, 800), title="Starting Hero"),
-                                 sg.Frame(layout=[[]], key="-EndingHero-", size=(150, 800), title="Ending Hero"),
-                                 sg.Frame(layout=[[]], key="-Placement-", size=(150, 800), title="Placement")]],
-                               size=(150 * 3, 800), scrollable=True, vertical_scroll_only=True), hero_stats_tab]],
+        sg.Tab(layout=[[sg.Canvas(key=Keys.HealthGraph.value)]], title="Health Graph"),
+        sg.Tab(layout=[[sg.Col(layout=[[sg.Table(values=[['' for __ in range(3)] for _ in range(40)],
+                                                 headings=["Starting Hero", "Ending Hero", "Placement"],
+                                                 key=Keys.MatchStats.value, hide_vertical_scroll=True,
+                                                 justification="Center", expand_y=True,
+                                                 col_widths=[19, 19, 10], auto_size_columns=False)],
+                                       [sg.Button("Prev"), sg.Text("Page: 1", key=Keys.StatsPageNum.value),
+                                        sg.Button("Next")]],
+                               expand_y=True, element_justification="center"),
+                        hero_stats_tab]],
                title="Match History")
     ]])]]
 
     layout = [[sg.Menu([['&File', ['&Export Stats']], ['&Help']])],
-              [sg.Text(text="Waiting for match to start...", font="Courier 32", k="-GameStatus-",
+              [sg.Text(text="Waiting for match to start...", font="Arial 28", k=Keys.GameStatus.value,
                        justification='center')], application_tab_group]
 
     return layout
@@ -268,8 +278,9 @@ def the_gui():
     Returns when the user exits / closes the window
     """
     sg.theme('Dark Blue 14')
+    sg.set_options(font="Arial 11")
 
-    window = sg.Window('SBBTracker', construct_layout(), resizable=True, finalize=True, size=(1350, 800),
+    window = sg.Window('SBBTracker', construct_layout(), resizable=True, finalize=True, size=(1350, 820),
                        icon=resource_path("assets/sbbt.ico"))
     threading.Thread(target=log_parser.run, args=(window,), daemon=True).start()
     threading.Thread(target=update_check.run, args=(window,), daemon=True).start()
@@ -277,6 +288,7 @@ def the_gui():
     current_player = None
     health_fig_agg = None
     round_number = 0
+    page_number = 1
 
     # --------------------- EVENT LOOP ---------------------
     while True:
@@ -291,7 +303,7 @@ def the_gui():
         elif event == log_parser.JOB_NEWGAME:
             for player_id in player_ids:
                 index = get_player_index(player_id)
-                graph = window[get_graph_key(index)]
+                graph = window[app.get_graph_key(index)]
                 graph.erase()
 
             player_ids.clear()
@@ -299,21 +311,24 @@ def the_gui():
             ids_to_heroes.clear()
             current_player = None
             round_number = 0
-            window["-GameStatus-"].update("Round: 0")
+            window[Keys.GameStatus.value].update("Round: 0")
         elif event == log_parser.JOB_INITCURRENTPLAYER:
             current_player = values[event]
         elif event == log_parser.JOB_ROUNDINFO:
             round_number = values[event][1].round
-            window["-GameStatus-"].update(f"Round: {round_number}")
+            window[Keys.GameStatus.value].update(f"Round: {round_number}")
         elif event == log_parser.JOB_PLAYERINFO:
             updated_player = values[event]
             update_player(window, updated_player, round_number)
         elif event == log_parser.JOB_BOARDINFO:
             update_board(window, values[event])
+            for player_id in values[event].state:
+                index = get_player_index(player_id)
+                window[app.get_player_round_key(index)].update(f"Last seen round: {round_number}")
         elif event == log_parser.JOB_ENDCOMBAT:
             if health_fig_agg is not None:
                 delete_fig_agg(health_fig_agg)
-            health_fig_agg = draw_figure(window["-HealthGraph-"].TKCanvas, make_health_graph())
+            health_fig_agg = draw_figure(window[Keys.HealthGraph.value].TKCanvas, make_health_graph())
             window.refresh()
         elif event == log_parser.JOB_ENDGAME:
             player = values[event]
@@ -325,6 +340,14 @@ def the_gui():
             if choice == "Yes":
                 webbrowser.open_new_tab('https://github.com/SBBTracker/SBBTracker/releases/latest')
 
+        elif event == "Prev":
+            if page_number > 1:
+                page_number -= 1
+            player_stats.update_page(page_number)
+        elif event == "Next":
+            if page_number < stats.get_num_pages(player_stats.df):
+                page_number += 1
+            player_stats.update_page(page_number)
     # if user exits the window, then close the window and exit the GUI func
     window.close()
     player_stats.save()
