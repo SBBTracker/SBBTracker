@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "SBBTracker"
-#define MyAppVersion "1.4.0"
+#define MyAppVersion "1.5.0"
 #define MyAppPublisher "SBBTracker"
 #define MyAppURL "sbbtracker.com"
 #define MyAppExeName "SBBTracker.exe"
@@ -23,7 +23,7 @@ DisableProgramGroupPage=yes
 LicenseFile=../LICENSE
 ; Uncomment the following line to run in non administrative install mode (install for current user only.)
 ;PrivilegesRequired=lowest
-OutputBaseFilename=SBBTracker
+OutputBaseFilename=SBBTracker_installer
 SetupIconFile=..\assets\sbbt.ico
 Compression=lzma
 SolidCompression=yes
