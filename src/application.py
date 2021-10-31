@@ -64,7 +64,7 @@ names_to_health = defaultdict(dict)
 ids_to_heroes = {}
 
 
-def draw_figure(canvas, figure):
+def draw_matplotlib_figure(canvas, figure):
     figure_canvas_agg = FigureCanvasTkAgg(figure, canvas)
     figure_canvas_agg.draw()
     figure_canvas_agg.get_tk_widget().pack(side='top', fill='both', expand=1)
@@ -101,6 +101,13 @@ def make_health_graph():
     _, labels, handles = zip(*sorted(zip(healths, labels, handles), key=lambda t: t[0], reverse=True))
     ax.legend(handles, labels)
     return plt.gcf()
+
+
+def add_asset_id(graph: sg.Graph, player_id: str, slot: str, asset_type: str, new_id):
+    slot_graph_ids = graph_ids[str(get_player_index(player_id))][slot]
+    if asset_type in slot_graph_ids:
+        graph.delete_figure(slot_graph_ids[asset_type])
+    slot_graph_ids[asset_type] = new_id
 
 
 def update_player(window: sg.Window, update: log_parser.Update, round_num: int):
@@ -167,39 +174,36 @@ def update_card_stats(graph: sg.Graph, playerid: str, slot: int, health: str, at
     health_center = tuple(map(operator.add, health_loc, card_location))
     # att_circle_center = tuple(map(operator.sub, att_center, (21, 18)))
     # health_circle_center = tuple(map(operator.sub, health_center, (21, 18)))
-    slot_graph_ids = graph_ids[str(get_player_index(playerid))][str(slot)]
     if attack:
         if slot < 7:
-            slot_graph_ids['attcirc'] = graph.draw_circle(att_center, 20, '#856515')
+            add_asset_id(graph, playerid, str(slot), "attcirc", graph.draw_circle(att_center, 20, '#856515'))
             # graph.draw_image("../assets/attack_orb.png", location=att_circle_center)
-            slot_graph_ids['attval'] = graph.draw_text(str(attack), att_center, "white", "Arial 20")
+            add_asset_id(graph, playerid, str(slot), 'attval',
+                         graph.draw_text(str(attack), att_center, "white", "Arial 20"))
     if health:
         if slot < 7 or slot == 11:
-            slot_graph_ids['healthcirc'] = graph.draw_circle(health_center, 20, '#851717')
+            add_asset_id(graph, playerid, str(slot), 'healthcirc', graph.draw_circle(health_center, 20, '#851717'))
             # graph.draw_image("../assets/health_orb.png", location=health_circle_center)
-            slot_graph_ids['healthval'] = graph.draw_text(str(health), health_center, "white", "Arial 20")
+            add_asset_id(graph, playerid, str(slot), 'healthval',
+                         graph.draw_text(str(health), health_center, "white", "Arial 20"))
 
 
 def draw_golden_overlay(graph: sg.Graph, position: (int, int)):
-    pass
-    # graph.draw_oval(position, tuple(map(operator.add, position, art_dim)), fill_color="gold")
+    return graph.draw_image(filename="../assets/golden_overlay.png", location=position)
 
 
 def update_card(window: sg.Window, playerid: str, slot, cardname: str, content_id: str, health: str, attack: str,
-                is_golden: bool):
+                is_golden):
     index = get_player_index(playerid)
     if index >= 0:
         graph = window[app.get_graph_key(index)]
         card_loc = get_image_location(int(slot))
-        path = asset_utils.get_card_path(cardname, content_id, is_golden)
-        slot_graph_ids = graph_ids[str(index)][str(slot)]
-        if "Empty" in path and slot_graph_ids:
-            for graph_id in slot_graph_ids.values():
-                graph.delete_figure(graph_id)
+        actually_is_golden = is_golden if isinstance(is_golden, bool) else is_golden == "True"
+        path = asset_utils.get_card_path(cardname, content_id, actually_is_golden)
         card_id = graph.draw_image(filename=path, location=card_loc)
-        slot_graph_ids['card'] = card_id
-        if is_golden:
-            draw_golden_overlay(graph, card_loc)
+        add_asset_id(graph, playerid, str(slot), "card", card_id)
+        if actually_is_golden:
+            add_asset_id(graph, playerid, str(slot), 'golden', draw_golden_overlay(graph, card_loc))
         update_card_stats(graph, playerid, int(slot), health, attack)
 
 
@@ -329,7 +333,7 @@ def the_gui():
         elif event == log_parser.JOB_ENDCOMBAT:
             if health_fig_agg is not None:
                 delete_fig_agg(health_fig_agg)
-            health_fig_agg = draw_figure(window[Keys.HealthGraph.value].TKCanvas, make_health_graph())
+            health_fig_agg = draw_matplotlib_figure(window[Keys.HealthGraph.value].TKCanvas, make_health_graph())
             window.refresh()
         elif event == log_parser.JOB_ENDGAME:
             player = values[event]
