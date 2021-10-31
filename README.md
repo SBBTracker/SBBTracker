@@ -10,7 +10,8 @@ A game tracker for storybook brawl
 
 Get the installer for the latest release [here](https://github.com/SBBTracker/SBBTracker/releases/latest)
 
-<img src="doc/sample-screenshot-3.png">
+<img src="doc/sample-boardcomp.png">
+<img src="doc/sample-graph.png">
 <img src="doc/sample-stats.png">
 
 ## Building from Source
