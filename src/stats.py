@@ -1,5 +1,6 @@
 import math
 import os.path
+from datetime import datetime
 from os.path import expanduser
 from pathlib import Path, WindowsPath
 
@@ -37,7 +38,8 @@ def update_history(window: PySimpleGUI.Window, df: pd.DataFrame, page_number: in
     start_index = len(df.index) - stats_per_page * page_number
     end_index = len(df.index) - stats_per_page * (page_number - 1)
     adjusted_start = start_index if start_index > 0 else 0
-    window[Keys.MatchStats.value].update(df[adjusted_start:end_index][::-1].values.tolist())
+    window[Keys.MatchStats.value].update(
+        df[adjusted_start:end_index][::-1].loc[:, df.columns != 'Timestamp'].values.tolist())
     window[Keys.StatsPageNum.value].update(f"Page: {page_number}")
 
 
@@ -55,11 +57,14 @@ class PlayerStats:
                 #  Legacy data
                 self.df = self.df.rename({'Hero': "EndingHero"}, axis='columns')
                 self.df["StartingHero"] = " "
-                self.df = self.df[["StartingHero", "EndingHero", "Placement"]]
+                self.df = self.df[["StartingHero", "EndingHero", "Placement", "Timestamp"]]
+            if 'Timestamp' not in self.df.columns:
+                #  Pre-timestamp data gets an empty-timestamp column
+                self.df["Timestamp"] = " "
             update_history(self.window, self.df, 1)
             generate_stats(self.window, self.df)
         else:
-            self.df = pd.DataFrame(columns=['StartingHero', 'EndingHero', 'Placement'])
+            self.df = pd.DataFrame(columns=['StartingHero', 'EndingHero', 'Placement', 'Timestamp'])
 
     def export(self, filepath: Path):
         try:
@@ -76,7 +81,9 @@ class PlayerStats:
         update_history(self.window, self.df, page_num)
 
     def update_stats(self, startinghero: str, endinghero: str, placement: str):
-        self.df = self.df.append({"StartingHero": startinghero, "EndingHero": endinghero, "Placement": placement},
-                                 ignore_index=True)
+        self.df = self.df.append(
+            {"StartingHero": startinghero, "EndingHero": endinghero, "Placement": placement,
+             "Timestamp": datetime.now().strftime("%Y-%m-%d")},
+            ignore_index=True)
         update_history(self.window, self.df, 1)
         generate_stats(self.window, self.df)
