@@ -350,7 +350,7 @@ def the_gui():
         elif event == log_parser.JOB_ENDGAME:
             player = values[event]
             if player:
-                place = player.place if int(player.health) >= 0 else "1"
+                place = player.place if int(player.health) <= 0 else "1"
                 player_stats.update_stats(asset_utils.get_card_art_name(current_player.heroid, current_player.heroname),
                                           asset_utils.get_card_art_name(player.heroid, player.heroname), place)
         elif event == "GITHUB-UPDATE":
