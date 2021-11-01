@@ -7,8 +7,8 @@ from pathlib import Path, WindowsPath
 import PySimpleGUI
 import pandas as pd
 
+import asset_utils
 from application_constants import Keys, stats_per_page
-from src import asset_utils
 
 statsfile = WindowsPath(expanduser('~/Documents')).joinpath("SBBTracker/stats.csv")
 
