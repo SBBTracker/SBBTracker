@@ -27,12 +27,13 @@ board_indicies = []
 
 art_dim = (161, 204)
 
-sns.set_style("darkgrid", {"axes.facecolor": "#21273d"})
+default_bg_color = "#21273d"
+sns.set_style("darkgrid", {"axes.facecolor": default_bg_color})
 
 plt.rcParams.update({'text.color': "white",
                      'xtick.color': 'white',
                      'ytick.color': 'white',
-                     'figure.facecolor': '#21273d',
+                     'figure.facecolor': default_bg_color,
                      'axes.labelcolor': "white"})
 
 
@@ -272,7 +273,7 @@ def construct_layout():
                title="Match History")
     ]])]]
 
-    layout = [[sg.Menu([['&File', ['&Export Stats']], ['&Help']])],
+    layout = [[sg.Menu([['&File', ['&Export Stats', '&Delete Stats']], ['&Help', ['&Report an issue']]])],
               [sg.Text(text="Waiting for match to start...", font="Arial 28", k=Keys.GameStatus.value,
                        justification='center')], application_tab_group]
 
@@ -308,6 +309,13 @@ def the_gui():
                                          file_types=(("Text CSV", ".csv"),),
                                          initial_folder=str(Path(os.environ['USERPROFILE']).joinpath("Documents")))
             player_stats.export(Path(filename))
+
+        elif event == 'Delete Stats':
+            choice = sg.popup_yes_no("This will remove ALL of your stats? Are you sure?")
+            if choice == "Yes":
+                player_stats.delete()
+        elif event == 'Report an issue':
+            webbrowser.open_new_tab('https://github.com/SBBTracker/SBBTracker/issues')
         elif event == log_parser.JOB_NEWGAME:
             for player_id in player_ids:
                 index = get_player_index(player_id)
@@ -342,8 +350,9 @@ def the_gui():
         elif event == log_parser.JOB_ENDGAME:
             player = values[event]
             if player:
+                place = player.place if int(player.health) >= 0 else "1"
                 player_stats.update_stats(asset_utils.get_card_art_name(current_player.heroid, current_player.heroname),
-                                          asset_utils.get_card_art_name(player.heroid, player.heroname), player.place)
+                                          asset_utils.get_card_art_name(player.heroid, player.heroname), place)
         elif event == "GITHUB-UPDATE":
             choice = sg.popup_yes_no("New version available!\nWould you like to go to the download page?")
             if choice == "Yes":

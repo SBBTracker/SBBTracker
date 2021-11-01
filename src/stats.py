@@ -8,6 +8,7 @@ import PySimpleGUI
 import pandas as pd
 
 from application_constants import Keys, stats_per_page
+from src import asset_utils
 
 statsfile = WindowsPath(expanduser('~/Documents')).joinpath("SBBTracker/stats.csv")
 
@@ -34,7 +35,7 @@ def generate_stats(window: PySimpleGUI.Window, df: pd.DataFrame):
             table.update(values=data)
 
 
-def update_history(window: PySimpleGUI.Window, df: pd.DataFrame, page_number: int):
+def update_history(window: PySimpleGUI.Window, df: pd.DataFrame, page_number: int = 1):
     start_index = len(df.index) - stats_per_page * page_number
     end_index = len(df.index) - stats_per_page * (page_number - 1)
     adjusted_start = start_index if start_index > 0 else 0
@@ -77,13 +78,25 @@ class PlayerStats:
     def save(self):
         self.export(statsfile)
 
+    def delete(self):
+        self.df = pd.DataFrame(columns=['StartingHero', 'EndingHero', 'Placement', 'Timestamp'])
+        try:
+            os.rename(statsfile, str(statsfile) + "_backup")
+        except Exception as e:
+            print("Unable to move old stats file!")
+            print(e)
+        update_history(self.window, self.df)
+        data = [['' for __ in range(5)] for _ in range(len(asset_utils.hero_ids))]
+        for hero_type in [Keys.StartingHeroStats, Keys.EndingHeroStats]:
+            self.window[hero_type.value].update(data)
+
     def update_page(self, page_num: int):
         update_history(self.window, self.df, page_num)
 
-    def update_stats(self, startinghero: str, endinghero: str, placement: str):
+    def update_stats(self, starting_hero: str, ending_hero: str, placement: str):
         self.df = self.df.append(
-            {"StartingHero": startinghero, "EndingHero": endinghero, "Placement": placement,
+            {"StartingHero": starting_hero, "EndingHero": ending_hero, "Placement": placement,
              "Timestamp": datetime.now().strftime("%Y-%m-%d")},
             ignore_index=True)
-        update_history(self.window, self.df, 1)
+        update_history(self.window, self.df)
         generate_stats(self.window, self.df)
