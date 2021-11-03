@@ -23,3 +23,4 @@ class Keys(Enum):
     GameStatus = "-GameStatus-"
     HealthGraph = "-HealthGraph-"
     StatsPageNum = "-StatsPageNum-"
+    ReattachButton = "-Reattach-"

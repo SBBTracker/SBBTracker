@@ -275,7 +275,8 @@ def construct_layout():
 
     layout = [[sg.Menu([['&File', ['&Export Stats', '&Delete Stats']], ['&Help', ['&Report an issue']]])],
               [sg.Text(text="Waiting for match to start...", font="Arial 28", k=Keys.GameStatus.value,
-                       justification='center')], application_tab_group]
+                       justification='center'),
+               sg.Button("Reattach to Storybook Brawl", key=Keys.ReattachButton.value)], application_tab_group]
 
     return layout
 
@@ -311,12 +312,25 @@ def the_gui():
             player_stats.export(Path(filename))
 
         elif event == 'Delete Stats':
-            choice = sg.popup_yes_no("This will remove ALL of your stats? Are you sure?")
+            choice = sg.popup_yes_no("This will remove ALL of your stats? Are you sure?",
+                                     keep_on_top=True)
             if choice == "Yes":
                 player_stats.delete()
         elif event == 'Report an issue':
             webbrowser.open_new_tab('https://github.com/SBBTracker/SBBTracker/issues')
+        elif event == Keys.ReattachButton.value:
+            choice = sg.popup_yes_no("Would you like to reattach to the Storybook Brawl log?\n"
+                                     "This can fix the tracker not connecting to the game.\n\n"
+                                     "You should restart the game before doing this,\n"
+                                     "otherwise you might re-import your previous games.", title="Reattach?")
+            if choice == "Yes":
+                try:
+                    os.remove(log_parser.offsetfile)
+                except:
+                    pass
+
         elif event == log_parser.JOB_NEWGAME:
+            window[Keys.ReattachButton.value].update(visible=False)
             for player_id in player_ids:
                 index = get_player_index(player_id)
                 graph = window[app.get_graph_key(index)]
@@ -354,7 +368,8 @@ def the_gui():
                 player_stats.update_stats(asset_utils.get_card_art_name(current_player.heroid, current_player.heroname),
                                           asset_utils.get_card_art_name(player.heroid, player.heroname), place)
         elif event == "GITHUB-UPDATE":
-            choice = sg.popup_yes_no("New version available!\nWould you like to go to the download page?")
+            choice = sg.popup_yes_no("New version available!\nWould you like to go to the download page?",
+                                     keep_on_top=True)
             if choice == "Yes":
                 webbrowser.open_new_tab('https://github.com/SBBTracker/SBBTracker/releases/latest')
 
