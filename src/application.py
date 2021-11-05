@@ -329,13 +329,14 @@ def customize_dates(dates: dict):
     layout = [[sg.Listbox(values=list(displays_to_keys), size=(40, 8), key="-DatesList-")],
               [sg.Button("Delete Date")],
               [sg.Text("Create a custom date range")],
-              [sg.Text("Label: "), sg.In(size=(15, 1), key="CustomDateNameIn")],
-              [sg.Text("Start Date: "),
-               sg.In(size=(10, 1), enable_events=True, key="StartDateIn", disabled=True, do_not_clear=True),
-               sg.CalendarButton("Pick date", format='%Y-%m-%d', target="StartDateIn", enable_events=True)],
-              [sg.Text("End Date: "),
-               sg.In(size=(10, 1), enable_events=True, key="EndDateIn", disabled=True, do_not_clear=True),
-               sg.CalendarButton("Pick date", format='%Y-%m-%d', target="EndDateIn", enable_events=True)],
+              [sg.Col([[sg.Text("Label: ")], [sg.Text("Start Date: ")], [sg.Text("End Date: ")]]),
+               sg.Col([[sg.In(size=(15, 1), key="CustomDateNameIn")],
+                       [sg.In(size=(10, 1), enable_events=True, key="StartDateIn",
+                              disabled=True, do_not_clear=True),
+                        sg.CalendarButton("Pick date", format='%Y-%m-%d', target="StartDateIn",
+                                          enable_events=True)],
+                       [sg.In(size=(10, 1), enable_events=True, key="EndDateIn", disabled=True, do_not_clear=True),
+                        sg.CalendarButton("Pick date", format='%Y-%m-%d', target="EndDateIn", enable_events=True)]])],
               [sg.Text("Fill out all fields", text_color="red", visible=False, key="-ERROR-")],
               [sg.Button("Add"), sg.Exit("Done")]]
     window = sg.Window("Custom date picker", layout, modal=True)
@@ -347,11 +348,15 @@ def customize_dates(dates: dict):
                 window["-ERROR-"].update(visible=True)
             else:
                 dates[values["CustomDateNameIn"]] = (values["StartDateIn"], values["EndDateIn"])
-                window["-DatesList-"].update(values={f"{k} - {v}": k for k, v in dates.items()})
+                displays_to_keys = {f"{k} - {v}": k for k, v in dates.items()}
+                window["-DatesList-"].update(values=displays_to_keys.keys())
         elif event == "Delete Date":
             selection = values["-DatesList-"]
-            del dates[displays_to_keys[selection[0]]]
-            window["-DatesList-"].update(values={f"{k} - {v}": k for k, v in dates.items()})
+            if selection:
+                to_del = displays_to_keys[selection[0]]
+                if to_del in dates:
+                    del dates[to_del]
+                    window["-DatesList-"].update(values={f"{k} - {v}": k for k, v in dates.items()})
         elif event == "Exit" or event == sg.WIN_CLOSED or event == "Done":
             break
 
