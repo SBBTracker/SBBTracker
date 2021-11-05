@@ -2,7 +2,7 @@ import math
 import os.path
 from datetime import datetime
 from os.path import expanduser
-from pathlib import Path, WindowsPath
+from pathlib import Path
 
 import PySimpleGUI
 import pandas as pd
@@ -10,7 +10,10 @@ import pandas as pd
 import asset_utils
 from application_constants import Keys, stats_per_page
 
-statsfile = WindowsPath(expanduser('~/Documents')).joinpath("SBBTracker/stats.csv")
+sbbtracker_folder = Path(expanduser('~/Documents')).joinpath("SBBTracker")
+statsfile = Path(expanduser('~/Documents')).joinpath("SBBTracker/stats.csv")
+if not sbbtracker_folder:
+    sbbtracker_folder.mkdir()
 
 headings = ["Hero", "# Matches", "Avg Place", "Top 4", "Wins"]
 
@@ -30,9 +33,11 @@ def generate_stats(window: PySimpleGUI.Window, df: pd.DataFrame):
                 total_wins = len(df.loc[bool_df & (df['Placement'] <= 1), 'Placement'])
                 data.append([hero, str(total_matches), str(avg), str(total_top4), str(total_wins)])
 
-            key = Keys.StartingHeroStats if hero_type == "StartingHero" else Keys.EndingHeroStats
-            table = window[key.value]
-            table.update(values=data)
+        key = Keys.StartingHeroStats if hero_type == "StartingHero" else Keys.EndingHeroStats
+        table = window[key.value]
+        padding = [["", "", "", ""] for _ in range(len(asset_utils.hero_ids) - len(data))]
+        data = data + padding
+        table.update(values=data)
 
 
 def update_history(window: PySimpleGUI.Window, df: pd.DataFrame, page_number: int = 1):
@@ -61,7 +66,8 @@ class PlayerStats:
                 self.df = self.df[["StartingHero", "EndingHero", "Placement", "Timestamp"]]
             if 'Timestamp' not in self.df.columns:
                 #  Pre-timestamp data gets an empty-timestamp column
-                self.df["Timestamp"] = " "
+                self.df["Timestamp"] = "1973-01-01"
+            self.df['Timestamp'] = self.df['Timestamp'].replace(r'^\s*$', "1973-01-01", regex=True)
             update_history(self.window, self.df, 1)
             generate_stats(self.window, self.df)
         else:
@@ -100,3 +106,12 @@ class PlayerStats:
             ignore_index=True)
         update_history(self.window, self.df)
         generate_stats(self.window, self.df)
+
+    def filter(self, start_date: str, end_date: str):
+        df = self.df
+        df['Timestamp'] = pd.to_datetime(df['Timestamp'], format="%Y-%m-%d")
+        if start_date == "1973-01-01":
+            generate_stats(self.window, df)
+        else:
+            filtered = df[(df['Timestamp'] >= start_date) & (df['Timestamp'] <= end_date)]
+            generate_stats(self.window, filtered)

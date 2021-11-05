@@ -1,10 +1,12 @@
 #!/usr/bin/python3
+import json
 import operator
 import os
 import sys
 import threading
 import webbrowser
 from collections import defaultdict
+from datetime import date
 from enum import Enum
 from pathlib import Path
 
@@ -218,6 +220,39 @@ def get_player_index(player_id: str):
     return player_ids.index(player_id)
 
 
+settings_file = stats.sbbtracker_folder.joinpath("settings.json")
+
+
+def load_settings():
+    if settings_file.exists():
+        with open(settings_file, "r") as json_file:
+            return json.load(json_file)
+    else:
+        return {}
+
+
+settings = load_settings()
+
+
+def save_settings():
+    with open(settings_file, "w") as json_file:
+        json.dump(settings, json_file)
+
+
+default_dates = {
+    "All": ("1970-01-01", date.today().strftime("%Y-%m-%d")),
+    "Patch 63.4": ("2021-10-18", date.today().strftime("%Y-%m-%d")),
+    "Patch 63.3": ("2021-10-04", "2021-10-18")
+}
+
+custom_dates = settings["custom_dates"] if "custom_dates" in settings else {}
+
+# Cleanup any old custom dates that people made
+for key in custom_dates:
+    if key in default_dates:
+        del custom_dates[key]
+
+
 def construct_layout():
     player_tabs = []
     for num in range(0, 8):
@@ -227,7 +262,7 @@ def construct_layout():
             [sg.Graph(canvas_size=(1350, 800), graph_bottom_left=(0, 800),
                       graph_top_right=(1350, 0),
                       key=app.get_graph_key(num))]],
-            title=name, k=app.get_tab_key(num)))
+            title=name, key=app.get_tab_key(num)))
 
     player_tab_group = [[sg.TabGroup(layout=[player_tabs])]]
 
@@ -258,6 +293,7 @@ def construct_layout():
         ]], title="Ending Hero Stats")
     ]], expand_y=True)
 
+    all_dates = default_dates | custom_dates
     application_tab_group = [[sg.TabGroup(layout=[[
         sg.Tab(layout=player_tab_group, title="Board Comps"),
         sg.Tab(layout=[[sg.Canvas(key=Keys.HealthGraph.value)]], title="Health Graph"),
@@ -269,16 +305,57 @@ def construct_layout():
                                        [sg.Button("Prev"), sg.Text("Page: 1", key=Keys.StatsPageNum.value),
                                         sg.Button("Next")]],
                                expand_y=True, element_justification="center"),
-                        hero_stats_tab]],
+                        hero_stats_tab,
+                        sg.Col([[sg.Text("Filter stats:")],
+                                [sg.Combo(list(all_dates.keys()), readonly=True,
+                                          default_value=list(default_dates.keys())[0],
+                                          key=Keys.FilterableDates.value),
+                                 sg.Button("Filter", key=Keys.FilterDateButton.value),
+                                 sg.Button("Customize Dates", key=Keys.CustomDateButton.value)]],
+                               expand_y=True)]],
                title="Match History")
     ]])]]
 
     layout = [[sg.Menu([['&File', ['&Export Stats', '&Delete Stats']], ['&Help', ['&Report an issue']]])],
-              [sg.Text(text="Waiting for match to start...", font="Arial 28", k=Keys.GameStatus.value,
+              [sg.Text(text="Waiting for match to start...", font="Arial 28", key=Keys.GameStatus.value,
                        justification='center'),
                sg.Button("Reattach to Storybook Brawl", key=Keys.ReattachButton.value)], application_tab_group]
 
     return layout
+
+
+def customize_dates(dates: dict):
+    displays_to_keys = {f"{k} - {v}": k for k, v in dates.items()}
+    layout = [[sg.Listbox(values=list(displays_to_keys), size=(40, 8), key="-DatesList-")],
+              [sg.Button("Delete Date")],
+              [sg.Text("Create a custom date range")],
+              [sg.Text("Label: "), sg.In(size=(15, 1), key="CustomDateNameIn")],
+              [sg.Text("Start Date: "),
+               sg.In(size=(10, 1), enable_events=True, key="StartDateIn", disabled=True, do_not_clear=True),
+               sg.CalendarButton("Pick date", format='%Y-%m-%d', target="StartDateIn", enable_events=True)],
+              [sg.Text("End Date: "),
+               sg.In(size=(10, 1), enable_events=True, key="EndDateIn", disabled=True, do_not_clear=True),
+               sg.CalendarButton("Pick date", format='%Y-%m-%d', target="EndDateIn", enable_events=True)],
+              [sg.Text("Fill out all fields", text_color="red", visible=False, key="-ERROR-")],
+              [sg.Button("Add"), sg.Exit("Done")]]
+    window = sg.Window("Custom date picker", layout, modal=True)
+    while True:
+        event, values = window.read()
+        if event == "Add":
+            custom_date = [values["CustomDateNameIn"], values["StartDateIn"], values["EndDateIn"]]
+            if any([not val for val in custom_date]):
+                window["-ERROR-"].update(visible=True)
+            else:
+                dates[values["CustomDateNameIn"]] = (values["StartDateIn"], values["EndDateIn"])
+                window["-DatesList-"].update(values={f"{k} - {v}": k for k, v in dates.items()})
+        elif event == "Delete Date":
+            selection = values["-DatesList-"]
+            del dates[displays_to_keys[selection[0]]]
+            window["-DatesList-"].update(values={f"{k} - {v}": k for k, v in dates.items()})
+        elif event == "Exit" or event == sg.WIN_CLOSED or event == "Done":
+            break
+
+    window.close()
 
 
 def the_gui():
@@ -328,7 +405,15 @@ def the_gui():
                     os.remove(log_parser.offsetfile)
                 except:
                     pass
-
+        elif event == Keys.CustomDateButton.value:
+            customize_dates(custom_dates)
+            all_dates = default_dates | custom_dates
+            window[Keys.FilterableDates.value].update(list(all_dates.keys())[0], values=list(all_dates.keys()))
+        elif event == Keys.FilterDateButton.value:
+            selected_label = values[Keys.FilterableDates.value]
+            all_dates = default_dates | custom_dates
+            selected_date = all_dates[selected_label]
+            player_stats.filter(selected_date[0], selected_date[1])
         elif event == log_parser.JOB_NEWGAME:
             window[Keys.ReattachButton.value].update(visible=False)
             for player_id in player_ids:
@@ -384,6 +469,8 @@ def the_gui():
     # if user exits the window, then close the window and exit the GUI func
     window.close()
     player_stats.save()
+    settings["custom_dates"] = custom_dates
+    save_settings()
 
 
 if __name__ == '__main__':

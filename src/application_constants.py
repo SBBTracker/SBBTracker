@@ -24,3 +24,6 @@ class Keys(Enum):
     HealthGraph = "-HealthGraph-"
     StatsPageNum = "-StatsPageNum-"
     ReattachButton = "-Reattach-"
+    CustomDateButton = "-CustomDate-"
+    FilterableDates = "-FilterableDates-"
+    FilterDateButton = "-FilterDateButton-"
