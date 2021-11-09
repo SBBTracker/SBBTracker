@@ -28,7 +28,7 @@ def generate_stats(window: PySimpleGUI.Window, df: pd.DataFrame):
             if not hero.isspace():
                 bool_df = df[hero_type] == hero
                 total_matches = sum(bool_df)
-                avg = round(df.loc[bool_df, 'Placement'].sum() / total_matches, 2)
+                avg = round(df.loc[bool_df, 'Placement'].mean(), 2)
                 total_top4 = len(df.loc[bool_df & (df['Placement'] <= 4), 'Placement'])
                 total_wins = len(df.loc[bool_df & (df['Placement'] <= 1), 'Placement'])
                 data.append([hero, str(total_matches), str(avg), str(total_top4), str(total_wins)])

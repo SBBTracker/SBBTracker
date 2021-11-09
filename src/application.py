@@ -203,11 +203,11 @@ def update_card(window: sg.Window, playerid: str, slot, cardname: str, content_i
         card_loc = get_image_location(int(slot))
         actually_is_golden = is_golden if isinstance(is_golden, bool) else is_golden == "True"
         path = asset_utils.get_card_path(cardname, content_id, actually_is_golden)
-        card_id = graph.draw_image(filename=path, location=card_loc)
         slot_graph_ids = graph_ids[str(index)][str(slot)]
-        if "Empty" in path and slot_graph_ids:
+        if slot_graph_ids:
             for graph_id in slot_graph_ids.values():
                 graph.delete_figure(graph_id)
+        card_id = graph.draw_image(filename=path, location=card_loc)
         add_asset_id(graph, playerid, str(slot), "card", card_id)
         if actually_is_golden:
             add_asset_id(graph, playerid, str(slot), 'golden', draw_golden_overlay(graph, card_loc))
@@ -241,8 +241,8 @@ def save_settings():
 
 default_dates = {
     "All": ("1970-01-01", date.today().strftime("%Y-%m-%d")),
-    "Patch 63.4": ("2021-10-18", date.today().strftime("%Y-%m-%d")),
-    "Patch 63.3": ("2021-10-04", "2021-10-18")
+    "Patch 64.2": ("2021-11-08", date.today().strftime("%Y-%m-%d")),
+    "Patch 63.4": ("2021-10-18", "2021-11-08")
 }
 
 custom_dates = settings["custom_dates"] if "custom_dates" in settings else {}

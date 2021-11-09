@@ -1,7 +1,7 @@
-import os
 from pathlib import Path
 
 hero_ids = {
+    "SBB_HERO_APOCALYPSE": "Apocalypse",
     "SBB_HERO_PRINCESSBELLE": "Beauty",
     "SBB_HERO_BIGBADWOLF": "Big Bad Wolf",
     "SBB_HERO_THECOLLECTOR": "Celestial Tiger",
