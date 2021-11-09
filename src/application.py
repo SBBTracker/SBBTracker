@@ -350,6 +350,7 @@ def customize_dates(dates: dict):
                 dates[values["CustomDateNameIn"]] = (values["StartDateIn"], values["EndDateIn"])
                 displays_to_keys = {f"{k} - {v}": k for k, v in dates.items()}
                 window["-DatesList-"].update(values=displays_to_keys.keys())
+                window["-ERROR-"].update(visible=False)
         elif event == "Delete Date":
             selection = values["-DatesList-"]
             if selection:
