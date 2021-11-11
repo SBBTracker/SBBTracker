@@ -30,13 +30,18 @@ def generate_stats(window: PySimpleGUI.Window, df: pd.DataFrame):
                 total_matches = sum(bool_df)
                 avg = round(df.loc[bool_df, 'Placement'].mean(), 2)
                 total_top4 = len(df.loc[bool_df & (df['Placement'] <= 4), 'Placement'])
-                total_wins = len(df.loc[bool_df & (df['Placement'] <= 1), 'Placement'])
+                total_wins = len(df.loc[bool_df & (df['Placement'] == 1), 'Placement'])
                 data.append([hero, str(total_matches), str(avg), str(total_top4), str(total_wins)])
 
         key = Keys.StartingHeroStats if hero_type == "StartingHero" else Keys.EndingHeroStats
         table = window[key.value]
         padding = [["", "", "", ""] for _ in range(len(asset_utils.hero_ids) - len(data))]
         data = data + padding
+        global_matches = len(df)
+        global_avg = round(df["Placement"].mean(), 2)
+        global_top4 = len(df.loc[df['Placement'] <= 4, 'Placement'])
+        global_wins = len(df.loc[df['Placement'] == 1, 'Placement'])
+        data.insert(0, ["All Heroes", global_matches, global_avg, global_top4, global_wins])
         table.update(values=data)
 
 
