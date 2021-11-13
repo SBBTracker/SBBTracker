@@ -72,7 +72,11 @@ class PlayerStats:
             if 'Timestamp' not in self.df.columns:
                 #  Pre-timestamp data gets an empty-timestamp column
                 self.df["Timestamp"] = "1973-01-01"
+            if '+/-MMR' not in self.df.columns:
+                #  Pre-MMR data gets 0 MMR for each game
+                self.df["+/-MMR"] = "0"
             self.df['Timestamp'] = self.df['Timestamp'].replace(r'^\s*$', "1973-01-01", regex=True)
+            #  clean up empty timestamps into some old time (that I thought was unix epoch but was off by 3 years lol)
             update_history(self.window, self.df, 1)
             generate_stats(self.window, self.df)
         else:
@@ -104,10 +108,10 @@ class PlayerStats:
     def update_page(self, page_num: int):
         update_history(self.window, self.df, page_num)
 
-    def update_stats(self, starting_hero: str, ending_hero: str, placement: str):
+    def update_stats(self, starting_hero: str, ending_hero: str, placement: str, mmr_change: str):
         self.df = self.df.append(
             {"StartingHero": starting_hero, "EndingHero": ending_hero, "Placement": placement,
-             "Timestamp": datetime.now().strftime("%Y-%m-%d")},
+             "Timestamp": datetime.now().strftime("%Y-%m-%d"), "+/-MMR": str(mmr_change)},
             ignore_index=True)
         update_history(self.window, self.df)
         generate_stats(self.window, self.df)

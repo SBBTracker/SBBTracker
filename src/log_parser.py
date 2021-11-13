@@ -162,13 +162,12 @@ def process_line(line, ifs, dt=None, path=[]):
             if current_key == 'DisplayName' and line.find(healthstr) != line.rfind(healthstr):
                 instances = []
                 cpy = line
-                while cpy.find(healthstr) != -1: 
+                while cpy.find(healthstr) != -1:
                     loc = cpy.find(healthstr)
-                    instances.append(loc + len(instances)*len(healthstr))
+                    instances.append(loc + len(instances) * len(healthstr))
                     cpy = cpy.replace(healthstr, '', 1)
 
                 pipedis = instances[-2]
-
 
         # Handle game text having newlines
         # By grabbing the next line and attaching it if we
@@ -240,8 +239,6 @@ def parse(ifs):
     for line in ifs:
         if 'NEW GAME STARTED' in line:
             yield Action(info=None, game_state=GameState.START)
-        elif 'GAME SERVER DESTROYED!' in line:
-            yield Action(info=None, game_state=GameState.END)
         elif 'QueueActionRPC' in line:
             chop_idx = line.find('-') + 1
             line = line[chop_idx:]
@@ -262,14 +259,10 @@ class Action:
             self.task = TASK_NEWGAME
             return
 
-        if game_state == GameState.END:
-            self.task = TASK_ENDGAME
-            return
-
         if info is not None:
 
             self.action_type = info['Action']['Type']
-            if self.action_type == EVENT_ADDPLAYER:
+            if self.action_type == EVENT_ADDPLAYER or self.action_type == EVENT_ENTERRESULTSPHASE:
                 self.task = TASK_ADDPLAYER
                 self.displayname = info['DisplayName']
                 self.heroname = info['Hero']['Card']['DisplayName']
@@ -278,6 +271,11 @@ class Action:
                 self.playerid = info['Hero']['Card']['PlayerId']
                 self.place = info['Place']
                 self.attrs = ['displayname', 'heroname', 'playerid', 'health', 'heroid', 'place']
+
+                if self.action_type == EVENT_ENTERRESULTSPHASE:
+                    self.task = TASK_ENDGAME
+                    self.mmr = info['Hero']['Card']['RankReward']
+                    self.attrs.append('mmr')
 
             elif self.action_type == EVENT_ENTERBRAWLPHASE:
                 self.task = TASK_GATHERIDS
@@ -311,6 +309,7 @@ class Action:
             elif self.action_type == EVENT_UPDATEEMOTES:
                 self.task = TASK_GETTHISPLAYER
                 self.attrs = []
+
             else:
                 self.task = None
                 self.attrs = []
@@ -329,7 +328,7 @@ class Update:
         self.state = state
 
 
-class SBBPygtal(Pygtail):
+class SBBPygtail(Pygtail):
     def _check_rotated_filename_candidates(self):
         return self.filename
 
@@ -352,7 +351,7 @@ class SBBPygtal(Pygtail):
         return self._fh
 
 
-def run(window):
+def run(window, log=logfile):
     inbrawl = False
     current_round = None
     current_player_stats = None
@@ -360,7 +359,7 @@ def run(window):
     last_player_timestamp = -2
     while True:
         prev_action = None
-        ifs = SBBPygtal(filename=str(logfile))
+        ifs = SBBPygtail(filename=str(log))
         for action in parse(ifs):
             if action.task == TASK_NEWGAME:
                 inbrawl = False
@@ -390,7 +389,7 @@ def run(window):
             elif action.task == TASK_GETROUND:
                 window.write_event_value(JOB_ROUNDINFO, (JOB_ROUNDINFO, action))
             elif action.task == TASK_ENDGAME:
-                window.write_event_value(JOB_ENDGAME, current_player_stats)
+                window.write_event_value(JOB_ENDGAME, action)
                 current_player_stats = None
             elif action.action_type != EVENT_ADDPLAYER and int(action.timestamp) == (last_player_timestamp + 1):
                 window.write_event_value(JOB_ENDCOMBAT, action.timestamp)

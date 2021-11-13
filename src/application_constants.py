@@ -27,3 +27,4 @@ class Keys(Enum):
     CustomDateButton = "-CustomDate-"
     FilterableDates = "-FilterableDates-"
     FilterDateButton = "-FilterDateButton-"
+    StatGraphs = "-StatGraphs-"
