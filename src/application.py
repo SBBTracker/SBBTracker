@@ -9,6 +9,7 @@ from collections import defaultdict
 from datetime import date
 from enum import Enum
 from pathlib import Path
+from queue import Queue
 
 import PySimpleGUI as sg
 import matplotlib.pyplot as plt
@@ -73,8 +74,7 @@ def add_asset_id(graph: sg.Graph, player_id: str, slot: str, asset_type: str, ne
     slot_graph_ids[asset_type] = new_id
 
 
-def update_player(window: sg.Window, update: log_parser.Update, round_num: int):
-    state = update.state
+def update_player(window: sg.Window, state, round_num: int):
     index = get_player_index(state.playerid)
     player_tab = window[app.get_tab_key(index)]
     real_hero_name = asset_utils.get_card_art_name(state.heroid, state.heroname)
@@ -85,8 +85,8 @@ def update_player(window: sg.Window, update: log_parser.Update, round_num: int):
     ids_to_heroes[state.playerid] = real_hero_name
 
 
-def update_board(window: sg.Window, update: log_parser.Update):
-    for playerid, actions in update.state.items():
+def update_board(window: sg.Window, state):
+    for playerid, actions in state.items():
         used_slots = []
         for action in actions:
             slot = action.slot
@@ -330,6 +330,14 @@ def customize_dates(dates: dict):
     window.close()
 
 
+def log_queue(window: sg.Window):
+    queue = Queue()
+    threading.Thread(target=log_parser.run, args=(queue,), daemon=True).start()
+    while True:
+        update = queue.get()
+        window.write_event_value(update.job, update.state)
+
+
 def the_gui():
     """
     Starts and executes the GUI
@@ -341,7 +349,7 @@ def the_gui():
 
     window = sg.Window('SBBTracker', construct_layout(), resizable=True, finalize=True, size=(1350, 820),
                        icon=resource_path("assets/sbbt.ico"))
-    threading.Thread(target=log_parser.run, args=(window,), daemon=True).start()
+    threading.Thread(target=log_queue, args=(window,), daemon=True).start()
     threading.Thread(target=update_check.run, args=(window,), daemon=True).start()
     player_stats = PlayerStats(window)
     current_player = None
@@ -411,14 +419,14 @@ def the_gui():
         elif event == log_parser.JOB_INITCURRENTPLAYER:
             current_player = values[event]
         elif event == log_parser.JOB_ROUNDINFO:
-            round_number = values[event][1].round
+            round_number = values[event].round
             window[Keys.GameStatus.value].update(f"Round: {round_number}")
         elif event == log_parser.JOB_PLAYERINFO:
             updated_player = values[event]
             update_player(window, updated_player, round_number)
         elif event == log_parser.JOB_BOARDINFO:
             update_board(window, values[event])
-            for player_id in values[event].state:
+            for player_id in values[event]:
                 index = get_player_index(player_id)
                 window[app.get_player_round_key(index)].update(f"Last seen round: {round_number}")
         elif event == log_parser.JOB_ENDCOMBAT:

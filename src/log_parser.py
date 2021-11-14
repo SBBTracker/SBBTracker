@@ -6,6 +6,7 @@ from collections import defaultdict
 from enum import Enum
 from os.path import exists
 from pathlib import Path
+from queue import Queue
 
 from pygtail import Pygtail
 
@@ -351,7 +352,7 @@ class SBBPygtail(Pygtail):
         return self._fh
 
 
-def run(window, log=logfile):
+def run(queue: Queue, log=logfile):
     inbrawl = False
     current_round = None
     current_player_stats = None
@@ -366,12 +367,12 @@ def run(window, log=logfile):
                 current_round = None
                 lastupdated = dict()
 
-                window.write_event_value(JOB_NEWGAME, Update(JOB_NEWGAME, None))
+                queue.put(Update(JOB_NEWGAME, None))
             elif not inbrawl and not current_player_stats and action.task == TASK_ADDPLAYER and prev_action.task == TASK_GETTHISPLAYER:
                 current_player_stats = action
-                window.write_event_value(JOB_INITCURRENTPLAYER, current_player_stats)
+                queue.put(Update(JOB_INITCURRENTPLAYER, current_player_stats))
             elif not inbrawl and action.task == TASK_ADDPLAYER:
-                window.write_event_value(JOB_PLAYERINFO, Update(JOB_PLAYERINFO, action))
+                queue.put(Update(JOB_PLAYERINFO, action))
                 last_player_timestamp = int(action.timestamp)
             elif not inbrawl and action.task == TASK_GATHERIDS:
                 inbrawl = True
@@ -384,15 +385,15 @@ def run(window, log=logfile):
                 if action.zone in ['Spell', 'Treasure', 'Character']:
                     brawldt[action.playerid].append(action)
             elif inbrawl and action.task == TASK_ENDROUNDGATHER:
-                window.write_event_value(JOB_BOARDINFO, Update(JOB_BOARDINFO, brawldt))
+                queue.put(Update(JOB_BOARDINFO, brawldt))
                 inbrawl = False
             elif action.task == TASK_GETROUND:
-                window.write_event_value(JOB_ROUNDINFO, (JOB_ROUNDINFO, action))
+                queue.put(Update(JOB_ROUNDINFO, action))
             elif action.task == TASK_ENDGAME:
-                window.write_event_value(JOB_ENDGAME, action)
+                queue.put(Update(JOB_ENDGAME, action))
                 current_player_stats = None
             elif action.action_type != EVENT_ADDPLAYER and int(action.timestamp) == (last_player_timestamp + 1):
-                window.write_event_value(JOB_ENDCOMBAT, action.timestamp)
+                queue.put(Update(JOB_ENDCOMBAT, action.timestamp))
             else:
                 pass
 
