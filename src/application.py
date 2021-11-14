@@ -12,13 +12,11 @@ from pathlib import Path
 
 import PySimpleGUI as sg
 import matplotlib.pyplot as plt
-import pandas as pd
 import seaborn as sns
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from matplotlib.ticker import MaxNLocator
 
 import application_constants as app
 import asset_utils
+import graphs
 import log_parser
 import stats
 import update_check
@@ -66,75 +64,6 @@ def resource_path(relative_path):
 graph_ids = {str(player): {str(slot.value): {} for slot in Slot} for player in range(0, 9)}
 names_to_health = defaultdict(dict)
 ids_to_heroes = {}
-
-
-def draw_matplotlib_figure(canvas, figure):
-    figure_canvas_agg = FigureCanvasTkAgg(figure, canvas)
-    figure_canvas_agg.draw()
-    figure_canvas_agg.get_tk_widget().pack(side='top', fill='both', expand=1)
-    return figure_canvas_agg
-
-
-def delete_fig_agg(fig_agg):
-    fig_agg.get_tk_widget().forget()
-    plt.close('all')
-
-
-def make_health_graph():
-    fig, ax = plt.subplots()
-    last_values = []
-    for player in names_to_health.keys():
-        x = []
-        y = []
-        for round_num in names_to_health[player]:
-            x.append(round_num)
-            y.append(names_to_health[player][round_num])
-        ax.plot(x, y, label=ids_to_heroes[player])
-        last_values.append((x[-1], y[-1]))
-        ax.annotate(y[-1], (x[-1], y[-1]))
-    ax.legend()
-    ax.set_xlabel("Turn")
-    ax.set_ylabel("Health")
-    plt.axhline(y=0, color='w', linewidth=2.0)
-    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-    ax.yaxis.set_major_locator(MaxNLocator(integer=True))
-    fig.set_size_inches(13.5, 18)
-    handles, labels = ax.get_legend_handles_labels()
-    healths = [health for (_, health) in last_values]
-    # sort both labels and handles by labels
-    _, labels, handles = zip(*sorted(zip(healths, labels, handles), key=lambda t: t[0], reverse=True))
-    ax.legend(handles, labels)
-    return plt.gcf()
-
-
-def make_hero_freq_graph(df: pd.DataFrame):
-    fig, ax = plt.subplots()
-    fig.set_size_inches(13.5, 18)
-    sorted_df = df.sort_values(by='StartingHero', ascending=True)
-    sorted_df = sorted_df[~sorted_df['StartingHero'].str.isspace()]
-    heroes = sorted_df["StartingHero"].unique()
-    matches = sorted_df.groupby("StartingHero").count()["Placement"].values
-    firsts = sorted_df.groupby("StartingHero").apply(lambda x: sum(x.Placement <= 1)).values
-    top4s = sorted_df.groupby("StartingHero").apply(lambda x: sum(x.Placement <= 4)) - firsts
-    top8s = sorted_df.groupby("StartingHero").apply(lambda x: sum(x.Placement > 4)).values
-    sort_by_wins = matches.argsort()[::-1]
-    heroes = heroes[sort_by_wins]
-    firsts = firsts[sort_by_wins]
-    top4s = top4s[sort_by_wins]
-    top8s = top8s[sort_by_wins]
-    ax.barh(heroes, matches[sort_by_wins], .8, color='tab:red', label="Top 8s")
-    # ax.barh(heroes, top8s, .8, color='tab:red', label="Top 8s")
-    # ax.barh(heroes, top4s, .8, left=top8s, color='tab:green', label="Top 4s")
-    # ax.barh(heroes, firsts, .8, left=(top4s + top8s), color='gold', label="Wins")
-    ind = range(max(matches) + 1)
-    ax.invert_yaxis()
-    ax.grid(axis='y')
-    ax.set_xticks(ind)
-    plt.title("Matches per Hero")
-    # ax.legend()
-    # ax.set_yticklabels(heroes, rotation=90)
-
-    return plt.gcf()
 
 
 def add_asset_id(graph: sg.Graph, player_id: str, slot: str, asset_type: str, new_id):
@@ -327,7 +256,8 @@ def construct_layout():
     all_dates = default_dates | custom_dates
     application_tab_group = [[sg.TabGroup(layout=[[
         sg.Tab(layout=player_tab_group, title="Board Comps"),
-        sg.Tab(layout=[[sg.Canvas(key=Keys.HealthGraph.value)]], title="Health Graph"),
+        sg.Tab(layout=[[sg.Canvas(key=Keys.HealthGraph.value)]],
+               title="Health Graph"),
         sg.Tab(layout=[[sg.Col(layout=[[sg.Table(values=[['' for __ in range(4)] for _ in range(40)],
                                                  headings=["Starting Hero", "Ending Hero", "Place", "+/-MMR"],
                                                  key=Keys.MatchStats.value, hide_vertical_scroll=True,
@@ -345,7 +275,11 @@ def construct_layout():
                                  sg.Button("Customize Dates", key=Keys.CustomDateButton.value)]],
                                expand_y=True)]],
                title="Match History"),
-        sg.Tab(layout=[[sg.Canvas(key=Keys.StatGraphs.value)]], title="Stats Graphs")
+        sg.Tab(layout=[
+            [sg.Combo([graphs.matches_per_hero, graphs.mmr_change], readonly=True, key=Keys.StatGraphsCombo.value,
+                      enable_events=True, default_value=graphs.matches_per_hero)],
+            [sg.Canvas(key=Keys.StatGraphs.value)]],
+            title="Stats Graphs")
     ]])]]
 
     layout = [[sg.Menu([['&File', ['&Export Stats', '&Delete Stats']], ['&Help', ['&Report an issue']]])],
@@ -410,9 +344,10 @@ def the_gui():
     threading.Thread(target=log_parser.run, args=(window,), daemon=True).start()
     threading.Thread(target=update_check.run, args=(window,), daemon=True).start()
     player_stats = PlayerStats(window)
-    draw_matplotlib_figure(window[Keys.StatGraphs.value].TKCanvas, make_hero_freq_graph(player_stats.df))
     current_player = None
     health_fig_agg = None
+    stats_graph_agg = graphs.draw_matplotlib_figure(window[Keys.StatGraphs.value].TKCanvas,
+                                                    graphs.make_hero_freq_graph(player_stats.df))
     round_number = 0
     page_number = 1
 
@@ -453,6 +388,12 @@ def the_gui():
             all_dates = default_dates | custom_dates
             selected_date = all_dates[selected_label]
             player_stats.filter(selected_date[0], selected_date[1])
+        elif event == Keys.StatGraphsCombo.value:
+            graph_type = values[event]
+            if stats_graph_agg is not None:
+                graphs.delete_fig_agg(stats_graph_agg)
+            stats_graph_agg = graphs.draw_matplotlib_figure(window[Keys.StatGraphs.value].TKCanvas,
+                                                            graphs.make_stats_graph(player_stats.df, graph_type))
         elif event == log_parser.JOB_NEWGAME:
             window[Keys.ReattachButton.value].update(visible=False)
             for player_id in player_ids:
@@ -482,8 +423,9 @@ def the_gui():
                 window[app.get_player_round_key(index)].update(f"Last seen round: {round_number}")
         elif event == log_parser.JOB_ENDCOMBAT:
             if health_fig_agg is not None:
-                delete_fig_agg(health_fig_agg)
-            health_fig_agg = draw_matplotlib_figure(window[Keys.HealthGraph.value].TKCanvas, make_health_graph())
+                graphs.delete_fig_agg(health_fig_agg)
+            health_fig_agg = graphs.draw_matplotlib_figure(window[Keys.HealthGraph.value].TKCanvas,
+                                                           graphs.make_health_graph(names_to_health, ids_to_heroes))
             window.refresh()
         elif event == log_parser.JOB_ENDGAME:
             player = values[event]
@@ -492,7 +434,6 @@ def the_gui():
                 player_stats.update_stats(asset_utils.get_card_art_name(current_player.heroid, current_player.heroname),
                                           asset_utils.get_card_art_name(player.heroid, player.heroname), place,
                                           player.mmr)
-                draw_matplotlib_figure(window[Keys.StatGraphs.value].TKCanvas, make_hero_freq_graph(player_stats.df))
         elif event == "GITHUB-UPDATE":
             choice = sg.popup_yes_no("New version available!\nWould you like to go to the download page?",
                                      keep_on_top=True)
