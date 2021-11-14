@@ -79,9 +79,12 @@ def make_hero_freq_graph(df: pd.DataFrame):
 def make_mmr_graph(df: pd.DataFrame):
     fig, ax = plt.subplots()
     fig.set_size_inches(13.5, 18)
-    data = df["+/-MMR"].values
+    data = df["+/-MMR"].tail(20).values
     timeseries = range(len(data))
     ax.plot(timeseries, data)
+    ax.set_ylabel("Change in MMR")
+    plt.title("Last 20 MMR Changes")
+    plt.xticks(range(1, 21))
 
     return plt.gcf()
 
