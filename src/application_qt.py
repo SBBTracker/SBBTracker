@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
 )
 
 import asset_utils
-from src import log_parser
+import log_parser
 
 art_dim = (161, 204)
 att_loc = (26, 181)
