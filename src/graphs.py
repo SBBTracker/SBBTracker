@@ -47,29 +47,30 @@ def make_health_graph(names_to_health: dict, ids_to_heroes: dict):
 
 
 def make_hero_freq_graph(df: pd.DataFrame):
-    fig, ax = plt.subplots()
-    fig.set_size_inches(13.5, 18)
-    sorted_df = df.sort_values(by='StartingHero', ascending=True)
-    sorted_df = sorted_df[~sorted_df['StartingHero'].str.isspace()]
-    heroes = sorted_df["StartingHero"].unique()
-    matches = sorted_df.groupby("StartingHero").count()["Placement"].values
-    firsts = sorted_df.groupby("StartingHero").apply(lambda x: sum(x.Placement <= 1)).values
-    top4s = sorted_df.groupby("StartingHero").apply(lambda x: sum(x.Placement <= 4)) - firsts
-    top8s = sorted_df.groupby("StartingHero").apply(lambda x: sum(x.Placement > 4)).values
-    sort_by_wins = matches.argsort()[::-1]
-    heroes = heroes[sort_by_wins]
-    firsts = firsts[sort_by_wins]
-    top4s = top4s[sort_by_wins]
-    top8s = top8s[sort_by_wins]
-    ax.barh(heroes, matches[sort_by_wins], .8, color='tab:red', label="Top 8s")
-    # ax.barh(heroes, top8s, .8, color='tab:red', label="Top 8s")
-    # ax.barh(heroes, top4s, .8, left=top8s, color='tab:green', label="Top 4s")
-    # ax.barh(heroes, firsts, .8, left=(top4s + top8s), color='gold', label="Wins")
-    ind = range(max(matches) + 1)
-    ax.invert_yaxis()
-    ax.grid(axis='y')
-    ax.set_xticks(ind)
-    plt.title("Matches per Hero")
+    if len(df.index) > 0:
+        fig, ax = plt.subplots()
+        fig.set_size_inches(13.5, 18)
+        sorted_df = df.sort_values(by='StartingHero', ascending=True)
+        sorted_df = sorted_df[~sorted_df['StartingHero'].str.isspace()]
+        heroes = sorted_df["StartingHero"].unique()
+        matches = sorted_df.groupby("StartingHero").count()["Placement"].values
+        firsts = sorted_df.groupby("StartingHero").apply(lambda x: sum(x.Placement <= 1)).values
+        top4s = sorted_df.groupby("StartingHero").apply(lambda x: sum(x.Placement <= 4)) - firsts
+        top8s = sorted_df.groupby("StartingHero").apply(lambda x: sum(x.Placement > 4)).values
+        sort_by_wins = matches.argsort()[::-1]
+        heroes = heroes[sort_by_wins]
+        firsts = firsts[sort_by_wins]
+        top4s = top4s[sort_by_wins]
+        top8s = top8s[sort_by_wins]
+        ax.barh(heroes, matches[sort_by_wins], .8, color='tab:red', label="Top 8s")
+        # ax.barh(heroes, top8s, .8, color='tab:red', label="Top 8s")
+        # ax.barh(heroes, top4s, .8, left=top8s, color='tab:green', label="Top 4s")
+        # ax.barh(heroes, firsts, .8, left=(top4s + top8s), color='gold', label="Wins")
+        ind = range(max(matches) + 1)
+        ax.invert_yaxis()
+        ax.grid(axis='y')
+        ax.set_xticks(ind)
+        plt.title("Matches per Hero")
     # ax.legend()
     # ax.set_yticklabels(heroes, rotation=90)
 
