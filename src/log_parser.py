@@ -304,8 +304,8 @@ class Action:
 
             elif self.action_type == EVENT_ENTERSHOPPHASE:
                 self.task = TASK_GETROUND
-                self.round = int(info['Round'])
-                self.attrs = ['round']
+                self.round_num = int(info['Round'])
+                self.attrs = ['round_num']
 
             elif self.action_type == EVENT_UPDATEEMOTES:
                 self.task = TASK_GETTHISPLAYER
