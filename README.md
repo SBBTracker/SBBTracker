@@ -1,7 +1,9 @@
 # SBBTracker <img src="assets/icon.png" width="50" height="50">
 A game tracker for storybook brawl
 
-### Features
+Join the SBBTracker Discord: [![SBBTracker discord](https://discordapp.com/api/guilds/909995539888762902/widget.png)](https://discord.gg/2AJctfj239)
+
+## Features
 * Keep track of previous opponent's boards
 * See history of players' healths
 * Record game placements
