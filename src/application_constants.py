@@ -13,7 +13,7 @@ def get_player_round_key(index: int):
     return f"-round{index}-"
 
 
-stats_per_page = 37
+stats_per_page = 20
 
 
 class Keys(Enum):

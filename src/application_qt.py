@@ -1,26 +1,30 @@
 import operator
-import os
 import sys
 import threading
 from queue import Queue
 
-from PySide6.QtCore import QPoint, QRect, QSize
-from PySide6.QtGui import QBrush, QColor, QFont, QFontMetrics, QPainter, QPainterPath, QPen, QPixmap
+from PySide6.QtCore import QPoint, QRect, QSize, Qt
+from PySide6.QtGui import QAction, QBrush, QColor, QFont, QFontMetrics, QPainter, QPainterPath, QPen, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
-    QLabel,
+    QHBoxLayout, QLabel,
     QMainWindow,
-    QTabWidget, QVBoxLayout,
+    QPushButton, QTabWidget, QTableWidget, QTableWidgetItem, QVBoxLayout,
     QWidget,
 )
+from qt_material import apply_stylesheet
 
+import application_constants
 import asset_utils
 import log_parser
+from stats import PlayerStats
 
 art_dim = (161, 204)
 att_loc = (26, 181)
 health_loc = (137, 181)
 player_ids = []
+
+round_font = QFont("Roboto", 18)
 
 
 def get_image_location(position: int):
@@ -30,11 +34,11 @@ def get_image_location(position: int):
     elif 4 <= position < 7:
         x = (161 * (position - 4)) + 300 + (161 / 2) + ((position - 4) * 20)
         y = 210
-    elif position == 7:
-        x = (161 / 2)
+    elif 7 <= position < 9:
+        x = (161 * (position - 7))
         y = 440 - 175
-    elif 7 < position < 10:
-        x = (161 * (position - 8))
+    elif position == 9:
+        x = (161 / 2)
         y = 440
     elif position == 10:
         x = 900
@@ -45,7 +49,7 @@ def get_image_location(position: int):
     else:
         x = 0
         y = 0
-    return x, y
+    return x, y + 5
 
 
 def get_player_index(player_id: str):
@@ -62,14 +66,40 @@ class SBBTracker(QMainWindow):
         self.first_comp = BoardComp()
         self.ids_to_comps = {index: BoardComp() for index in range(0, 8)}
         self.round_indicator = QLabel("Waiting for match to start...")
+        self.round_indicator.setFont(round_font)
 
         self.comp_tabs = QTabWidget()
+        self.comp_tabs.setStyleSheet("QTabBar{ text-transform: none; }")
         for index in self.ids_to_comps:
             self.comp_tabs.addTab(self.ids_to_comps[index], f"Player{index}")
-        layout = QVBoxLayout()
+
+        comps_widget = QWidget()
+        layout = QVBoxLayout(comps_widget)
         layout.addWidget(self.round_indicator)
         layout.addWidget(self.comp_tabs)
-        self.setCentralWidget(self.comp_tabs)
+
+        main_tabs = QTabWidget()
+        main_tabs.setStyleSheet("QTabBar{ text-transform: none; }")
+        main_tabs.addTab(comps_widget, "Board Comps")
+        main_tabs.addTab(QWidget(), "Health Graph")
+        main_tabs.addTab(MatchHistory(), "Match History")
+        main_tabs.addTab(QWidget(), "Stats Graphs")
+
+        menu_bar = self.menuBar()
+        file_menu = menu_bar.addMenu("&File")
+        file_menu.addAction(QAction("&Export stats", self))
+        file_menu.addAction(QAction("&Delete stats", self))
+        menu_bar.addMenu("&Help")
+        menu_bar.addMenu("&About")
+
+        menu_bar.setCornerWidget(QPushButton(QPixmap("../assets/icons/discord.png"), "Discord"))
+
+        main_widget = QWidget()
+        main_layout = QVBoxLayout(main_widget)
+        # main_layout.addWidget(menu_bar)
+        main_layout.addWidget(main_tabs)
+
+        self.setCentralWidget(main_widget)
 
         self.setFixedSize(QSize(1350, 820))
 
@@ -77,7 +107,7 @@ class SBBTracker(QMainWindow):
         return self.ids_to_comps[index]
 
     def update_round_num(self, round_number):
-        self.round_indicator.setText(round_number)
+        self.round_indicator.setText(f"Turn {round_number}")
         self.round_indicator.update()
 
     def update_player(self, player, round_number):
@@ -85,13 +115,14 @@ class SBBTracker(QMainWindow):
         self.comp_tabs.setTabText(index, player.heroname)
         comp = self.get_comp(index)
         comp.player = player
+        comp.current_round = round_number
         comp.update()
 
     def update_comp(self, player_id, player, round_number):
         index = get_player_index(player_id)
         comp = self.get_comp(index)
         comp.composition = player
-        # comp.round_num = round_number
+        comp.last_seen = round_number
         comp.update()
 
 
@@ -101,6 +132,8 @@ class BoardComp(QWidget):
         self.composition = None
         self.golden_overlay = QPixmap("../assets/golden_overlay.png")
         self.border = QPixmap("../assets/neutral_border.png")
+        self.last_seen = None
+        self.current_round = 0
         self.player = None
 
     def update_card_stats(self, painter: QPainter, slot: int, health: str, attack: str):
@@ -158,13 +191,62 @@ class BoardComp(QWidget):
                 used_slots.append(str(position))
             if self.player:
                 self.update_card(painter, 11, self.player.heroname, self.player.heroid, self.player.health, "", False)
+            last_seen_text = ""
+            if self.last_seen is not None:
+                if self.last_seen == 0:
+                    last_seen_text = "Last seen just now"
+                elif self.last_seen > 0:
+                    last_seen_text = f"Last seen {self.current_round - self.last_seen}"
+                    if self.current_round - self.last_seen == 1:
+                        last_seen_text += " turn ago"
+                    else:
+                        last_seen_text += " turns ago"
+            else:
+                last_seen_text = "Not yet seen"
+            painter.setPen(QPen(QColor("white"), 1))
+            painter.setFont(QFont("Roboto", 12))
+            painter.drawText(5, 20, last_seen_text)
         else:
             painter.eraseRect(QRect(0, 0, 1350, 820))
 
 
+class MatchHistory(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.match_history_table = QTableWidget(application_constants.stats_per_page, 4)
+        self.stats = PlayerStats()
+
+        self.match_history_table.setHorizontalHeaderLabels(["Starting Hero", "Ending Hero", "Place", "+/-MMR"])
+        self.match_history_table.setColumnWidth(0, 130)
+        self.match_history_table.setColumnWidth(1, 120)
+        history = self.stats.get_page(1)
+        for row in range(len(history)):
+            for column in range(len(history[0])):
+                self.match_history_table.setItem(row, column, QTableWidgetItem(str((history[row][column]))))
+        paged_table = QWidget()
+        paged_table.setMaximumWidth(533)
+        paged_layout = QVBoxLayout(paged_table)
+        paged_layout.addWidget(self.match_history_table)
+
+        buttons_widget = QWidget()
+        page_buttons = QHBoxLayout(buttons_widget)
+        page_buttons.addWidget(QPushButton("Prev"))
+        page_buttons.addWidget(QLabel("Page: 1"), alignment=Qt.AlignCenter | Qt.AlignVCenter)
+        page_buttons.addWidget(QPushButton("Next"))
+        paged_layout.addWidget(buttons_widget)
+        paged_table.resize(200, paged_table.height())
+        tab_layout = QHBoxLayout(self)
+        tab_layout.addWidget(paged_table)
+        tab_layout.addWidget(QTableWidget(40, 5))
+
+
 def log_queue(app: SBBTracker):
     queue = Queue()
-    threading.Thread(target=log_parser.run, args=(queue,), daemon=True).start()
+    threading.Thread(target=log_parser.run,
+                     args=(
+                         queue,
+                         "../data/source/storybookbrawl.com/storybookbrawl/version/2021-11-14/source/Player.log"),
+                     daemon=True).start()
     round_number = 0
     while True:
         update = queue.get()
@@ -183,13 +265,13 @@ def log_queue(app: SBBTracker):
             # ids_to_heroes.clear()
             current_player = None
             round_number = 0
-            app.update_round_num("Round: 0")
+            app.update_round_num(0)
         elif job == log_parser.JOB_INITCURRENTPLAYER:
             # current_player = values[event]
             pass
         elif job == log_parser.JOB_ROUNDINFO:
             round_number = state.round_num
-            app.update_round_num(f"Round: {round_number}")
+            app.update_round_num(round_number)
         elif job == log_parser.JOB_PLAYERINFO:
             app.update_player(state, round_number)
         elif job == log_parser.JOB_BOARDINFO:
@@ -215,11 +297,11 @@ def log_queue(app: SBBTracker):
 
 
 app = QApplication(sys.argv)
-
+apply_stylesheet(app, theme='dark_teal.xml')
 window = SBBTracker()
 window.show()
 
-os.remove(log_parser.offsetfile)
+# os.remove(log_parser.offsetfile)
 threading.Thread(target=log_queue, args=(window,), daemon=True).start()
 
 app.exec()
