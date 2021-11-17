@@ -4,15 +4,19 @@ import os
 import time
 from collections import defaultdict
 from enum import Enum
-from os.path import exists
+from os.path import exists, expanduser
 from pathlib import Path
 from queue import Queue
 
 from pygtail import Pygtail
 
+import stats
+
 sbb_root = Path(os.environ["APPDATA"]).parent.joinpath("LocalLow/Good Luck Games/Storybook Brawl")
 logfile = sbb_root.joinpath("Player.log")
-offsetfile = sbb_root.joinpath("Player.log.offset")
+offsetfile = stats.sbbtracker_folder.joinpath("logfile.offset")
+if not offsetfile.exists():
+    offsetfile.touch()
 
 # try:
 #     os.remove(offsetfile)
@@ -360,7 +364,7 @@ def run(queue: Queue, log=logfile):
     last_player_timestamp = -2
     while True:
         prev_action = None
-        ifs = SBBPygtail(filename=str(log))
+        ifs = SBBPygtail(filename=str(log), offset_file=offsetfile)
         for action in parse(ifs):
             if action.task == TASK_NEWGAME:
                 inbrawl = False

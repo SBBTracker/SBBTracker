@@ -1,4 +1,5 @@
 import json
+import logging
 import operator
 import os
 import sys
@@ -16,7 +17,7 @@ from PySide6.QtGui import QAction, QBrush, QColor, QDesktopServices, QFont, QFon
     QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView, QApplication,
-    QComboBox, QFileDialog, QHBoxLayout, QHeaderView, QLabel,
+    QComboBox, QErrorMessage, QFileDialog, QHBoxLayout, QHeaderView, QLabel,
     QMainWindow,
     QMessageBox, QPushButton, QTabWidget, QTableWidget, QTableWidgetItem, QVBoxLayout,
     QWidget,
@@ -31,6 +32,9 @@ import stats
 import update_check
 
 matplotlib.use('Qt5Agg')
+if not stats.sbbtracker_folder.exists():
+    stats.sbbtracker_folder.mkdir()
+logging.basicConfig(filename=stats.sbbtracker_folder.joinpath("sbbtracker.log"), filemode="w", format='%(name)s - %(levelname)s - %(message)s')
 
 art_dim = (161, 204)
 att_loc = (26, 181)
@@ -343,8 +347,8 @@ This will import all games played since SBB was last opened.
         if reply == QMessageBox.Yes:
             try:
                 os.remove(log_parser.offsetfile)
-            except:
-                pass
+            except Exception as e:
+                logging.warning(str(e))
         self.reset_button.hide()
         self.update()
 
