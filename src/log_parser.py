@@ -15,6 +15,8 @@ import stats
 sbb_root = Path(os.environ["APPDATA"]).parent.joinpath("LocalLow/Good Luck Games/Storybook Brawl")
 logfile = sbb_root.joinpath("Player.log")
 offsetfile = stats.sbbtracker_folder.joinpath("logfile.offset")
+if not stats.sbbtracker_folder.exists():
+    stats.sbbtracker_folder.mkdir()
 if not offsetfile.exists():
     offsetfile.touch()
 
