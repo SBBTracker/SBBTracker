@@ -17,10 +17,6 @@ if not sbbtracker_folder:
 headings = ["Hero", "# Matches", "Avg Place", "Top 4", "Wins"]
 
 
-def get_num_pages(df: pd.DataFrame):
-    return math.ceil(len(df.index) / stats_per_page)
-
-
 class PlayerStats:
 
     def __init__(self):
@@ -60,6 +56,9 @@ class PlayerStats:
         except:
             print("Unable to move old stats file!")
 
+    def get_num_pages(self):
+        return math.ceil(len(self.df.index) / stats_per_page)
+
     def get_page(self, page_num: int):
         start_index = len(self.df.index) - stats_per_page * page_num
         end_index = len(self.df.index) - stats_per_page * (page_num - 1)
@@ -79,20 +78,22 @@ class PlayerStats:
         df["Placement"] = pd.to_numeric(df["Placement"])
         stats = []
         for hero_type in ["StartingHero", "EndingHero"]:
-            heroes = sorted(set(df[hero_type]))
+            # heroes = sorted(set(df[hero_type]))
 
             data = []
-            for hero in heroes:
+            for hero in asset_utils.hero_ids.values():
                 if not hero.isspace():
                     bool_df = df[hero_type] == hero
                     total_matches = sum(bool_df)
                     avg = round(df.loc[bool_df, 'Placement'].mean(), 2)
+                    if math.isnan(avg):
+                        avg = 0
                     total_top4 = len(df.loc[bool_df & (df['Placement'] <= 4), 'Placement'])
                     total_wins = len(df.loc[bool_df & (df['Placement'] == 1), 'Placement'])
                     data.append([hero, str(total_matches), str(avg), str(total_top4), str(total_wins)])
 
             key = Keys.StartingHeroStats if hero_type == "StartingHero" else Keys.EndingHeroStats
-            padding = [["", "", "", ""] for _ in range(len(asset_utils.hero_ids) - len(data))]
+            padding = [["", "", "", "", ""] for _ in range(len(asset_utils.hero_ids) - len(data))]
             data = data + padding
             global_matches = len(df)
             global_avg = round(df["Placement"].mean(), 2)

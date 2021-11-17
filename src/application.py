@@ -1,35 +1,44 @@
-#!/usr/bin/python3
 import json
 import operator
 import os
 import sys
 import threading
-import webbrowser
 from collections import defaultdict
 from datetime import date
-from enum import Enum
 from pathlib import Path
 from queue import Queue
 
-import PySimpleGUI as sg
+import matplotlib
 import matplotlib.pyplot as plt
 import seaborn as sns
+from PySide6.QtCore import QObject, QPoint, QRect, QSize, QThread, QUrl, Qt, Signal
+from PySide6.QtGui import QAction, QBrush, QColor, QDesktopServices, QFont, QFontMetrics, QPainter, QPainterPath, QPen, \
+    QPixmap
+from PySide6.QtWidgets import (
+    QApplication,
+    QComboBox, QFileDialog, QHBoxLayout, QLabel,
+    QMainWindow,
+    QMessageBox, QPushButton, QTabWidget, QTableWidget, QTableWidgetItem, QVBoxLayout,
+    QWidget,
+)
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
+from qt_material import apply_stylesheet
 
-import application_constants as app
+import application_constants
 import asset_utils
 import graphs
 import log_parser
 import stats
 import update_check
-from application_constants import Keys
-from stats import PlayerStats
 
-player_ids = []
-board_indicies = []
+matplotlib.use('Qt5Agg')
 
 art_dim = (161, 204)
+att_loc = (26, 181)
+health_loc = (137, 181)
+player_ids = []
 
-default_bg_color = "#21273d"
+default_bg_color = "#31363b"
 sns.set_style("darkgrid", {"axes.facecolor": default_bg_color})
 
 plt.rcParams.update({'text.color': "white",
@@ -38,82 +47,21 @@ plt.rcParams.update({'text.color': "white",
                      'figure.facecolor': default_bg_color,
                      'axes.labelcolor': "white"})
 
-
-class Slot(Enum):
-    Char1 = 0
-    Char2 = 1
-    Char3 = 2
-    Char4 = 3
-    Char5 = 4
-    Char6 = 5
-    Char7 = 6
-    Treasure1 = 7
-    Treasure2 = 8
-    Treasure3 = 9
-    Spell = 10
-    Hero = 11
-
-
-def resource_path(relative_path):
-    """ Get absolute path to resource, works for dev and for PyInstaller """
-    if hasattr(sys, '_MEIPASS'):
-        return os.path.join(sys._MEIPASS, relative_path)
-
-    return os.path.join(os.path.abspath(".."), relative_path)
-
-
-graph_ids = {str(player): {str(slot.value): {} for slot in Slot} for player in range(0, 9)}
-names_to_health = defaultdict(dict)
-ids_to_heroes = {}
-
-
-def add_asset_id(graph: sg.Graph, player_id: str, slot: str, asset_type: str, new_id):
-    slot_graph_ids = graph_ids[str(get_player_index(player_id))][slot]
-    if asset_type in slot_graph_ids:
-        graph.delete_figure(slot_graph_ids[asset_type])
-    slot_graph_ids[asset_type] = new_id
-
-
-def update_player(window: sg.Window, state, round_num: int):
-    index = get_player_index(state.playerid)
-    player_tab = window[app.get_tab_key(index)]
-    real_hero_name = asset_utils.get_card_art_name(state.heroid, state.heroname)
-    title = f"{real_hero_name}" if state.health > 0 else f"{real_hero_name} *DEAD*"
-    player_tab.update(title=title)
-    update_card(window, state.playerid, 11, state.heroname, state.heroid, state.health, "", False)
-    names_to_health[state.playerid][round_num] = state.health
-    ids_to_heroes[state.playerid] = real_hero_name
-
-
-def update_board(window: sg.Window, state):
-    for playerid, actions in state.items():
-        used_slots = []
-        for action in actions:
-            slot = action.slot
-            zone = action.zone
-            position = 10 if zone == 'Spell' else (7 + int(slot)) if zone == "Treasure" else slot
-            update_card(window, playerid, position, action.cardname, action.content_id, action.cardhealth,
-                        action.cardattack, action.is_golden)
-            used_slots.append(str(position))
-        all_slots = [str(slot.value) for slot in Slot]
-
-        unused_slots = set(all_slots) - set(used_slots)
-        for slot in unused_slots:
-            update_card(window, playerid, slot, "empty", "", "", "", False)
+round_font = QFont("Roboto", 18)
 
 
 def get_image_location(position: int):
     if position < 4:
-        x = (161 * position) + 300
+        x = (161 * position) + 300 + (position * 20)
         y = 0
     elif 4 <= position < 7:
-        x = (161 * (position - 4)) + 300 + (161 / 2)
+        x = (161 * (position - 4)) + 300 + (161 / 2) + ((position - 4) * 20)
         y = 210
-    elif position == 7:
-        x = (161 / 2)
+    elif 7 <= position < 9:
+        x = (161 * (position - 7))
         y = 440 - 175
-    elif 7 < position < 10:
-        x = (161 * (position - 8))
+    elif position == 9:
+        x = (161 / 2)
         y = 440
     elif position == 10:
         x = 900
@@ -124,60 +72,19 @@ def get_image_location(position: int):
     else:
         x = 0
         y = 0
-    return x, y
-
-
-att_loc = (26, 181)
-health_loc = (137, 181)
-
-
-def update_card_stats(graph: sg.Graph, playerid: str, slot: int, health: str, attack: str):
-    card_location = get_image_location(slot)
-    att_center = tuple(map(operator.add, att_loc, card_location))
-    health_center = tuple(map(operator.add, health_loc, card_location))
-    # att_circle_center = tuple(map(operator.sub, att_center, (21, 18)))
-    # health_circle_center = tuple(map(operator.sub, health_center, (21, 18)))
-    if attack:
-        if slot < 7:
-            add_asset_id(graph, playerid, str(slot), "attcirc", graph.draw_circle(att_center, 20, '#856515'))
-            # graph.draw_image("../assets/attack_orb.png", location=att_circle_center)
-            add_asset_id(graph, playerid, str(slot), 'attval',
-                         graph.draw_text(str(attack), att_center, "white", "Arial 20"))
-    if health:
-        if slot < 7 or slot == 11:
-            add_asset_id(graph, playerid, str(slot), 'healthcirc', graph.draw_circle(health_center, 20, '#851717'))
-            # graph.draw_image("../assets/health_orb.png", location=health_circle_center)
-            add_asset_id(graph, playerid, str(slot), 'healthval',
-                         graph.draw_text(str(health), health_center, "white", "Arial 20"))
-
-
-def draw_golden_overlay(graph: sg.Graph, position: (int, int)):
-    return graph.draw_image(filename="../assets/golden_overlay.png", location=position)
-
-
-def update_card(window: sg.Window, playerid: str, slot, cardname: str, content_id: str, health: str, attack: str,
-                is_golden):
-    index = get_player_index(playerid)
-    if index >= 0:
-        graph = window[app.get_graph_key(index)]
-        card_loc = get_image_location(int(slot))
-        actually_is_golden = is_golden if isinstance(is_golden, bool) else is_golden == "True"
-        path = asset_utils.get_card_path(cardname, content_id, actually_is_golden)
-        slot_graph_ids = graph_ids[str(index)][str(slot)]
-        if slot_graph_ids:
-            for graph_id in slot_graph_ids.values():
-                graph.delete_figure(graph_id)
-        card_id = graph.draw_image(filename=path, location=card_loc)
-        add_asset_id(graph, playerid, str(slot), "card", card_id)
-        if actually_is_golden:
-            add_asset_id(graph, playerid, str(slot), 'golden', draw_golden_overlay(graph, card_loc))
-        update_card_stats(graph, playerid, int(slot), health, attack)
+    return x, y + 5
 
 
 def get_player_index(player_id: str):
     if player_id not in player_ids:
         player_ids.append(player_id)
     return player_ids.index(player_id)
+
+
+def update_table(table: QTableWidget, data: list[list]):
+    for row in range(len(data)):
+        for column in range(len(data[0])):
+            table.setItem(row, column, QTableWidgetItem(str((data[row][column]))))
 
 
 settings_file = stats.sbbtracker_folder.joinpath("settings.json")
@@ -207,262 +114,483 @@ default_dates = {
 
 custom_dates = settings["custom_dates"] if "custom_dates" in settings else {}
 
-# Cleanup any old custom dates that people made
-for key in custom_dates:
-    if key in default_dates:
-        del custom_dates[key]
+
+class LogSignals(QObject):
+    round_update = Signal(int)
+    player_update = Signal(object, int)
+    comp_update = Signal(str, object, int)
+    stats_update = Signal(str, object)
+    health_update = Signal(dict, dict)
 
 
-def construct_layout():
-    player_tabs = []
-    for num in range(0, 8):
-        name = "Player" + str(num)
-        player_tabs.append(sg.Tab(layout=[
-            [sg.Text("Last seen round: 0", font="Arial 18", key=app.get_player_round_key(num))],
-            [sg.Graph(canvas_size=(1350, 800), graph_bottom_left=(0, 800),
-                      graph_top_right=(1350, 0),
-                      key=app.get_graph_key(num))]],
-            title=name, key=app.get_tab_key(num)))
+class LogThread(QThread):
+    def __init__(self, *args, **kwargs):
+        super(LogThread, self).__init__()
+        # Store constructor arguments (re-used for processing)
+        self.args = args
+        self.kwargs = kwargs
+        self.signals = LogSignals()
 
-    player_tab_group = [[sg.TabGroup(layout=[player_tabs])]]
+    def run(self):
+        queue = Queue()
+        threading.Thread(target=log_parser.run,
+                         args=(
+                             queue,),
+                         daemon=True).start()
+        round_number = 0
+        current_player = None
+        names_to_health = defaultdict(dict)
+        ids_to_heroes = {}
+        while True:
+            update = queue.get()
+            job = update.job
+            state = update.state
+            if job == log_parser.JOB_NEWGAME:
+                # window[Keys.ReattachButton.value].update(visible=False)
+                for player_id in player_ids:
+                    self.signals.comp_update.emit(player_id, None, 0)
 
-    data = [['' for __ in range(5)] for _ in range(len(asset_utils.hero_ids))]
-    headings = stats.headings
-    starting_stats = sg.Table(values=data, headings=headings,
-                              justification='center',
-                              key=Keys.StartingHeroStats.value,
-                              expand_y=True,
-                              auto_size_columns=False,
-                              hide_vertical_scroll=True,
-                              col_widths=[19, 10, 10, 10, 10])
-
-    ending_stats = sg.Table(values=data, headings=headings,
-                            justification='center',
-                            key=Keys.EndingHeroStats.value,
-                            expand_y=True,
-                            auto_size_columns=False,
-                            hide_vertical_scroll=True,
-                            col_widths=[19, 10, 10, 10, 10])
-
-    hero_stats_tab = sg.TabGroup(layout=[[
-        sg.Tab(layout=[[
-            starting_stats
-        ]], title="Starting Hero Stats"),
-        sg.Tab(layout=[[
-            ending_stats
-        ]], title="Ending Hero Stats")
-    ]], expand_y=True)
-
-    all_dates = default_dates | custom_dates
-    application_tab_group = [[sg.TabGroup(layout=[[
-        sg.Tab(layout=player_tab_group, title="Board Comps"),
-        sg.Tab(layout=[[sg.Canvas(key=Keys.HealthGraph.value)]],
-               title="Health Graph"),
-        sg.Tab(layout=[[sg.Col(layout=[[sg.Table(values=[['' for __ in range(4)] for _ in range(40)],
-                                                 headings=["Starting Hero", "Ending Hero", "Place", "+/-MMR"],
-                                                 key=Keys.MatchStats.value, hide_vertical_scroll=True,
-                                                 justification="Center", expand_y=True,
-                                                 col_widths=[17, 17, 6, 6], auto_size_columns=False)],
-                                       [sg.Button("Prev"), sg.Text("Page: 1", key=Keys.StatsPageNum.value),
-                                        sg.Button("Next")]],
-                               expand_y=True, element_justification="center"),
-                        hero_stats_tab,
-                        sg.Col([[sg.Text("Filter stats:")],
-                                [sg.Combo(list(all_dates.keys()), readonly=True,
-                                          default_value=list(default_dates.keys())[0],
-                                          key=Keys.FilterableDates.value),
-                                 sg.Button("Filter", key=Keys.FilterDateButton.value),
-                                 sg.Button("Customize Dates", key=Keys.CustomDateButton.value)]],
-                               expand_y=True)]],
-               title="Match History"),
-        sg.Tab(layout=[
-            [sg.Combo([graphs.matches_per_hero, graphs.mmr_change], readonly=True, key=Keys.StatGraphsCombo.value,
-                      enable_events=True, default_value=graphs.matches_per_hero)],
-            [sg.Canvas(key=Keys.StatGraphs.value)]],
-            title="Stats Graphs")
-    ]])]]
-
-    layout = [[sg.Menu([['&File', ['&Export Stats', '&Delete Stats']], ['&Help', ['&Report an issue']]])],
-              [sg.Text(text="Waiting for match to start...", font="Arial 28", key=Keys.GameStatus.value,
-                       justification='center'),
-               sg.Button("Reattach to Storybook Brawl", key=Keys.ReattachButton.value)], application_tab_group]
-
-    return layout
+                player_ids.clear()
+                names_to_health.clear()
+                ids_to_heroes.clear()
+                current_player = None
+                round_number = 0
+                self.signals.round_update.emit(0)
+            elif job == log_parser.JOB_INITCURRENTPLAYER:
+                current_player = state
+                self.signals.player_update.emit(state, round_number)
+            elif job == log_parser.JOB_ROUNDINFO:
+                round_number = state.round_num
+                self.signals.round_update.emit(round_number)
+            elif job == log_parser.JOB_PLAYERINFO:
+                self.signals.player_update.emit(state, round_number)
+                names_to_health[state.playerid][round_number] = state.health
+                ids_to_heroes[state.playerid] = asset_utils.get_card_art_name(state.heroid, state.heroname)
+            elif job == log_parser.JOB_BOARDINFO:
+                for player_id in state:
+                    self.signals.comp_update.emit(player_id, state[player_id], round_number)
+            elif job == log_parser.JOB_ENDCOMBAT:
+                self.signals.health_update.emit(names_to_health, ids_to_heroes)
+                # pass
+            elif job == log_parser.JOB_ENDGAME:
+                if state:
+                    place = state.place if int(state.health) <= 0 else "1"
+                    self.signals.stats_update.emit(asset_utils.get_card_art_name(current_player.heroid,
+                                                                                 current_player.heroname), state)
 
 
-def customize_dates(dates: dict):
-    displays_to_keys = {f"{k} - {v}": k for k, v in dates.items()}
-    layout = [[sg.Listbox(values=list(displays_to_keys), size=(40, 8), key="-DatesList-")],
-              [sg.Button("Delete Date")],
-              [sg.Text("Create a custom date range")],
-              [sg.Col([[sg.Text("Label: ")], [sg.Text("Start Date: ")], [sg.Text("End Date: ")]]),
-               sg.Col([[sg.In(size=(15, 1), key="CustomDateNameIn")],
-                       [sg.In(size=(10, 1), enable_events=True, key="StartDateIn",
-                              disabled=True, do_not_clear=True),
-                        sg.CalendarButton("Pick date", format='%Y-%m-%d', target="StartDateIn",
-                                          enable_events=True)],
-                       [sg.In(size=(10, 1), enable_events=True, key="EndDateIn", disabled=True, do_not_clear=True),
-                        sg.CalendarButton("Pick date", format='%Y-%m-%d', target="EndDateIn", enable_events=True)]])],
-              [sg.Text("Fill out all fields", text_color="red", visible=False, key="-ERROR-")],
-              [sg.Button("Add"), sg.Exit("Done")]]
-    window = sg.Window("Custom date picker", layout, modal=True)
-    while True:
-        event, values = window.read()
-        if event == "Add":
-            custom_date = [values["CustomDateNameIn"], values["StartDateIn"], values["EndDateIn"]]
-            if any([not val for val in custom_date]):
-                window["-ERROR-"].update(visible=True)
+class UpdateCheckSignals(QObject):
+    github_update = Signal()
+
+
+class UpdateCheckThread(QThread):
+    def __init__(self, *args, **kwargs):
+        super(UpdateCheckThread, self).__init__()
+        self.args = args
+        self.kwargs = kwargs
+        self.signals = UpdateCheckSignals()
+
+    def run(self):
+        update_check.run()
+        # wait for an update
+        self.signals.github_update.emit()
+
+
+class SBBTracker(QMainWindow):
+    def __init__(self):
+        super().__init__()
+
+        self.setWindowTitle("SBBTracker")
+        self.first_comp = BoardComp()
+        self.ids_to_comps = {index: BoardComp() for index in range(0, 8)}
+        self.round_indicator = QLabel("Waiting for match to start...")
+        self.round_indicator.setFont(round_font)
+        self.player_stats = stats.PlayerStats()
+
+        self.comp_tabs = QTabWidget()
+        for index in self.ids_to_comps:
+            self.comp_tabs.addTab(self.ids_to_comps[index], f"Player{index}")
+
+        self.reset_button = QPushButton("Reattach to Storybook Brawl")
+        self.reset_button.setFixedSize(300, 25)
+        self.reset_button.clicked.connect(self.reattatch_to_log)
+        round_widget = QWidget()
+        round_layout = QHBoxLayout(round_widget)
+        round_layout.addWidget(self.round_indicator)
+        round_layout.addWidget(self.reset_button)
+
+        comps_widget = QWidget()
+        layout = QVBoxLayout(comps_widget)
+        layout.addWidget(round_widget)
+        layout.addWidget(self.comp_tabs)
+
+        self.match_history = MatchHistory(self.player_stats)
+        self.health_graph = HealthGraph()
+        self.stats_graph = StatsGraph(self.player_stats)
+
+        main_tabs = QTabWidget()
+        main_tabs.addTab(comps_widget, "Board Comps")
+        main_tabs.addTab(self.health_graph, "Health Graph")
+        main_tabs.addTab(self.match_history, "Match History")
+        main_tabs.addTab(self.stats_graph, "Stats Graphs")
+
+        menu_bar = self.menuBar()
+        file_menu = menu_bar.addMenu("&File")
+        export_action = QAction("&Export stats", self)
+        export_action.triggered.connect(self.export_csv)
+        delete_action = QAction("&Delete stats", self)
+        delete_action.triggered.connect(self.delete_stats)
+        file_menu.addAction(export_action)
+        file_menu.addAction(delete_action)
+        help_menu = menu_bar.addMenu("&Help")
+        bug_action = QAction("&Report a bug", self)
+        bug_action.triggered.connect(self.open_issues)
+        help_menu.addAction(bug_action)
+
+        discord_action = QAction(QPixmap("../assets/icons/discord.png"), "&Discord", menu_bar)
+        menu_bar.addAction(discord_action)
+        discord_action.triggered.connect(self.open_discord)
+
+        main_widget = QWidget()
+        main_layout = QVBoxLayout(main_widget)
+        main_layout.addWidget(main_tabs)
+
+        self.setCentralWidget(main_widget)
+
+        self.setFixedSize(QSize(1350, 840))
+
+        self.github_updates = UpdateCheckThread()
+        self.github_updates.signals.github_update.connect(self.github_update_popup)
+
+        self.log_updates = LogThread()
+        self.log_updates.signals.comp_update.connect(self.update_comp)
+        self.log_updates.signals.player_update.connect(self.update_player)
+        self.log_updates.signals.round_update.connect(self.update_round_num)
+        self.log_updates.signals.stats_update.connect(self.update_stats)
+        self.log_updates.signals.health_update.connect(self.health_graph.update_graph)
+
+        self.log_updates.start()
+        self.github_updates.start()
+
+    def get_comp(self, index: int):
+        return self.ids_to_comps[index]
+
+    def update_round_num(self, round_number):
+        self.round_indicator.setText(f"Turn {round_number}")
+        self.round_indicator.update()
+        self.reset_button.hide()
+
+    def update_player(self, player, round_number):
+        index = get_player_index(player.playerid)
+        real_hero_name = asset_utils.get_card_art_name(player.heroid, player.heroname)
+        title = f"{real_hero_name}" if player.health > 0 else f"{real_hero_name} *DEAD*"
+        self.comp_tabs.setTabText(index, title)
+        comp = self.get_comp(index)
+        comp.player = player
+        comp.current_round = round_number
+        self.update()
+
+    def update_comp(self, player_id, player, round_number):
+        index = get_player_index(player_id)
+        comp = self.get_comp(index)
+        comp.composition = player
+        comp.last_seen = round_number
+        self.update()
+
+    def update_stats(self, starting_hero: str, player):
+        place = player.place if int(player.health) <= 0 else "1"
+        self.player_stats.update_stats(starting_hero, asset_utils.get_card_art_name(player.heroid, player.heroname),
+                                       place, player.mmr)
+        self.match_history.update_history_table()
+        self.match_history.update_stats_table()
+
+    def open_url(self, url_string: str):
+        url = QUrl(url_string)
+        if not QDesktopServices.openUrl(url):
+            QMessageBox.warning(self, 'Open Url', 'Could not open url')
+
+    def open_discord(self):
+        self.open_url('https://discord.com/invite/2AJctfj239')
+
+    def open_github_release(self):
+        self.open_url("https://github.com/SBBTracker/SBBTracker/releases/latest")
+
+    def open_issues(self):
+        self.open_url("https://github.com/SBBTracker/SBBTracker/issues")
+
+    def github_update_popup(self):
+        reply = QMessageBox.question(self, "New update available!",
+                                     "New version available!\nWould you like to go to the download page?")
+        if reply == QMessageBox.Yes:
+            self.open_github_release()
+
+    def export_csv(self):
+        filepath, filetype = QFileDialog.getSaveFileName(parent=None, caption='Export to .csv',
+                                                         dir=str(Path(os.environ['USERPROFILE']).joinpath("Documents")),
+                                                         filter="Text CSV (*.csv)")
+        self.player_stats.export(Path(filepath))
+
+    def delete_stats(self):
+        reply = QMessageBox.question(self, "Delete all Stats", "Do you want to delete *ALL* saved stats?")
+        if reply == QMessageBox.Yes:
+            self.player_stats.delete()
+
+    def reattatch_to_log(self):
+        reply = QMessageBox.question(self, "Reattach?",
+                                     """Would you like to reattach to the Storybook Brawl log?
+This can fix the tracker not connecting to the game.
+This will import all games played since SBB was last opened.
+(you can restart the game to avoid this)""")
+        if reply == QMessageBox.Yes:
+            try:
+                os.remove(log_parser.offsetfile)
+            except:
+                pass
+        self.reset_button.hide()
+        self.update()
+
+    def closeEvent(self, *args, **kwargs):
+        super(QMainWindow, self).closeEvent(*args, **kwargs)
+        self.github_updates.terminate()
+        self.log_updates.terminate()
+        self.player_stats.save()
+
+
+class BoardComp(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.composition = None
+        self.golden_overlay = QPixmap("../assets/golden_overlay.png")
+        self.border = QPixmap("../assets/neutral_border.png")
+        self.last_seen = None
+        self.current_round = 0
+        self.player = None
+
+    def update_card_stats(self, painter: QPainter, slot: int, health: str, attack: str):
+        card_location = get_image_location(slot)
+        att_center = tuple(map(operator.add, att_loc, card_location))
+        health_center = tuple(map(operator.add, health_loc, card_location))
+        att_circle_center = tuple(map(operator.sub, att_center, (30, 40)))
+        health_circle_center = tuple(map(operator.sub, health_center, (30, 40)))
+        font = QFont("Impact", 25, QFont.ExtraBold)
+        metrics = QFontMetrics(font)
+        att_text_center = tuple(map(operator.sub, att_center, (metrics.horizontalAdvance(attack) / 2, -4)))
+        health_text_center = tuple(map(operator.sub, health_center, (metrics.horizontalAdvance(health) / 2, -4)))
+        if attack:
+            if slot < 7:
+                painter.drawPixmap(QPoint(*att_circle_center), QPixmap("../assets/attack_orb.png"))
+                path = QPainterPath()
+                path.addText(QPoint(*att_text_center), font, attack)
+                painter.setPen(QPen(QColor("black"), 1))
+                painter.setBrush(QBrush("white"))
+                painter.drawPath(path)
+        if health:
+            if slot < 7 or slot == 11:
+                painter.drawPixmap(QPoint(*health_circle_center), QPixmap("../assets/health_orb.png"))
+                path = QPainterPath()
+                path.addText(QPoint(*health_text_center), font, health)
+                painter.setPen(QPen(QColor("black"), 1))
+                painter.setBrush(QBrush("white"))
+                painter.drawPath(path)
+
+    def update_card(self, painter: QPainter, slot, cardname: str, content_id: str, health: str,
+                    attack: str, is_golden):
+        card_loc = get_image_location(int(slot))
+        actually_is_golden = is_golden if isinstance(is_golden, bool) else is_golden == "True"
+        path = asset_utils.get_card_path(cardname, content_id, actually_is_golden)
+        pixmap = QPixmap(path)
+        painter.drawPixmap(card_loc[0], card_loc[1], pixmap)
+        painter.drawPixmap(card_loc[0], card_loc[1], self.border)
+        if actually_is_golden:
+            painter.drawPixmap(card_loc[0], card_loc[1], self.golden_overlay)
+        # painter.drawPixmap(card_loc[0], card_loc[1], self.border)
+        self.update_card_stats(painter, int(slot), str(health), str(attack))
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        if self.composition is not None:
+            used_slots = []
+            for action in self.composition:
+                slot = action.slot
+                zone = action.zone
+                position = 10 if zone == 'Spell' else (7 + int(slot)) if zone == "Treasure" else slot
+                self.update_card(painter, position, action.cardname, action.content_id, action.cardhealth,
+                                 action.cardattack, action.is_golden)
+                used_slots.append(str(position))
+            last_seen_text = ""
+            if self.last_seen is not None:
+                if self.last_seen == 0:
+                    last_seen_text = "Last seen just now"
+                elif self.last_seen > 0:
+                    last_seen_text = f"Last seen {self.current_round - self.last_seen}"
+                    if self.current_round - self.last_seen == 1:
+                        last_seen_text += " turn ago"
+                    else:
+                        last_seen_text += " turns ago"
             else:
-                dates[values["CustomDateNameIn"]] = (values["StartDateIn"], values["EndDateIn"])
-                displays_to_keys = {f"{k} - {v}": k for k, v in dates.items()}
-                window["-DatesList-"].update(values=displays_to_keys.keys())
-                window["-ERROR-"].update(visible=False)
-        elif event == "Delete Date":
-            selection = values["-DatesList-"]
-            if selection:
-                to_del = displays_to_keys[selection[0]]
-                if to_del in dates:
-                    del dates[to_del]
-                    window["-DatesList-"].update(values={f"{k} - {v}": k for k, v in dates.items()})
-        elif event == "Exit" or event == sg.WIN_CLOSED or event == "Done":
-            break
-
-    window.close()
+                last_seen_text = "Not yet seen"
+            painter.setPen(QPen(QColor("white"), 1))
+            painter.setFont(QFont("Roboto", 12))
+            painter.drawText(5, 20, last_seen_text)
+        else:
+            painter.eraseRect(QRect(0, 0, 1350, 820))
+        if self.player:
+            self.update_card(painter, 11, self.player.heroname, self.player.heroid, self.player.health, "", False)
 
 
-def log_queue(window: sg.Window):
-    queue = Queue()
-    threading.Thread(target=log_parser.run, args=(queue,), daemon=True).start()
-    while True:
-        update = queue.get()
-        window.write_event_value(update.job, update.state)
+class MatchHistory(QWidget):
+    def __init__(self, player_stats: stats.PlayerStats):
+        super().__init__()
+        self.player_stats = player_stats
+        self.match_history_table = QTableWidget(application_constants.stats_per_page, 4)
+        self.page = 1
+        self.display_starting_hero = True
+        self.filter = "All"
+        self.match_history_table.setHorizontalHeaderLabels(["Starting Hero", "Ending Hero", "Place", "+/- MMR"])
+        self.match_history_table.setColumnWidth(0, 130)
+        self.match_history_table.setColumnWidth(1, 120)
+
+        paged_table = QWidget()
+        paged_table.setMaximumWidth(533)
+        paged_layout = QVBoxLayout(paged_table)
+        paged_layout.addWidget(self.match_history_table)
+
+        buttons_widget = QWidget()
+        page_buttons = QHBoxLayout(buttons_widget)
+        prev_button = QPushButton("<")
+        prev_button.clicked.connect(lambda: self.page_down(prev_button))
+        prev_button.setMaximumWidth(50)
+        next_button = QPushButton(">")
+        next_button.setMaximumWidth(50)
+        next_button.clicked.connect(lambda: self.page_up(next_button))
+
+        self.page_indicator = QLabel("1")
+        self.page_indicator.setFont(QFont("Roboto", 16))
+
+        page_buttons.addWidget(prev_button, alignment=Qt.AlignRight)
+        page_buttons.addWidget(self.page_indicator, alignment=Qt.AlignCenter | Qt.AlignVCenter)
+        page_buttons.addWidget(next_button, alignment=Qt.AlignLeft)
+        page_buttons.setSpacing(0)
+
+        paged_layout.addWidget(buttons_widget)
+        paged_table.resize(200, paged_table.height())
+
+        stats_widget = QWidget()
+        stats_layout = QVBoxLayout(stats_widget)
+        self.stats_table = QTableWidget(len(asset_utils.hero_ids), 5)
+        self.stats_table.setHorizontalHeaderLabels(stats.headings)
+        self.stats_table.setColumnWidth(0, 130)
+        self.stats_table.setColumnWidth(1, 130)
+        self.stats_table.setColumnWidth(2, 130)
+
+        filter_widget = QWidget()
+        toggle_hero = QPushButton("Show Ending Heroes")
+        toggle_hero.clicked.connect(lambda: self.toggle_heroes(toggle_hero))
+        all_dates = default_dates | custom_dates
+        self.filter_combo = QComboBox()
+        self.filter_combo.addItems(all_dates.keys())
+        self.filter_combo.activated.connect(self.filter_stats)
+        filter_label = QLabel("Filter Stats:")
+        filter_label.setFont(QFont("Roboto", 16))
+
+        filter_layout = QHBoxLayout(filter_widget)
+        filter_layout.addWidget(toggle_hero, alignment=Qt.AlignLeft)
+        filter_layout.addWidget(filter_label, alignment=Qt.AlignRight)
+        filter_layout.addWidget(self.filter_combo, alignment=Qt.AlignLeft)
+
+        stats_layout.addWidget(filter_widget)
+        stats_layout.addWidget(self.stats_table)
+
+        tables_layout = QHBoxLayout(self)
+        tables_layout.addWidget(paged_table)
+        tables_layout.addWidget(stats_widget)
+
+        self.update_history_table()
+        self.update_stats_table()
+
+    def page_up(self, button: QPushButton):
+        if self.page < self.player_stats.get_num_pages():
+            self.page += 1
+        button.setDisabled(self.page == 1)
+        self.update_history_table()
+
+    def page_down(self, button: QPushButton):
+        if self.page > 1:
+            self.page -= 1
+        button.setDisabled(self.page == self.player_stats.get_num_pages())
+        self.update_history_table()
+
+    def update_history_table(self):
+        history = self.player_stats.get_page(self.page)
+        update_table(self.match_history_table, history)
+        self.page_indicator.setText(f'Page {self.page} of {self.player_stats.get_num_pages()}')
+
+    def update_stats_table(self):
+        all_dates = default_dates | custom_dates
+        hero_stats = self.player_stats.filter(*all_dates[self.filter])
+        chosen_stats = hero_stats[int(self.display_starting_hero)]
+        update_table(self.stats_table, chosen_stats)
+
+    def toggle_heroes(self, button: QPushButton):
+        self.display_starting_hero = not self.display_starting_hero
+        self.update_stats_table()
+        text = "Show Ending Heroes" if self.display_starting_hero else "Show Starting Heroes"
+        button.setText(text)
+
+    def filter_stats(self):
+        self.filter = self.filter_combo.currentText()
+        self.update_stats_table()
 
 
-def the_gui():
-    """
-    Starts and executes the GUI
-    Reads data from a Queue and displays the data to the window
-    Returns when the user exits / closes the window
-    """
-    sg.theme('Dark Blue 14')
-    sg.set_options(font="Arial 11")
+class HealthGraph(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.layout = QVBoxLayout(self)
 
-    window = sg.Window('SBBTracker', construct_layout(), resizable=True, finalize=True, size=(1350, 820),
-                       icon=resource_path("assets/sbbt.ico"))
-    threading.Thread(target=log_queue, args=(window,), daemon=True).start()
-    threading.Thread(target=update_check.run, args=(window,), daemon=True).start()
-    player_stats = PlayerStats(window)
-    current_player = None
-    health_fig_agg = None
-    stats_graph_agg = graphs.draw_matplotlib_figure(window[Keys.StatGraphs.value].TKCanvas,
-                                                    graphs.make_hero_freq_graph(player_stats.df))
-    round_number = 0
-    page_number = 1
+        self.figure = None
+        self.canvas = FigureCanvasQTAgg(plt.Figure(figsize=(13.5, 18)))
+        self.ax = self.canvas.figure.subplots()
+        self.layout.addWidget(self.canvas)
 
-    # --------------------- EVENT LOOP ---------------------
-    while True:
-        event, values = window.read()
-        if event in (sg.WIN_CLOSED, 'Exit'):
-            break
-        if event == 'Export Stats':
-            filename = sg.popup_get_file('Export stats to .csv', save_as=True, default_extension=".csv", no_window=True,
-                                         file_types=(("Text CSV", ".csv"),),
-                                         initial_folder=str(Path(os.environ['USERPROFILE']).joinpath("Documents")))
-            player_stats.export(Path(filename))
-
-        elif event == 'Delete Stats':
-            choice = sg.popup_yes_no("This will remove ALL of your stats? Are you sure?",
-                                     keep_on_top=True)
-            if choice == "Yes":
-                player_stats.delete()
-        elif event == 'Report an issue':
-            webbrowser.open_new_tab('https://github.com/SBBTracker/SBBTracker/issues')
-        elif event == Keys.ReattachButton.value:
-            choice = sg.popup_yes_no("Would you like to reattach to the Storybook Brawl log?\n"
-                                     "This can fix the tracker not connecting to the game.\n\n"
-                                     "You should restart the game before doing this,\n"
-                                     "otherwise you might re-import your previous games.", title="Reattach?")
-            if choice == "Yes":
-                try:
-                    os.remove(log_parser.offsetfile)
-                except:
-                    pass
-        elif event == Keys.CustomDateButton.value:
-            customize_dates(custom_dates)
-            all_dates = default_dates | custom_dates
-            window[Keys.FilterableDates.value].update(list(all_dates.keys())[0], values=list(all_dates.keys()))
-        elif event == Keys.FilterDateButton.value:
-            selected_label = values[Keys.FilterableDates.value]
-            all_dates = default_dates | custom_dates
-            selected_date = all_dates[selected_label]
-            player_stats.filter(selected_date[0], selected_date[1])
-        elif event == Keys.StatGraphsCombo.value:
-            graph_type = values[event]
-            if stats_graph_agg is not None:
-                graphs.delete_fig_agg(stats_graph_agg)
-            stats_graph_agg = graphs.draw_matplotlib_figure(window[Keys.StatGraphs.value].TKCanvas,
-                                                            graphs.make_stats_graph(player_stats.df, graph_type))
-        elif event == log_parser.JOB_NEWGAME:
-            window[Keys.ReattachButton.value].update(visible=False)
-            for player_id in player_ids:
-                index = get_player_index(player_id)
-                graph = window[app.get_graph_key(index)]
-                window[app.get_player_round_key(index)].update(f"Last seen round: 0")
-                graph.erase()
-
-            player_ids.clear()
-            names_to_health.clear()
-            ids_to_heroes.clear()
-            current_player = None
-            round_number = 0
-            window[Keys.GameStatus.value].update("Round: 0")
-        elif event == log_parser.JOB_INITCURRENTPLAYER:
-            current_player = values[event]
-        elif event == log_parser.JOB_ROUNDINFO:
-            round_number = values[event].round
-            window[Keys.GameStatus.value].update(f"Round: {round_number}")
-        elif event == log_parser.JOB_PLAYERINFO:
-            updated_player = values[event]
-            update_player(window, updated_player, round_number)
-        elif event == log_parser.JOB_BOARDINFO:
-            update_board(window, values[event])
-            for player_id in values[event]:
-                index = get_player_index(player_id)
-                window[app.get_player_round_key(index)].update(f"Last seen round: {round_number}")
-        elif event == log_parser.JOB_ENDCOMBAT:
-            if health_fig_agg is not None:
-                graphs.delete_fig_agg(health_fig_agg)
-            health_fig_agg = graphs.draw_matplotlib_figure(window[Keys.HealthGraph.value].TKCanvas,
-                                                           graphs.make_health_graph(names_to_health, ids_to_heroes))
-            window.refresh()
-        elif event == log_parser.JOB_ENDGAME:
-            player = values[event]
-            if player:
-                place = player.place if int(player.health) <= 0 else "1"
-                player_stats.update_stats(asset_utils.get_card_art_name(current_player.heroid, current_player.heroname),
-                                          asset_utils.get_card_art_name(player.heroid, player.heroname), place,
-                                          player.mmr)
-        elif event == "GITHUB-UPDATE":
-            choice = sg.popup_yes_no("New version available!\nWould you like to go to the download page?",
-                                     keep_on_top=True)
-            if choice == "Yes":
-                webbrowser.open_new_tab('https://github.com/SBBTracker/SBBTracker/releases/latest')
-
-        elif event == "Prev":
-            if page_number > 1:
-                page_number -= 1
-            player_stats.update_page(page_number)
-        elif event == "Next":
-            if page_number < stats.get_num_pages(player_stats.df):
-                page_number += 1
-            player_stats.update_page(page_number)
-    # if user exits the window, then close the window and exit the GUI func
-    window.close()
-    player_stats.save()
-    settings["custom_dates"] = custom_dates
-    save_settings()
+    def update_graph(self, names_to_health, ids_to_heroes):
+        self.ax.cla()
+        self.figure = graphs.make_health_graph(names_to_health, ids_to_heroes, self.ax)
+        self.canvas.draw()
 
 
-if __name__ == '__main__':
-    the_gui()
-    print('Exiting Program')
+class StatsGraph(QWidget):
+    def __init__(self, player_stats: stats.PlayerStats):
+        super().__init__()
+        self.player_stats = player_stats
+
+        self.figure = None
+        self.canvas = FigureCanvasQTAgg(plt.Figure(figsize=(13.5, 18)))
+        self.ax = self.canvas.figure.subplots()
+
+        self.graph_selection = QComboBox()
+        self.graph_selection.setMaximumWidth(200)
+        self.graph_selection.addItems([graphs.matches_per_hero, graphs.mmr_change])
+        self.graph_selection.activated.connect(self.update_graph)
+        self.selection = graphs.mmr_change
+
+        self.layout = QVBoxLayout(self)
+        self.layout.addWidget(self.graph_selection)
+        self.layout.addWidget(self.canvas)
+
+        self.update_graph()
+
+    def update_graph(self):
+        self.selection = self.graph_selection.currentText()
+        self.ax.cla()
+        self.figure = graphs.make_stats_graph(self.player_stats.df, self.selection, self.ax)
+        self.canvas.draw()
+
+
+app = QApplication(sys.argv)
+apply_stylesheet(app, theme='dark_teal.xml')
+stylesheet = app.styleSheet()
+app.setStyleSheet(stylesheet + "QTabBar{ text-transform: none; }")
+window = SBBTracker()
+window.show()
+
+sys.exit(app.exec())
