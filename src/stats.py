@@ -4,7 +4,6 @@ from datetime import datetime
 from os.path import expanduser
 from pathlib import Path
 
-import PySimpleGUI
 import pandas as pd
 
 import asset_utils
@@ -18,50 +17,9 @@ if not sbbtracker_folder:
 headings = ["Hero", "# Matches", "Avg Place", "Top 4", "Wins"]
 
 
-def generate_stats(window: PySimpleGUI.Window, df: pd.DataFrame):
-    df["Placement"] = pd.to_numeric(df["Placement"])
-    for hero_type in ["StartingHero", "EndingHero"]:
-        heroes = sorted(set(df[hero_type]))
-
-        data = []
-        for hero in heroes:
-            if not hero.isspace():
-                bool_df = df[hero_type] == hero
-                total_matches = sum(bool_df)
-                avg = round(df.loc[bool_df, 'Placement'].mean(), 2)
-                total_top4 = len(df.loc[bool_df & (df['Placement'] <= 4), 'Placement'])
-                total_wins = len(df.loc[bool_df & (df['Placement'] == 1), 'Placement'])
-                data.append([hero, str(total_matches), str(avg), str(total_top4), str(total_wins)])
-
-        key = Keys.StartingHeroStats if hero_type == "StartingHero" else Keys.EndingHeroStats
-        table = window[key.value]
-        padding = [["", "", "", ""] for _ in range(len(asset_utils.hero_ids) - len(data))]
-        data = data + padding
-        global_matches = len(df)
-        global_avg = round(df["Placement"].mean(), 2)
-        global_top4 = len(df.loc[df['Placement'] <= 4, 'Placement'])
-        global_wins = len(df.loc[df['Placement'] == 1, 'Placement'])
-        data.insert(0, ["All Heroes", global_matches, global_avg, global_top4, global_wins])
-        table.update(values=data)
-
-
-def update_history(window: PySimpleGUI.Window, df: pd.DataFrame, page_number: int = 1):
-    start_index = len(df.index) - stats_per_page * page_number
-    end_index = len(df.index) - stats_per_page * (page_number - 1)
-    adjusted_start = start_index if start_index > 0 else 0
-    window[Keys.MatchStats.value].update(
-        df[adjusted_start:end_index][::-1].loc[:, df.columns != 'Timestamp'].values.tolist())
-    window[Keys.StatsPageNum.value].update(f"Page: {page_number}")
-
-
-def get_num_pages(df: pd.DataFrame):
-    return math.ceil(len(df.index) / stats_per_page)
-
-
 class PlayerStats:
 
-    def __init__(self, window: PySimpleGUI.Window):
-        self.window = window
+    def __init__(self):
         if os.path.exists(statsfile):
             self.df = pd.read_csv(str(statsfile))
             if 'Hero' in self.df.columns:
@@ -75,10 +33,8 @@ class PlayerStats:
             if '+/-MMR' not in self.df.columns:
                 #  Pre-MMR data gets 0 MMR for each game
                 self.df["+/-MMR"] = "0"
-            self.df['Timestamp'] = self.df['Timestamp'].replace(r'^\s*$', "1973-01-01", regex=True)
             #  clean up empty timestamps into some old time (that I thought was unix epoch but was off by 3 years lol)
-            update_history(self.window, self.df, 1)
-            generate_stats(self.window, self.df)
+            self.df['Timestamp'] = self.df['Timestamp'].replace(r'^\s*$', "1973-01-01", regex=True)
         else:
             self.df = pd.DataFrame(columns=['StartingHero', 'EndingHero', 'Placement', 'Timestamp'])
 
@@ -97,30 +53,61 @@ class PlayerStats:
         self.df = pd.DataFrame(columns=['StartingHero', 'EndingHero', 'Placement', 'Timestamp'])
         try:
             os.rename(statsfile, str(statsfile) + "_backup")
-        except Exception as e:
+        except:
             print("Unable to move old stats file!")
-            print(e)
-        update_history(self.window, self.df)
-        data = [['' for __ in range(5)] for _ in range(len(asset_utils.hero_ids))]
-        for hero_type in [Keys.StartingHeroStats, Keys.EndingHeroStats]:
-            self.window[hero_type.value].update(data)
 
-    def update_page(self, page_num: int):
-        update_history(self.window, self.df, page_num)
+    def get_num_pages(self):
+        return math.ceil(len(self.df.index) / stats_per_page)
+
+    def get_page(self, page_num: int):
+        start_index = len(self.df.index) - stats_per_page * page_num
+        end_index = len(self.df.index) - stats_per_page * (page_num - 1)
+        adjusted_start = start_index if start_index > 0 else 0
+        match_stats = self.df[adjusted_start:end_index][::-1].loc[:, self.df.columns != 'Timestamp'].values.tolist()
+        return match_stats
 
     def update_stats(self, starting_hero: str, ending_hero: str, placement: str, mmr_change: str):
         self.df = self.df.append(
             {"StartingHero": starting_hero, "EndingHero": ending_hero, "Placement": placement,
              "Timestamp": datetime.now().strftime("%Y-%m-%d"), "+/-MMR": str(mmr_change)},
             ignore_index=True)
-        update_history(self.window, self.df)
-        generate_stats(self.window, self.df)
+
+    def generate_stats(self, df=None):
+        if df is None:
+            df = self.df
+        df["Placement"] = pd.to_numeric(df["Placement"])
+        stats = []
+        for hero_type in ["StartingHero", "EndingHero"]:
+            # heroes = sorted(set(df[hero_type]))
+
+            data = []
+            for hero in asset_utils.hero_ids.values():
+                if not hero.isspace():
+                    bool_df = df[hero_type] == hero
+                    total_matches = sum(bool_df)
+                    avg = round(df.loc[bool_df, 'Placement'].mean(), 2)
+                    if math.isnan(avg):
+                        avg = 0
+                    total_top4 = len(df.loc[bool_df & (df['Placement'] <= 4), 'Placement'])
+                    total_wins = len(df.loc[bool_df & (df['Placement'] == 1), 'Placement'])
+                    data.append([hero, str(total_matches), str(avg), str(total_top4), str(total_wins)])
+
+            key = Keys.StartingHeroStats if hero_type == "StartingHero" else Keys.EndingHeroStats
+            padding = [["", "", "", "", ""] for _ in range(len(asset_utils.hero_ids) - len(data))]
+            data = data + padding
+            global_matches = len(df)
+            global_avg = round(df["Placement"].mean(), 2)
+            global_top4 = len(df.loc[df['Placement'] <= 4, 'Placement'])
+            global_wins = len(df.loc[df['Placement'] == 1, 'Placement'])
+            data.insert(0, ["All Heroes", global_matches, global_avg, global_top4, global_wins])
+            stats.append(data)
+        return stats
 
     def filter(self, start_date: str, end_date: str):
         df = self.df
         df['Timestamp'] = pd.to_datetime(df['Timestamp'], format="%Y-%m-%d")
         if start_date == "1973-01-01":
-            generate_stats(self.window, df)
+            return self.generate_stats()
         else:
             filtered = df[(df['Timestamp'] >= start_date) & (df['Timestamp'] <= end_date)]
-            generate_stats(self.window, filtered)
+            return self.generate_stats(filtered)
