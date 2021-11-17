@@ -9,13 +9,6 @@ matches_per_hero = "Matches per Hero"
 mmr_change = "MMR Graph"
 
 
-# def draw_matplotlib_figure(canvas, figure):
-#     figure_canvas_agg = FigureCanvasTkAgg(figure, canvas)
-#     figure_canvas_agg.draw_idle()
-#     figure_canvas_agg.get_tk_widget().pack(side='top', fill='both', expand=1)
-#     return figure_canvas_agg
-
-
 def delete_fig_agg(fig_agg):
     fig_agg.get_tk_widget().forget()
     plt.close('all')
@@ -49,20 +42,19 @@ def make_health_graph(names_to_health: dict, ids_to_heroes: dict, ax):
 
 
 def make_hero_freq_graph(df: pd.DataFrame, ax):
-    sorted_df = df.sort_values(by='StartingHero', ascending=True)
-    sorted_df = sorted_df[~sorted_df['StartingHero'].str.isspace()]
-    heroes = sorted_df["StartingHero"].unique()
-    matches = sorted_df.groupby("StartingHero").count()["Placement"].values
-    sort_by_wins = matches.argsort()[::-1]
-    heroes = heroes[sort_by_wins]
-    ax.barh(heroes, matches[sort_by_wins], .8, color='tab:red')
-    ind = range(max(matches) + 1)
-    ax.invert_yaxis()
-    ax.grid(axis='y')
-    ax.set_xticks(ind)
-    ax.set_title("Matches per Hero")
-    # ax.legend()
-    # ax.set_yticklabels(heroes, rotation=90)
+    if len(df.index) > 0:
+        sorted_df = df.sort_values(by='StartingHero', ascending=True)
+        sorted_df = sorted_df[~sorted_df['StartingHero'].str.isspace()]
+        heroes = sorted_df["StartingHero"].unique()
+        matches = sorted_df.groupby("StartingHero").count()["Placement"].values
+        sort_by_wins = matches.argsort()[::-1]
+        heroes = heroes[sort_by_wins]
+        ax.barh(heroes, matches[sort_by_wins], .8, color='tab:red')
+        ind = range(max(matches) + 1)
+        ax.invert_yaxis()
+        ax.grid(axis='y')
+        ax.set_xticks(ind)
+        ax.set_title("Matches per Hero")
 
     return plt.gcf()
 
