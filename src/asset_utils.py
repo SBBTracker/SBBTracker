@@ -13,7 +13,7 @@ hero_ids = {
     "SBB_HERO_GWEN": "Gwen",
     "SBB_HERO_HORDEDRAGON": "Hoard Dragon",
     "SBB_HERO_SIRPIPS": "Jack's Giant",
-    "SBB_HERO_KINGMIDAS": "King Midas",
+    # "SBB_HERO_KINGMIDAS": "King Midas",
     "SBB_HERO_KRAMPUS": "Krampus",
     "SBB_HERO_LOKI": "Loki",
     "SBB_HERO_MADCATTER": "Mad Catter",

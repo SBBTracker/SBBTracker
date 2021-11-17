@@ -39,7 +39,6 @@ logging.basicConfig(filename=stats.sbbtracker_folder.joinpath("sbbtracker.log"),
 art_dim = (161, 204)
 att_loc = (26, 181)
 health_loc = (137, 181)
-player_ids = []
 
 default_bg_color = "#31363b"
 sns.set_style("darkgrid", {"axes.facecolor": default_bg_color})
@@ -76,12 +75,6 @@ def get_image_location(position: int):
         x = 0
         y = 0
     return x, y + 5
-
-
-def get_player_index(player_id: str):
-    if player_id not in player_ids:
-        player_ids.append(player_id)
-    return player_ids.index(player_id)
 
 
 def update_table(table: QTableWidget, data: list[list]):
@@ -124,6 +117,7 @@ class LogSignals(QObject):
     comp_update = Signal(str, object, int)
     stats_update = Signal(str, object)
     health_update = Signal(dict, dict)
+    new_game = Signal()
 
 
 class LogThread(QThread):
@@ -150,14 +144,11 @@ class LogThread(QThread):
             state = update.state
             if job == log_parser.JOB_NEWGAME:
                 # window[Keys.ReattachButton.value].update(visible=False)
-                for player_id in player_ids:
-                    self.signals.comp_update.emit(player_id, None, 0)
-
-                player_ids.clear()
                 names_to_health.clear()
                 ids_to_heroes.clear()
                 current_player = None
                 round_number = 0
+                self.signals.new_game.emit()
                 self.signals.round_update.emit(0)
             elif job == log_parser.JOB_INITCURRENTPLAYER:
                 current_player = state
@@ -177,7 +168,6 @@ class LogThread(QThread):
                 # pass
             elif job == log_parser.JOB_ENDGAME:
                 if state:
-                    place = state.place if int(state.health) <= 0 else "1"
                     self.signals.stats_update.emit(asset_utils.get_card_art_name(current_player.heroid,
                                                                                  current_player.heroname), state)
 
@@ -209,6 +199,7 @@ class SBBTracker(QMainWindow):
         self.round_indicator = QLabel("Waiting for match to start...")
         self.round_indicator.setFont(round_font)
         self.player_stats = stats.PlayerStats()
+        self.player_ids = []
 
         self.comp_tabs = QTabWidget()
         for index in self.ids_to_comps:
@@ -271,9 +262,21 @@ class SBBTracker(QMainWindow):
         self.log_updates.signals.round_update.connect(self.update_round_num)
         self.log_updates.signals.stats_update.connect(self.update_stats)
         self.log_updates.signals.health_update.connect(self.health_graph.update_graph)
+        self.log_updates.signals.new_game.connect(self.new_game)
 
         self.log_updates.start()
         self.github_updates.start()
+
+    def get_player_index(self, player_id: str):
+        if player_id not in self.player_ids:
+            self.player_ids.append(player_id)
+        return self.player_ids.index(player_id)
+
+    def new_game(self):
+        self.player_ids.clear()
+        for comp in self.ids_to_comps.values():
+            comp.composition = None
+            comp.player = None
 
     def get_comp(self, index: int):
         return self.ids_to_comps[index]
@@ -284,7 +287,7 @@ class SBBTracker(QMainWindow):
         self.reset_button.hide()
 
     def update_player(self, player, round_number):
-        index = get_player_index(player.playerid)
+        index = self.get_player_index(player.playerid)
         real_hero_name = asset_utils.get_card_art_name(player.heroid, player.heroname)
         title = f"{real_hero_name}" if player.health > 0 else f"{real_hero_name} *DEAD*"
         self.comp_tabs.setTabText(index, title)
@@ -294,7 +297,7 @@ class SBBTracker(QMainWindow):
         self.update()
 
     def update_comp(self, player_id, player, round_number):
-        index = get_player_index(player_id)
+        index = self.get_player_index(player_id)
         comp = self.get_comp(index)
         comp.composition = player
         comp.last_seen = round_number
