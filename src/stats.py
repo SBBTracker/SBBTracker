@@ -7,7 +7,6 @@ from pathlib import Path
 import pandas as pd
 
 import asset_utils
-from application_constants import Keys, stats_per_page
 
 sbbtracker_folder = Path(expanduser('~/Documents')).joinpath("SBBTracker")
 statsfile = Path(expanduser('~/Documents')).joinpath("SBBTracker/stats.csv")
@@ -15,6 +14,7 @@ if not sbbtracker_folder:
     sbbtracker_folder.mkdir()
 
 headings = ["Hero", "# Matches", "Avg Place", "Top 4", "Wins"]
+stats_per_page = 20
 
 
 class PlayerStats:
@@ -64,6 +64,8 @@ class PlayerStats:
         end_index = len(self.df.index) - stats_per_page * (page_num - 1)
         adjusted_start = start_index if start_index > 0 else 0
         match_stats = self.df[adjusted_start:end_index][::-1].loc[:, self.df.columns != 'Timestamp'].values.tolist()
+        padding = [["", "", "", "", ""] for _ in range(stats_per_page - len(match_stats))]
+        match_stats += padding
         return match_stats
 
     def update_stats(self, starting_hero: str, ending_hero: str, placement: str, mmr_change: str):
@@ -92,7 +94,6 @@ class PlayerStats:
                     total_wins = len(df.loc[bool_df & (df['Placement'] == 1), 'Placement'])
                     data.append([hero, str(total_matches), str(avg), str(total_top4), str(total_wins)])
 
-            key = Keys.StartingHeroStats if hero_type == "StartingHero" else Keys.EndingHeroStats
             padding = [["", "", "", "", ""] for _ in range(len(asset_utils.hero_ids) - len(data))]
             data = data + padding
             global_matches = len(df)

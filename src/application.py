@@ -15,8 +15,8 @@ from PySide6.QtCore import QObject, QPoint, QRect, QSize, QThread, QUrl, Qt, Sig
 from PySide6.QtGui import QAction, QBrush, QColor, QDesktopServices, QFont, QFontMetrics, QPainter, QPainterPath, QPen, \
     QPixmap
 from PySide6.QtWidgets import (
-    QApplication,
-    QComboBox, QFileDialog, QHBoxLayout, QLabel,
+    QAbstractItemView, QApplication,
+    QComboBox, QFileDialog, QHBoxLayout, QHeaderView, QLabel,
     QMainWindow,
     QMessageBox, QPushButton, QTabWidget, QTableWidget, QTableWidgetItem, QVBoxLayout,
     QWidget,
@@ -24,7 +24,6 @@ from PySide6.QtWidgets import (
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from qt_material import apply_stylesheet
 
-import application_constants
 import asset_utils
 import graphs
 import log_parser
@@ -442,13 +441,17 @@ class MatchHistory(QWidget):
     def __init__(self, player_stats: stats.PlayerStats):
         super().__init__()
         self.player_stats = player_stats
-        self.match_history_table = QTableWidget(application_constants.stats_per_page, 4)
+        self.match_history_table = QTableWidget(stats.stats_per_page, 4)
         self.page = 1
         self.display_starting_hero = True
         self.filter = "All"
         self.match_history_table.setHorizontalHeaderLabels(["Starting Hero", "Ending Hero", "Place", "+/- MMR"])
         self.match_history_table.setColumnWidth(0, 130)
         self.match_history_table.setColumnWidth(1, 120)
+        self.match_history_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.match_history_table.setFocusPolicy(Qt.NoFocus)
+        self.match_history_table.setSelectionMode(QAbstractItemView.NoSelection)
+        self.match_history_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
         paged_table = QWidget()
         paged_table.setMaximumWidth(533)
@@ -523,12 +526,15 @@ class MatchHistory(QWidget):
     def update_history_table(self):
         history = self.player_stats.get_page(self.page)
         update_table(self.match_history_table, history)
+        start_num = (self.page - 1) * stats.stats_per_page + 1
+        self.match_history_table.setVerticalHeaderLabels([str(i) for i in range(start_num,
+                                                                                start_num + stats.stats_per_page + 1)])
         self.page_indicator.setText(f'Page {self.page} of {self.player_stats.get_num_pages()}')
 
     def update_stats_table(self):
         all_dates = default_dates | custom_dates
         hero_stats = self.player_stats.filter(*all_dates[self.filter])
-        chosen_stats = hero_stats[int(self.display_starting_hero)]
+        chosen_stats = hero_stats[int(not self.display_starting_hero)]
         update_table(self.stats_table, chosen_stats)
 
     def toggle_heroes(self, button: QPushButton):

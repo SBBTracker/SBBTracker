@@ -36,10 +36,9 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "..\dist\{#MyAppExeName}"; DestDir: "{app}\bin\"; Flags: ignoreversion
+Source: "..\dist\SBBTracker\*"; DestDir: "{app}\bin\"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\cards\*"; DestDir: "{app}\cards\"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "..\assets\Empty.png"; DestDir: "{app}\assets\"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "..\assets\golden_overlay.png"; DestDir: "{app}\assets\"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\assets\*"; DestDir: "{app}\assets\"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
