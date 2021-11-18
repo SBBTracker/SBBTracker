@@ -167,7 +167,7 @@ class LogThread(QThread):
                 self.signals.health_update.emit(names_to_health, ids_to_heroes)
                 # pass
             elif job == log_parser.JOB_ENDGAME:
-                if state:
+                if state and current_player:
                     self.signals.stats_update.emit(asset_utils.get_card_art_name(current_player.heroid,
                                                                                  current_player.heroname), state)
 
@@ -284,7 +284,6 @@ class SBBTracker(QMainWindow):
     def update_round_num(self, round_number):
         self.round_indicator.setText(f"Turn {round_number}")
         self.round_indicator.update()
-        self.reset_button.hide()
 
     def update_player(self, player, round_number):
         index = self.get_player_index(player.playerid)
@@ -352,7 +351,6 @@ This will import all games played since SBB was last opened.
                 os.remove(log_parser.offsetfile)
             except Exception as e:
                 logging.warning(str(e))
-        self.reset_button.hide()
         self.update()
 
     def closeEvent(self, *args, **kwargs):
@@ -467,19 +465,19 @@ class MatchHistory(QWidget):
 
         buttons_widget = QWidget()
         page_buttons = QHBoxLayout(buttons_widget)
-        prev_button = QPushButton("<")
-        prev_button.clicked.connect(lambda: self.page_down(prev_button))
-        prev_button.setMaximumWidth(50)
-        next_button = QPushButton(">")
-        next_button.setMaximumWidth(50)
-        next_button.clicked.connect(lambda: self.page_up(next_button))
+        self.prev_button = QPushButton("<")
+        self.prev_button.clicked.connect(self.page_down)
+        self.prev_button.setMaximumWidth(50)
+        self.next_button = QPushButton(">")
+        self.next_button.setMaximumWidth(50)
+        self.next_button.clicked.connect(self.page_up)
 
         self.page_indicator = QLabel("1")
         self.page_indicator.setFont(QFont("Roboto", 16))
 
-        page_buttons.addWidget(prev_button, alignment=Qt.AlignRight)
+        page_buttons.addWidget(self.prev_button, alignment=Qt.AlignRight)
         page_buttons.addWidget(self.page_indicator, alignment=Qt.AlignCenter | Qt.AlignVCenter)
-        page_buttons.addWidget(next_button, alignment=Qt.AlignLeft)
+        page_buttons.addWidget(self.next_button, alignment=Qt.AlignLeft)
         page_buttons.setSpacing(0)
 
         paged_layout.addWidget(buttons_widget)
@@ -518,16 +516,14 @@ class MatchHistory(QWidget):
         self.update_history_table()
         self.update_stats_table()
 
-    def page_up(self, button: QPushButton):
+    def page_up(self):
         if self.page < self.player_stats.get_num_pages():
             self.page += 1
-        button.setDisabled(self.page == 1)
         self.update_history_table()
 
-    def page_down(self, button: QPushButton):
+    def page_down(self):
         if self.page > 1:
             self.page -= 1
-        button.setDisabled(self.page == self.player_stats.get_num_pages())
         self.update_history_table()
 
     def update_history_table(self):

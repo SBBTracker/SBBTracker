@@ -366,7 +366,7 @@ def run(queue: Queue, log=logfile):
     last_player_timestamp = -2
     while True:
         prev_action = None
-        ifs = SBBPygtail(filename=str(log), offset_file=offsetfile)
+        ifs = SBBPygtail(filename=str(log), offset_file=offsetfile, paranoid=True)
         for action in parse(ifs):
             if action.task == TASK_NEWGAME:
                 inbrawl = False
