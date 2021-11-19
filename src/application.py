@@ -1,3 +1,4 @@
+import datetime
 import json
 import logging
 import operator
@@ -109,13 +110,15 @@ def save_settings():
         json.dump(settings, json_file)
 
 
+today = date.today()
 default_dates = {
-    "All": ("1970-01-01", date.today().strftime("%Y-%m-%d")),
-    "Patch 64.2": ("2021-11-08", date.today().strftime("%Y-%m-%d")),
-    "Patch 63.4": ("2021-10-18", "2021-11-08")
+    "All Matches": ("1970-01-01", today.strftime("%Y-%m-%d")),
+    "Latest Patch (64.2)": ("2021-11-08", today.strftime("%Y-%m-%d")),
+    "Previous Patch (63.4)": ("2021-10-18", "2021-11-08"),
+    "Today": (today.strftime("%Y-%m-%d"), today.strftime("%Y-%m-%d")),
+    "Last 7 days": ((today - datetime.timedelta(days=7)).strftime("%Y-%m-%d"), today.strftime("%Y-%m-%d")),
+    "Last 30 days": ((today - datetime.timedelta(days=30)).strftime("%Y-%m-%d"), today.strftime("%Y-%m-%d"))
 }
-
-custom_dates = settings["custom_dates"] if "custom_dates" in settings else {}
 
 
 class LogSignals(QObject):
@@ -469,8 +472,8 @@ class MatchHistory(QWidget):
         self.player_stats = player_stats
         self.match_history_table = QTableWidget(stats.stats_per_page, 4)
         self.page = 1
-        self.display_starting_hero = True
-        self.filter = "All"
+        self.display_starting_hero = 0
+        self.filter = "All Matches"
         self.match_history_table.setHorizontalHeaderLabels(["Starting Hero", "Ending Hero", "Place", "+/- MMR"])
         self.match_history_table.setColumnWidth(0, 130)
         self.match_history_table.setColumnWidth(1, 120)
@@ -517,19 +520,22 @@ class MatchHistory(QWidget):
         self.stats_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
         filter_widget = QWidget()
-        toggle_hero = QPushButton("Show Ending Heroes")
-        toggle_hero.clicked.connect(lambda: self.toggle_heroes(toggle_hero))
-        all_dates = default_dates | custom_dates
+        self.toggle_hero = QComboBox()
+        hero_types = ["Starting Heroes", "Ending Heroes"]
+        self.toggle_hero.activated.connect(self.toggle_heroes)
+        self.toggle_hero.addItems(hero_types)
         self.filter_combo = QComboBox()
-        self.filter_combo.addItems(all_dates.keys())
+        self.filter_combo.addItems(default_dates.keys())
         self.filter_combo.activated.connect(self.filter_stats)
-        filter_label = QLabel("Filter Stats:")
-        filter_label.setFont(QFont("Roboto", 16))
+        self.sort_combo = QComboBox()
+        self.sort_combo.addItems(stats.headings)
+        self.sort_combo.activated.connect(self.sort_stats)
+        self.sort_col = 0
 
         filter_layout = QHBoxLayout(filter_widget)
-        filter_layout.addWidget(toggle_hero, alignment=Qt.AlignLeft)
-        filter_layout.addWidget(filter_label, alignment=Qt.AlignRight)
-        filter_layout.addWidget(self.filter_combo, alignment=Qt.AlignLeft)
+        filter_layout.addWidget(self.toggle_hero)
+        filter_layout.addWidget(self.sort_combo)
+        filter_layout.addWidget(self.filter_combo)
 
         stats_layout.addWidget(filter_widget)
         stats_layout.addWidget(self.stats_table)
@@ -560,19 +566,21 @@ class MatchHistory(QWidget):
         self.page_indicator.setText(f'Page {self.page} of {self.player_stats.get_num_pages()}')
 
     def update_stats_table(self):
-        all_dates = default_dates | custom_dates
-        hero_stats = self.player_stats.filter(*all_dates[self.filter])
-        chosen_stats = hero_stats[int(not self.display_starting_hero)]
+        start, end = default_dates[self.filter]
+        hero_stats = self.player_stats.filter(start, end, self.sort_col)
+        chosen_stats = hero_stats[self.display_starting_hero]
         update_table(self.stats_table, chosen_stats)
 
-    def toggle_heroes(self, button: QPushButton):
-        self.display_starting_hero = not self.display_starting_hero
+    def toggle_heroes(self, index: int):
+        self.display_starting_hero = index
         self.update_stats_table()
-        text = "Show Ending Heroes" if self.display_starting_hero else "Show Starting Heroes"
-        button.setText(text)
 
     def filter_stats(self):
         self.filter = self.filter_combo.currentText()
+        self.update_stats_table()
+
+    def sort_stats(self, index: int):
+        self.sort_col = index
         self.update_stats_table()
 
 

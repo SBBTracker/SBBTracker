@@ -379,7 +379,8 @@ def run(queue: Queue, log=logfile):
                 lastupdated = dict()
 
                 queue.put(Update(JOB_NEWGAME, None))
-            elif not inbrawl and not current_player_stats and action.task == TASK_ADDPLAYER and prev_action.task == TASK_GETTHISPLAYER:
+            elif not inbrawl and not current_player_stats and action.task == TASK_ADDPLAYER \
+                    and prev_action is not None and prev_action.task == TASK_GETTHISPLAYER:
                 current_player_stats = action
                 queue.put(Update(JOB_INITCURRENTPLAYER, current_player_stats))
             elif not inbrawl and action.task == TASK_ADDPLAYER:

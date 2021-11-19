@@ -74,7 +74,7 @@ class PlayerStats:
              "Timestamp": datetime.now().strftime("%Y-%m-%d"), "+/-MMR": str(mmr_change)},
             ignore_index=True)
 
-    def generate_stats(self, df=None):
+    def generate_stats(self, sort_col: int, df=None):
         if df is None:
             df = self.df
         df["Placement"] = pd.to_numeric(df["Placement"])
@@ -100,18 +100,23 @@ class PlayerStats:
             data = data + padding
             global_matches = len(df)
             global_avg = round(df["Placement"].mean(), 2)
+            if math.isnan(global_avg):
+                global_avg = 0
             global_top4 = len(df.loc[df['Placement'] <= 4, 'Placement'])
             global_wins = len(df.loc[df['Placement'] == 1, 'Placement'])
             global_net_mmr = df["+/-MMR"].sum()
-            data.insert(0, ["All Heroes", global_matches, global_avg, global_top4, global_wins, global_net_mmr])
-            stats.append(data)
+            data.insert(0, ["All Heroes", str(global_matches), str(global_avg), str(global_top4), str(global_wins),
+                            str(global_net_mmr)])
+            caster = str if sort_col == 0 else float
+            sort_direction = not (sort_col == 0 or sort_col == 2)
+            stats.append(sorted(data, key=lambda x: caster(x[sort_col]), reverse=sort_direction))
         return stats
 
-    def filter(self, start_date: str, end_date: str):
+    def filter(self, start_date: str, end_date: str, sort_col: int):
         df = self.df
         df['Timestamp'] = pd.to_datetime(df['Timestamp'], format="%Y-%m-%d")
         if start_date == "1973-01-01":
-            return self.generate_stats()
+            return self.generate_stats(sort_col)
         else:
             filtered = df[(df['Timestamp'] >= start_date) & (df['Timestamp'] <= end_date)]
-            return self.generate_stats(filtered)
+            return self.generate_stats(sort_col, filtered)
