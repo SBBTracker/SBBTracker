@@ -8,6 +8,7 @@ from os.path import exists, expanduser
 from pathlib import Path
 from queue import Queue
 
+import psutil
 from pygtail import Pygtail
 
 import stats
@@ -277,7 +278,9 @@ class Action:
                 self.health = int(info['Hero']['Card']['Health'])
                 self.playerid = info['Hero']['Card']['PlayerId']
                 self.place = info['Place']
-                self.attrs = ['displayname', 'heroname', 'playerid', 'health', 'heroid', 'place']
+                self.experience = info['Experience']
+                self.level = info['Level']
+                self.attrs = ['displayname', 'heroname', 'playerid', 'health', 'heroid', 'place', 'level', 'experience']
 
                 if self.action_type == EVENT_ENTERRESULTSPHASE:
                     self.task = TASK_ENDGAME
@@ -368,7 +371,7 @@ def run(queue: Queue, log=logfile):
     last_player_timestamp = -2
     while True:
         prev_action = None
-        ifs = SBBPygtail(filename=str(log), offset_file=offsetfile, paranoid=True)
+        ifs = SBBPygtail(filename=str(log), offset_file=offsetfile, every_n=100)
         for action in parse(ifs):
             if action.task == TASK_NEWGAME:
                 inbrawl = False

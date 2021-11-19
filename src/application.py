@@ -39,6 +39,7 @@ logging.basicConfig(filename=stats.sbbtracker_folder.joinpath("sbbtracker.log"),
 art_dim = (161, 204)
 att_loc = (26, 181)
 health_loc = (137, 181)
+xp_loc = (137, 40)
 
 default_bg_color = "#31363b"
 sns.set_style("darkgrid", {"axes.facecolor": default_bg_color})
@@ -75,6 +76,12 @@ def get_image_location(position: int):
         x = 0
         y = 0
     return x, y + 5
+
+
+def round_to_xp(round_number: int):
+    lvl = min(6, (round_number - 1) // 3 + 2)
+    xp = (round_number - 1) % 3 if lvl != 6 else 0
+    return "0.0" if round_number == 0 else f"{lvl}.{xp}"
 
 
 def update_table(table: QTableWidget, data: list[list]):
@@ -143,7 +150,6 @@ class LogThread(QThread):
             job = update.job
             state = update.state
             if job == log_parser.JOB_NEWGAME:
-                # window[Keys.ReattachButton.value].update(visible=False)
                 names_to_health.clear()
                 ids_to_heroes.clear()
                 current_player = None
@@ -250,8 +256,8 @@ class SBBTracker(QMainWindow):
         main_layout.addWidget(main_tabs)
 
         self.setCentralWidget(main_widget)
-
         self.setFixedSize(QSize(1350, 840))
+        # self.setWindowFlag(Qt.FramelessWindowHint)
 
         self.github_updates = UpdateCheckThread()
         self.github_updates.signals.github_update.connect(self.github_update_popup)
@@ -282,7 +288,7 @@ class SBBTracker(QMainWindow):
         return self.ids_to_comps[index]
 
     def update_round_num(self, round_number):
-        self.round_indicator.setText(f"Turn {round_number}")
+        self.round_indicator.setText(f"Turn {round_number} ({round_to_xp(round_number)})")
         self.round_indicator.update()
 
     def update_player(self, player, round_number):
@@ -378,8 +384,8 @@ class BoardComp(QWidget):
         health_circle_center = tuple(map(operator.sub, health_center, (30, 40)))
         font = QFont("Impact", 25, QFont.ExtraBold)
         metrics = QFontMetrics(font)
-        att_text_center = tuple(map(operator.sub, att_center, (metrics.horizontalAdvance(attack) / 2, -4)))
-        health_text_center = tuple(map(operator.sub, health_center, (metrics.horizontalAdvance(health) / 2, -4)))
+        att_text_center = tuple(map(operator.sub, att_center, (metrics.horizontalAdvance(attack) / 2 - 2, -4)))
+        health_text_center = tuple(map(operator.sub, health_center, (metrics.horizontalAdvance(health) / 2 - 2, -4)))
         if attack:
             if slot < 7:
                 painter.drawPixmap(QPoint(*att_circle_center), QPixmap("../assets/attack_orb.png"))
@@ -410,6 +416,20 @@ class BoardComp(QWidget):
         # painter.drawPixmap(card_loc[0], card_loc[1], self.border)
         self.update_card_stats(painter, int(slot), str(health), str(attack))
 
+    def update_xp(self, painter: QPainter, xp: str):
+        card_loc = get_image_location(11)
+        xp_center = tuple(map(operator.add, xp_loc, card_loc))
+        font = QFont("Impact", 25, QFont.ExtraBold)
+        metrics = QFontMetrics(font)
+        xp_orb_center = tuple(map(operator.sub, xp_center, (30, 40)))
+        xp_text_center = tuple(map(operator.sub, xp_center, (metrics.horizontalAdvance(xp) / 2 - 2, -4)))
+        painter.drawPixmap(QPoint(*xp_orb_center), QPixmap("../assets/xp_orb.png"))
+        path = QPainterPath()
+        path.addText(QPoint(*xp_text_center), font, xp)
+        painter.setPen(QPen(QColor("black"), 1))
+        painter.setBrush(QBrush("white"))
+        painter.drawPath(path)
+
     def paintEvent(self, event):
         painter = QPainter(self)
         if self.composition is not None:
@@ -421,25 +441,26 @@ class BoardComp(QWidget):
                 self.update_card(painter, position, action.cardname, action.content_id, action.cardhealth,
                                  action.cardattack, action.is_golden)
                 used_slots.append(str(position))
-            last_seen_text = ""
-            if self.last_seen is not None:
-                if self.last_seen == 0:
-                    last_seen_text = "Last seen just now"
-                elif self.last_seen > 0:
-                    last_seen_text = f"Last seen {self.current_round - self.last_seen}"
-                    if self.current_round - self.last_seen == 1:
-                        last_seen_text += " turn ago"
-                    else:
-                        last_seen_text += " turns ago"
-            else:
-                last_seen_text = "Not yet seen"
-            painter.setPen(QPen(QColor("white"), 1))
-            painter.setFont(QFont("Roboto", 12))
-            painter.drawText(5, 20, last_seen_text)
         else:
             painter.eraseRect(QRect(0, 0, 1350, 820))
         if self.player:
             self.update_card(painter, 11, self.player.heroname, self.player.heroid, self.player.health, "", False)
+            self.update_xp(painter, f"{self.player.level}.{self.player.experience}")
+        last_seen_text = ""
+        if self.last_seen is not None:
+            if self.last_seen == 0:
+                last_seen_text = "Last seen just now"
+            elif self.last_seen > 0:
+                last_seen_text = f"Last seen {self.current_round - self.last_seen}"
+                if self.current_round - self.last_seen == 1:
+                    last_seen_text += " turn ago"
+                else:
+                    last_seen_text += " turns ago"
+        else:
+            last_seen_text = "Not yet seen"
+        painter.setPen(QPen(QColor("white"), 1))
+        painter.setFont(QFont("Roboto", 15))
+        painter.drawText(5, 20, last_seen_text)
 
 
 class MatchHistory(QWidget):
@@ -485,11 +506,15 @@ class MatchHistory(QWidget):
 
         stats_widget = QWidget()
         stats_layout = QVBoxLayout(stats_widget)
-        self.stats_table = QTableWidget(len(asset_utils.hero_ids), 5)
+        self.stats_table = QTableWidget(len(asset_utils.hero_ids), 6)
         self.stats_table.setHorizontalHeaderLabels(stats.headings)
         self.stats_table.setColumnWidth(0, 130)
         self.stats_table.setColumnWidth(1, 130)
         self.stats_table.setColumnWidth(2, 130)
+        self.stats_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.stats_table.setFocusPolicy(Qt.NoFocus)
+        self.stats_table.setSelectionMode(QAbstractItemView.NoSelection)
+        self.stats_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
         filter_widget = QWidget()
         toggle_hero = QPushButton("Show Ending Heroes")

@@ -10,10 +10,10 @@ import asset_utils
 
 sbbtracker_folder = Path(expanduser('~/Documents')).joinpath("SBBTracker")
 statsfile = Path(expanduser('~/Documents')).joinpath("SBBTracker/stats.csv")
-if not sbbtracker_folder:
+if not sbbtracker_folder.exists():
     sbbtracker_folder.mkdir()
 
-headings = ["Hero", "# Matches", "Avg Place", "Top 4", "Wins"]
+headings = ["Hero", "# Matches", "Avg Place", "Top 4", "Wins", "Net MMR"]
 stats_per_page = 20
 
 
@@ -78,6 +78,7 @@ class PlayerStats:
         if df is None:
             df = self.df
         df["Placement"] = pd.to_numeric(df["Placement"])
+        df["+/-MMR"] = pd.to_numeric(df["+/-MMR"])
         stats = []
         for hero_type in ["StartingHero", "EndingHero"]:
             # heroes = sorted(set(df[hero_type]))
@@ -92,15 +93,17 @@ class PlayerStats:
                         avg = 0
                     total_top4 = len(df.loc[bool_df & (df['Placement'] <= 4), 'Placement'])
                     total_wins = len(df.loc[bool_df & (df['Placement'] == 1), 'Placement'])
-                    data.append([hero, str(total_matches), str(avg), str(total_top4), str(total_wins)])
+                    net_mmr = df.loc[bool_df, '+/-MMR'].sum()
+                    data.append([hero, str(total_matches), str(avg), str(total_top4), str(total_wins), str(net_mmr)])
 
-            padding = [["", "", "", "", ""] for _ in range(len(asset_utils.hero_ids) - len(data))]
+            padding = [["", "", "", "", "", ""] for _ in range(len(asset_utils.hero_ids) - len(data))]
             data = data + padding
             global_matches = len(df)
             global_avg = round(df["Placement"].mean(), 2)
             global_top4 = len(df.loc[df['Placement'] <= 4, 'Placement'])
             global_wins = len(df.loc[df['Placement'] == 1, 'Placement'])
-            data.insert(0, ["All Heroes", global_matches, global_avg, global_top4, global_wins])
+            global_net_mmr = df["+/-MMR"].sum()
+            data.insert(0, ["All Heroes", global_matches, global_avg, global_top4, global_wins, global_net_mmr])
             stats.append(data)
         return stats
 
