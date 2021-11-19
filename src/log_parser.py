@@ -301,8 +301,10 @@ class Action:
                 self.is_golden = cardinfo['IsGolden']
                 self.slot = cardinfo['Slot']
                 self.zone = cardinfo['Zone']
+                self.cost = cardinfo['Cost']
+                self.level = cardinfo['Level']
                 self.content_id = cardinfo['ContentId']
-                self.attrs = ['cardname', 'cardattack', 'cardhealth', 'is_golden', 'slot', 'zone', 'content_id']
+                self.attrs = ['cardname', 'cardattack', 'cardhealth', 'is_golden', 'slot', 'zone', 'cost', 'level', 'content_id']
 
             elif self.action_type in [EVENT_BRAWLCOMPLETE, EVENT_SUMMONCHARACTER, EVENT_ATTACK, EVENT_DEALDAMAGE]:
                 self.task = TASK_ENDROUNDGATHER
