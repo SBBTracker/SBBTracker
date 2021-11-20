@@ -8,7 +8,6 @@ from os.path import exists, expanduser
 from pathlib import Path
 from queue import Queue
 
-import psutil
 from pygtail import Pygtail
 
 import stats

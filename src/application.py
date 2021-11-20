@@ -11,16 +11,25 @@ from pathlib import Path
 from queue import Queue
 
 import matplotlib
+matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
 import seaborn as sns
-from PySide6.QtCore import QObject, QPoint, QRect, QSize, QThread, QUrl, Qt, Signal
-from PySide6.QtGui import QAction, QBrush, QColor, QDesktopServices, QFont, QFontMetrics, QPainter, QPainterPath, QPen, \
+from PySide6 import QtGui
+from PySide6.QtCore import QObject, QPoint, QRect, QSettings, QSize, QThread, QUrl, Qt, Signal
+from PySide6.QtGui import QAction, QBrush, QColor, QDesktopServices, QFont, QFontMetrics, QIcon, QIntValidator, \
+    QPainter, QPainterPath, \
+    QPen, \
     QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView, QApplication,
-    QComboBox, QErrorMessage, QFileDialog, QHBoxLayout, QHeaderView, QLabel,
-    QMainWindow,
-    QMessageBox, QPushButton, QTabWidget, QTableWidget, QTableWidgetItem, QVBoxLayout,
+    QComboBox, QDoubleSpinBox, QErrorMessage, QFileDialog, QFrame, QGraphicsDropShadowEffect, QHBoxLayout, QHeaderView,
+    QLabel,
+    QLineEdit, QMainWindow,
+    QMenuBar, QMessageBox, QPushButton, QSizePolicy, QSlider, QSpinBox, QStyle, QTabWidget, QTableWidget,
+    QTableWidgetItem,
+    QToolBar,
+    QToolButton,
+    QVBoxLayout,
     QWidget,
 )
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
@@ -32,7 +41,6 @@ import log_parser
 import stats
 import update_check
 
-matplotlib.use('Qt5Agg')
 if not stats.sbbtracker_folder.exists():
     stats.sbbtracker_folder.mkdir()
 logging.basicConfig(filename=stats.sbbtracker_folder.joinpath("sbbtracker.log"), filemode="w", format='%(name)s - %(levelname)s - %(message)s')
@@ -198,7 +206,138 @@ class UpdateCheckThread(QThread):
         self.signals.github_update.emit()
 
 
-class SBBTracker(QMainWindow):
+class DraggableTitleBar(QToolBar):
+
+    def __init__(self, window: QMainWindow, parent):
+        super(DraggableTitleBar, self).__init__()
+        self.parent = parent
+        self._window = window
+        self._mousePressed = False
+        self.setMaximumHeight(40)
+
+        spacer = QWidget()
+        spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        titlebar_icon = QLabel()
+        titlebar_icon.setPixmap(QPixmap("../assets/icon.png").scaled(QSize(20, 20), mode=Qt.SmoothTransformation))
+        self.addWidget(QLabel("  "))
+        self.addWidget(titlebar_icon)
+        self.title = QLabel("  SBBTracker")
+        self.title.setFont(QFont("Roboto", 12))
+        self.addWidget(self.title)
+        self.addWidget(spacer)
+        self.minimize = QAction("&🗕", self)
+        self.addAction(self.minimize)
+        self.minimize.triggered.connect(self.parent.showMinimized)
+        self.widgetForAction(self.minimize).setToolTip("")
+
+        self.maximize = QAction("&🗖", self)
+        self.addAction(self.maximize)
+        self.widgetForAction(self.maximize).setToolTip("")
+        # self.maximize.triggered.connect(self.btn_max_clicked)
+
+        self.close = QAction("&🗙", self)
+        self.addAction(self.close)
+        self.close.triggered.connect(self.parent.close)
+        self.setObjectName("close-button")
+        close_widget = self.widgetForAction(self.close)
+        close_widget.setStyleSheet("QToolButton:hover { background-color: red; border-right: 10px solid red; "
+                                   "border-left: 10px solid red;}")
+        close_widget.setToolTip("")
+
+    def resizeEvent(self, QResizeEvent):
+        super(DraggableTitleBar, self).resizeEvent(QResizeEvent)
+
+    def mousePressEvent(self, event):
+        self._mousePressed = True
+        self._mousePos = event.globalPosition().toPoint()
+        self._windowPos = self._window.pos()
+
+    def mouseMoveEvent(self, event):
+        if self._mousePressed and (Qt.LeftButton & event.buttons()):
+            self._window.move(self._windowPos +
+                              (event.globalPosition().toPoint() - self._mousePos))
+
+    def btn_close_clicked(self):
+        self.parent.close()
+
+    def btn_max_clicked(self):
+        if self._window.isMaximized():
+            self._window.showNormal()
+        else:
+            self.parent.showMaximized()
+
+    def btn_min_clicked(self):
+        self.parent.showMinimized()
+
+
+class FramelessWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowFlags(Qt.CustomizeWindowHint | Qt.FramelessWindowHint)
+        self.titleBar = DraggableTitleBar(self, self)
+
+
+class SettingsWindow(FramelessWindow):
+    def __init__(self, main_window):
+        super().__init__()
+        self.hide()
+        main_widget = QFrame()
+        main_layout = QVBoxLayout(main_widget)
+        general_settings = QWidget()
+        settings_tabs = QTabWidget()
+        settings_tabs.addTab(general_settings, "General")
+
+        general_layout = QVBoxLayout(general_settings)
+
+        export_button = QPushButton("Export Stats")
+        export_button.clicked.connect(main_window.export_csv)
+        delete_button = QPushButton("Delete Stats")
+        delete_button.clicked.connect(lambda: main_window.delete_stats(self))
+
+        # scaling_layout = QHBoxLayout()
+        # scaling_layout.addWidget(QLabel("UI Scaling Factor"))
+        # self.scale_slider = QSlider(Qt.Horizontal)
+        # self.scale_editor = QLineEdit()
+        # saved_scaling = settings.get("scaling", 100)
+        # self.scale_slider.setValue(saved_scaling)
+        # self.scale_slider.setMaximum(200)
+        # self.scale_slider.setMinimum(50)
+        # self.scale_slider.valueChanged.connect(lambda val: self.scale_editor.setText(str(val)))
+        # self.scale_editor.setValidator(QIntValidator(0, 200))
+        # self.scale_editor.setText(str(saved_scaling))
+        # self.scale_editor.textEdited.connect(lambda text: self.scale_slider.setValue(int(text)) if text != '' else None)
+        # scaling_layout.addWidget(self.scale_slider)
+        # scaling_layout.addWidget(self.scale_editor)
+
+        general_layout.addWidget(export_button, alignment=Qt.AlignTop)
+        general_layout.addWidget(delete_button, alignment=Qt.AlignTop)
+        # general_layout.addLayout(scaling_layout)
+        general_layout.addStretch()
+
+        save_close_layout = QHBoxLayout()
+        save_button = QPushButton("Save")
+        save_button.clicked.connect(self.save)
+        close_button = QPushButton("Cancel")
+        close_button.clicked.connect(self.hide)
+        save_close_layout.addStretch()
+        save_close_layout.addWidget(save_button)
+        save_close_layout.addWidget(close_button)
+
+        # main_layout.addWidget(self.titleBar)
+        main_layout.addWidget(settings_tabs)
+        main_layout.addLayout(save_close_layout)
+
+        self.setCentralWidget(main_widget)
+        self.setFixedSize(600, 600)
+
+    def save(self):
+        # scaling = self.scale_slider.value()
+        # settings["scaling"] = scaling
+        save_settings()
+        self.hide()
+
+
+class SBBTracker(FramelessWindow):
     def __init__(self):
         super().__init__()
 
@@ -215,7 +354,8 @@ class SBBTracker(QMainWindow):
             self.comp_tabs.addTab(self.ids_to_comps[index], f"Player{index}")
 
         self.reset_button = QPushButton("Reattach to Storybook Brawl")
-        self.reset_button.setFixedSize(300, 25)
+        self.reset_button.setMaximumWidth(self.reset_button.fontMetrics().boundingRect("Reattach to Storybook Brawl")
+                                          .width() * 2)
         self.reset_button.clicked.connect(self.reattatch_to_log)
         round_widget = QWidget()
         round_layout = QHBoxLayout(round_widget)
@@ -237,30 +377,27 @@ class SBBTracker(QMainWindow):
         main_tabs.addTab(self.match_history, "Match History")
         main_tabs.addTab(self.stats_graph, "Stats Graphs")
 
-        menu_bar = self.menuBar()
-        file_menu = menu_bar.addMenu("&File")
-        export_action = QAction("&Export stats", self)
-        export_action.triggered.connect(self.export_csv)
-        delete_action = QAction("&Delete stats", self)
-        delete_action.triggered.connect(self.delete_stats)
-        file_menu.addAction(export_action)
-        file_menu.addAction(delete_action)
-        help_menu = menu_bar.addMenu("&Help")
-        bug_action = QAction("&Report a bug", self)
-        bug_action.triggered.connect(self.open_issues)
-        help_menu.addAction(bug_action)
-
-        discord_action = QAction(QPixmap("../assets/icons/discord.png"), "&Discord", menu_bar)
-        menu_bar.addAction(discord_action)
+        discord_action = QAction(QPixmap("../assets/icons/discord.png"), "&Join our Discord", self)
+        self.titleBar.insertAction(self.titleBar.minimize, discord_action)
         discord_action.triggered.connect(self.open_discord)
+
+        bug_action = QAction(QPixmap("../assets/icons/bug_report.png"), "&Report a bug", self)
+        self.titleBar.insertAction(discord_action, bug_action)
+        bug_action.triggered.connect(self.open_issues)
+
+        self.settings_window = SettingsWindow(self)
+        settings_action = QAction(QPixmap("../assets/icons/settings.png"), "&Settings", self)
+        self.titleBar.insertAction(bug_action, settings_action)
+        settings_action.triggered.connect(self.settings_window.show)
 
         main_widget = QWidget()
         main_layout = QVBoxLayout(main_widget)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.addWidget(self.titleBar)
         main_layout.addWidget(main_tabs)
 
         self.setCentralWidget(main_widget)
-        self.setFixedSize(QSize(1350, 840))
-        # self.setWindowFlag(Qt.FramelessWindowHint)
+        self.setFixedSize(QSize(1400, 900))
 
         self.github_updates = UpdateCheckThread()
         self.github_updates.signals.github_update.connect(self.github_update_popup)
@@ -298,7 +435,7 @@ class SBBTracker(QMainWindow):
         index = self.get_player_index(player.playerid)
         real_hero_name = asset_utils.get_card_art_name(player.heroid, player.heroname)
         title = f"{real_hero_name}" if player.health > 0 else f"{real_hero_name} *DEAD*"
-        self.comp_tabs.setTabText(index, title)
+        self.comp_tabs.tabBar().setTabText(index, title)
         comp = self.get_comp(index)
         comp.player = player
         comp.current_round = round_number
@@ -344,8 +481,8 @@ class SBBTracker(QMainWindow):
                                                          filter="Text CSV (*.csv)")
         self.player_stats.export(Path(filepath))
 
-    def delete_stats(self):
-        reply = QMessageBox.question(self, "Delete all Stats", "Do you want to delete *ALL* saved stats?")
+    def delete_stats(self, window):
+        reply = QMessageBox.question(window, "Delete all Stats", "Do you want to delete *ALL* saved stats?")
         if reply == QMessageBox.Yes:
             self.player_stats.delete()
 
@@ -378,6 +515,7 @@ class BoardComp(QWidget):
         self.last_seen = None
         self.current_round = 0
         self.player = None
+        self.number_display_font = QFont("Impact", 25, weight=QFont.ExtraBold)
 
     def update_card_stats(self, painter: QPainter, slot: int, health: str, attack: str):
         card_location = get_image_location(slot)
@@ -385,15 +523,15 @@ class BoardComp(QWidget):
         health_center = tuple(map(operator.add, health_loc, card_location))
         att_circle_center = tuple(map(operator.sub, att_center, (30, 40)))
         health_circle_center = tuple(map(operator.sub, health_center, (30, 40)))
-        font = QFont("Impact", 25, QFont.ExtraBold)
-        metrics = QFontMetrics(font)
+
+        metrics = QFontMetrics(self.number_display_font)
         att_text_center = tuple(map(operator.sub, att_center, (metrics.horizontalAdvance(attack) / 2 - 2, -4)))
         health_text_center = tuple(map(operator.sub, health_center, (metrics.horizontalAdvance(health) / 2 - 2, -4)))
         if attack:
             if slot < 7:
                 painter.drawPixmap(QPoint(*att_circle_center), QPixmap("../assets/attack_orb.png"))
                 path = QPainterPath()
-                path.addText(QPoint(*att_text_center), font, attack)
+                path.addText(QPoint(*att_text_center), self.number_display_font, attack)
                 painter.setPen(QPen(QColor("black"), 1))
                 painter.setBrush(QBrush("white"))
                 painter.drawPath(path)
@@ -401,7 +539,7 @@ class BoardComp(QWidget):
             if slot < 7 or slot == 11:
                 painter.drawPixmap(QPoint(*health_circle_center), QPixmap("../assets/health_orb.png"))
                 path = QPainterPath()
-                path.addText(QPoint(*health_text_center), font, health)
+                path.addText(QPoint(*health_text_center), self.number_display_font, health)
                 painter.setPen(QPen(QColor("black"), 1))
                 painter.setBrush(QBrush("white"))
                 painter.drawPath(path)
@@ -422,13 +560,12 @@ class BoardComp(QWidget):
     def update_xp(self, painter: QPainter, xp: str):
         card_loc = get_image_location(11)
         xp_center = tuple(map(operator.add, xp_loc, card_loc))
-        font = QFont("Impact", 25, QFont.ExtraBold)
-        metrics = QFontMetrics(font)
+        metrics = QFontMetrics(self.number_display_font)
         xp_orb_center = tuple(map(operator.sub, xp_center, (30, 40)))
         xp_text_center = tuple(map(operator.sub, xp_center, (metrics.horizontalAdvance(xp) / 2 - 2, -4)))
         painter.drawPixmap(QPoint(*xp_orb_center), QPixmap("../assets/xp_orb.png"))
         path = QPainterPath()
-        path.addText(QPoint(*xp_text_center), font, xp)
+        path.addText(QPoint(*xp_text_center), self.number_display_font, xp)
         painter.setPen(QPen(QColor("black"), 1))
         painter.setBrush(QBrush("white"))
         painter.drawPath(path)
@@ -462,8 +599,10 @@ class BoardComp(QWidget):
         else:
             last_seen_text = "Not yet seen"
         painter.setPen(QPen(QColor("white"), 1))
-        painter.setFont(QFont("Roboto", 15))
-        painter.drawText(5, 20, last_seen_text)
+        seen_font = QFont("Roboto")
+        seen_font.setPixelSize(20)
+        painter.setFont(seen_font)
+        painter.drawText(10, 25, last_seen_text)
 
 
 class MatchHistory(QWidget):
@@ -475,8 +614,10 @@ class MatchHistory(QWidget):
         self.display_starting_hero = 0
         self.filter = "All Matches"
         self.match_history_table.setHorizontalHeaderLabels(["Starting Hero", "Ending Hero", "Place", "+/- MMR"])
-        self.match_history_table.setColumnWidth(0, 130)
-        self.match_history_table.setColumnWidth(1, 120)
+        self.match_history_table.setColumnWidth(0, 140)
+        self.match_history_table.setColumnWidth(1, 130)
+        self.match_history_table.setColumnWidth(2, 90)
+        self.match_history_table.setColumnWidth(3, 100)
         self.match_history_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.match_history_table.setFocusPolicy(Qt.NoFocus)
         self.match_history_table.setSelectionMode(QAbstractItemView.NoSelection)
@@ -543,6 +684,12 @@ class MatchHistory(QWidget):
         tables_layout = QHBoxLayout(self)
         tables_layout.addWidget(paged_table)
         tables_layout.addWidget(stats_widget)
+
+        table_font = QFont("Roboto")
+        table_font.setPixelSize(14)
+
+        # self.match_history_table.setFont(table_font)
+        # self.stats_table.setFont(table_font)
 
         self.update_history_table()
         self.update_stats_table()
@@ -629,10 +776,11 @@ class StatsGraph(QWidget):
 
 
 app = QApplication(sys.argv)
+app.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.RoundPreferFloor)
 apply_stylesheet(app, theme='dark_teal.xml')
 stylesheet = app.styleSheet()
 app.setStyleSheet(stylesheet + "QTabBar{ text-transform: none; }")
-window = SBBTracker()
-window.show()
+mainWindow = SBBTracker()
+mainWindow.show()
 
 sys.exit(app.exec())

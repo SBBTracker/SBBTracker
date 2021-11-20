@@ -14,7 +14,7 @@ if not sbbtracker_folder.exists():
     sbbtracker_folder.mkdir()
 
 headings = ["Hero", "# Matches", "Avg Place", "Top 4", "Wins", "Net MMR"]
-stats_per_page = 20
+stats_per_page = 22
 
 
 class PlayerStats:
