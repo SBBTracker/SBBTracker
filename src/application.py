@@ -652,7 +652,7 @@ class MatchHistory(QWidget):
 
         stats_widget = QWidget()
         stats_layout = QVBoxLayout(stats_widget)
-        self.stats_table = QTableWidget(len(asset_utils.hero_ids), 6)
+        self.stats_table = QTableWidget(len(asset_utils.hero_ids) + 1, 6)
         self.stats_table.setHorizontalHeaderLabels(stats.headings)
         self.stats_table.setColumnWidth(0, 130)
         self.stats_table.setColumnWidth(1, 130)
