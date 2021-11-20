@@ -36,7 +36,7 @@ class PlayerStats:
             #  clean up empty timestamps into some old time (that I thought was unix epoch but was off by 3 years lol)
             self.df['Timestamp'] = self.df['Timestamp'].replace(r'^\s*$', "1973-01-01", regex=True)
         else:
-            self.df = pd.DataFrame(columns=['StartingHero', 'EndingHero', 'Placement', 'Timestamp'])
+            self.df = pd.DataFrame(columns=['StartingHero', 'EndingHero', 'Placement', 'Timestamp', '+/-MMR'])
 
     def export(self, filepath: Path):
         try:
@@ -112,10 +112,10 @@ class PlayerStats:
             stats.append(sorted(data, key=lambda x: caster(x[sort_col]), reverse=sort_direction))
         return stats
 
-    def filter(self, start_date: str, end_date: str, sort_col: int):
+    def filter(self, start_date, end_date, sort_col: int):
         df = self.df
         df['Timestamp'] = pd.to_datetime(df['Timestamp'], format="%Y-%m-%d")
-        if start_date == "1973-01-01":
+        if str(start_date) <= "1973-01-01":
             return self.generate_stats(sort_col)
         else:
             filtered = df[(df['Timestamp'] >= start_date) & (df['Timestamp'] <= end_date)]

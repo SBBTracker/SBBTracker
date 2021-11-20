@@ -423,6 +423,8 @@ class SBBTracker(FramelessWindow):
         for comp in self.ids_to_comps.values():
             comp.composition = None
             comp.player = None
+            comp.current_round = 0
+            comp.last_seen = None
 
     def get_comp(self, index: int):
         return self.ids_to_comps[index]
