@@ -17,7 +17,11 @@ headings = ["Hero", "# Matches", "Avg Place", "Top 4", "Wins", "Net MMR"]
 stats_per_page = 22
 
 
-def sorting(sort_col: int):
+def sorting_key(sort_col: int):
+    """
+    @param sort_col: the column to sort
+    @return: the key function for sorting a column
+    """
     if sort_col == 0:
         return str
     elif sort_col == 2:
@@ -27,7 +31,9 @@ def sorting(sort_col: int):
 
 
 class PlayerStats:
-
+    """
+    A class for loading, storing, and manipulating a player's match history and its relevant stats
+    """
     def __init__(self):
         if os.path.exists(statsfile):
             self.df = pd.read_csv(str(statsfile))
@@ -116,7 +122,7 @@ class PlayerStats:
             global_net_mmr = df["+/-MMR"].sum()
 
             sort_direction = not (sort_col == 0 or sort_col == 2)
-            sorter = sorting(sort_col)
+            sorter = sorting_key(sort_col)
             data = sorted(data, key=lambda x: sorter(x[sort_col]), reverse=sort_direction)
             data.insert(0, ["All Heroes", str(global_matches), str(global_avg), str(global_top4), str(global_wins),
                             str(global_net_mmr)])

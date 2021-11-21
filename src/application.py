@@ -233,7 +233,7 @@ class DraggableTitleBar(QToolBar):
         self.maximize = QAction("&🗖", self)
         self.addAction(self.maximize)
         self.widgetForAction(self.maximize).setToolTip("")
-        # self.maximize.triggered.connect(self.btn_max_clicked)
+        self.maximize.triggered.connect(self.btn_max_clicked)
 
         self.close = QAction("&🗙", self)
         self.addAction(self.close)
@@ -254,6 +254,7 @@ class DraggableTitleBar(QToolBar):
 
     def mouseMoveEvent(self, event):
         if self._mousePressed and (Qt.LeftButton & event.buttons()):
+            self._window.setWindowState(Qt.WindowNoState)
             self._window.move(self._windowPos +
                               (event.globalPosition().toPoint() - self._mousePos))
 
@@ -262,9 +263,9 @@ class DraggableTitleBar(QToolBar):
 
     def btn_max_clicked(self):
         if self._window.isMaximized():
-            self._window.showNormal()
+            self._window.setWindowState(Qt.WindowNoState)
         else:
-            self.parent.showMaximized()
+            self._window.setWindowState(Qt.WindowMaximized)
 
     def btn_min_clicked(self):
         self.parent.showMinimized()
@@ -273,7 +274,8 @@ class DraggableTitleBar(QToolBar):
 class FramelessWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowFlags(Qt.CustomizeWindowHint | Qt.FramelessWindowHint)
+        # self.setWindowFlags(Qt.CustomizeWindowHint | Qt.FramelessWindowHint)
+        # self.setWindowFlags(Qt.FramelessWindowHint)
         self.titleBar = DraggableTitleBar(self, self)
 
 
@@ -377,27 +379,37 @@ class SBBTracker(FramelessWindow):
         main_tabs.addTab(self.match_history, "Match History")
         main_tabs.addTab(self.stats_graph, "Stats Graphs")
 
+        # toolbar = self.titleBar
+        toolbar = QToolBar(self)
+        toolbar.setMinimumHeight(40)
+        toolbar.setStyleSheet("QToolBar {border-bottom: none; border-top: none;}")
         discord_action = QAction(QPixmap("../assets/icons/discord.png"), "&Join our Discord", self)
-        self.titleBar.insertAction(self.titleBar.minimize, discord_action)
+        # toolbar.insertAction(toolbar.minimize, discord_action)
+        toolbar.addAction(discord_action)
         discord_action.triggered.connect(self.open_discord)
 
         bug_action = QAction(QPixmap("../assets/icons/bug_report.png"), "&Report a bug", self)
-        self.titleBar.insertAction(discord_action, bug_action)
+        toolbar.insertAction(discord_action, bug_action)
         bug_action.triggered.connect(self.open_issues)
 
         self.settings_window = SettingsWindow(self)
         settings_action = QAction(QPixmap("../assets/icons/settings.png"), "&Settings", self)
-        self.titleBar.insertAction(bug_action, settings_action)
+        toolbar.insertAction(bug_action, settings_action)
         settings_action.triggered.connect(self.settings_window.show)
+
+        main_tabs.setCornerWidget(toolbar)
+
+        self.setWindowIcon(QIcon("../assets/icon.png"))
 
         main_widget = QWidget()
         main_layout = QVBoxLayout(main_widget)
         main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.addWidget(self.titleBar)
+        # main_layout.addWidget(toolbar)
         main_layout.addWidget(main_tabs)
 
         self.setCentralWidget(main_widget)
-        self.setFixedSize(QSize(1400, 900))
+        self.setMinimumSize(QSize(1400, 900))
+        self.setBaseSize(QSize(1400, 900))
 
         self.github_updates = UpdateCheckThread()
         self.github_updates.signals.github_update.connect(self.github_update_popup)
