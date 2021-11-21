@@ -11,6 +11,7 @@ from pathlib import Path
 from queue import Queue
 
 import matplotlib
+
 matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -22,10 +23,11 @@ from PySide6.QtGui import QAction, QBrush, QColor, QDesktopServices, QFont, QFon
     QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView, QApplication,
-    QComboBox, QDoubleSpinBox, QErrorMessage, QFileDialog, QFrame, QGraphicsDropShadowEffect, QHBoxLayout, QHeaderView,
+    QComboBox, QDialog, QDoubleSpinBox, QErrorMessage, QFileDialog, QFrame, QGraphicsDropShadowEffect, QHBoxLayout,
+    QHeaderView,
     QLabel,
     QLineEdit, QMainWindow,
-    QMenuBar, QMessageBox, QPushButton, QSizePolicy, QSlider, QSpinBox, QStyle, QTabWidget, QTableWidget,
+    QMenuBar, QMessageBox, QProgressBar, QPushButton, QSizePolicy, QSlider, QSpinBox, QStyle, QTabWidget, QTableWidget,
     QTableWidgetItem,
     QToolBar,
     QToolButton,
@@ -39,11 +41,12 @@ import asset_utils
 import graphs
 import log_parser
 import stats
-import update_check
+import updater
 
 if not stats.sbbtracker_folder.exists():
     stats.sbbtracker_folder.mkdir()
-logging.basicConfig(filename=stats.sbbtracker_folder.joinpath("sbbtracker.log"), filemode="w", format='%(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(filename=stats.sbbtracker_folder.joinpath("sbbtracker.log"), filemode="w",
+                    format='%(name)s - %(levelname)s - %(message)s')
 
 art_dim = (161, 204)
 att_loc = (26, 181)
@@ -190,7 +193,7 @@ class LogThread(QThread):
 
 
 class UpdateCheckSignals(QObject):
-    github_update = Signal()
+    github_update = Signal(str)
 
 
 class UpdateCheckThread(QThread):
@@ -201,9 +204,9 @@ class UpdateCheckThread(QThread):
         self.signals = UpdateCheckSignals()
 
     def run(self):
-        update_check.run()
+        release_notes = updater.check_updates()
         # wait for an update
-        self.signals.github_update.emit()
+        self.signals.github_update.emit(release_notes)
 
 
 class DraggableTitleBar(QToolBar):
@@ -483,11 +486,42 @@ class SBBTracker(FramelessWindow):
     def open_issues(self):
         self.open_url("https://github.com/SBBTracker/SBBTracker/issues")
 
-    def github_update_popup(self):
+    def github_update_popup(self, update_notes: str):
         reply = QMessageBox.question(self, "New update available!",
-                                     "New version available!\nWould you like to go to the download page?")
+                                     f"""New version available!
+ 
+ Changes:
+ 
+ {update_notes}
+ 
+ Would you like to automatically download and install?""")
         if reply == QMessageBox.Yes:
-            self.open_github_release()
+            # self.open_github_release()
+            self.install_update()
+
+    def install_update(self):
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Updater")
+        dialog_layout = QVBoxLayout(dialog)
+        self.download_progress = QProgressBar(dialog)
+        dialog_layout.addWidget(QLabel("Downloading update..."))
+        dialog_layout.addWidget(self.download_progress)
+        dialog.show()
+        dialog.update()
+        updater.self_update(self.handle_progress)
+        self.close()
+        sys.exit(0)
+
+    def handle_progress(self, blocknum, blocksize, totalsize):
+
+        read_data = blocknum * blocksize
+
+        if totalsize > 0:
+            download_percentage = read_data * 100 / totalsize
+
+            self.download_progress.setValue(download_percentage)
+
+            QApplication.processEvents()
 
     def export_csv(self):
         filepath, filetype = QFileDialog.getSaveFileName(parent=None, caption='Export to .csv',
