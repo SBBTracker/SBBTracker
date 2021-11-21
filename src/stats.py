@@ -17,6 +17,15 @@ headings = ["Hero", "# Matches", "Avg Place", "Top 4", "Wins", "Net MMR"]
 stats_per_page = 22
 
 
+def sorting(sort_col: int):
+    if sort_col == 0:
+        return str
+    elif sort_col == 2:
+        return lambda x: float(x) if float(x) > 0 else float("inf")
+    else:
+        return float
+
+
 class PlayerStats:
 
     def __init__(self):
@@ -105,11 +114,13 @@ class PlayerStats:
             global_top4 = len(df.loc[df['Placement'] <= 4, 'Placement'])
             global_wins = len(df.loc[df['Placement'] == 1, 'Placement'])
             global_net_mmr = df["+/-MMR"].sum()
+
+            sort_direction = not (sort_col == 0 or sort_col == 2)
+            sorter = sorting(sort_col)
+            data = sorted(data, key=lambda x: sorter(x[sort_col]), reverse=sort_direction)
             data.insert(0, ["All Heroes", str(global_matches), str(global_avg), str(global_top4), str(global_wins),
                             str(global_net_mmr)])
-            caster = str if sort_col == 0 else float
-            sort_direction = not (sort_col == 0 or sort_col == 2)
-            stats.append(sorted(data, key=lambda x: caster(x[sort_col]), reverse=sort_direction))
+            stats.append(data)
         return stats
 
     def filter(self, start_date, end_date, sort_col: int):
