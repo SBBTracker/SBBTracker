@@ -137,7 +137,7 @@ class LogSignals(QObject):
     player_update = Signal(object, int)
     comp_update = Signal(str, object, int)
     stats_update = Signal(str, object)
-    health_update = Signal(dict, dict)
+    player_info_update = Signal(graphs.LivePlayerStates)
     new_game = Signal()
 
 
@@ -157,15 +157,13 @@ class LogThread(QThread):
                          daemon=True).start()
         round_number = 0
         current_player = None
-        names_to_health = defaultdict(dict)
-        ids_to_heroes = {}
+        states = graphs.LivePlayerStates()
         while True:
             update = queue.get()
             job = update.job
             state = update.state
             if job == log_parser.JOB_NEWGAME:
-                names_to_health.clear()
-                ids_to_heroes.clear()
+                states.clear()
                 current_player = None
                 round_number = 0
                 self.signals.new_game.emit()
@@ -178,14 +176,14 @@ class LogThread(QThread):
                 self.signals.round_update.emit(round_number)
             elif job == log_parser.JOB_PLAYERINFO:
                 self.signals.player_update.emit(state, round_number)
-                names_to_health[state.playerid][round_number] = state.health
-                ids_to_heroes[state.playerid] = asset_utils.get_card_art_name(state.heroid, state.heroname)
+                xp = float(f"{state.level}.{int(state.experience) * 333333333}")
+                states.update_player(state.playerid, round_number, state.health, xp,
+                                     asset_utils.get_card_art_name(state.heroid, state.heroname))
             elif job == log_parser.JOB_BOARDINFO:
                 for player_id in state:
                     self.signals.comp_update.emit(player_id, state[player_id], round_number)
             elif job == log_parser.JOB_ENDCOMBAT:
-                self.signals.health_update.emit(names_to_health, ids_to_heroes)
-                # pass
+                self.signals.player_info_update.emit(states)
             elif job == log_parser.JOB_ENDGAME:
                 if state and current_player:
                     self.signals.stats_update.emit(asset_utils.get_card_art_name(current_player.heroid,
@@ -373,12 +371,12 @@ class SBBTracker(FramelessWindow):
         layout.addWidget(self.comp_tabs)
 
         self.match_history = MatchHistory(self.player_stats)
-        self.health_graph = HealthGraph()
+        self.live_graphs = LiveGraphs()
         self.stats_graph = StatsGraph(self.player_stats)
 
         main_tabs = QTabWidget()
         main_tabs.addTab(comps_widget, "Board Comps")
-        main_tabs.addTab(self.health_graph, "Health Graph")
+        main_tabs.addTab(self.live_graphs, "Live Graphs")
         main_tabs.addTab(self.match_history, "Match History")
         main_tabs.addTab(self.stats_graph, "Stats Graphs")
 
@@ -422,7 +420,7 @@ class SBBTracker(FramelessWindow):
         self.log_updates.signals.player_update.connect(self.update_player)
         self.log_updates.signals.round_update.connect(self.update_round_num)
         self.log_updates.signals.stats_update.connect(self.update_stats)
-        self.log_updates.signals.health_update.connect(self.health_graph.update_graph)
+        self.log_updates.signals.player_info_update.connect(self.live_graphs.update_graph)
         self.log_updates.signals.new_game.connect(self.new_game)
 
         self.log_updates.start()
@@ -779,20 +777,29 @@ class MatchHistory(QWidget):
         self.update_stats_table()
 
 
-class HealthGraph(QWidget):
+class LiveGraphs(QWidget):
     def __init__(self):
         super().__init__()
         self.layout = QVBoxLayout(self)
 
-        self.figure = None
-        self.canvas = FigureCanvasQTAgg(plt.Figure(figsize=(13.5, 18)))
-        self.ax = self.canvas.figure.subplots()
-        self.layout.addWidget(self.canvas)
+        self.health_canvas = FigureCanvasQTAgg(plt.Figure(figsize=(13.5, 18)))
+        self.xp_canvas = FigureCanvasQTAgg(plt.Figure(figsize=(13.5, 18)))
+        self.health_ax = self.health_canvas.figure.subplots()
+        self.xp_ax = self.xp_canvas.figure.subplots()
 
-    def update_graph(self, names_to_health, ids_to_heroes):
-        self.ax.cla()
-        self.figure = graphs.make_health_graph(names_to_health, ids_to_heroes, self.ax)
-        self.canvas.draw()
+        graphs_tabs = QTabWidget(self)
+        graphs_tabs.addTab(self.health_canvas, "Health Graph")
+        graphs_tabs.addTab(self.xp_canvas, "XP Graph")
+        self.layout.addWidget(graphs_tabs)
+
+    def update_graph(self, states: graphs.LivePlayerStates):
+        self.xp_ax.cla()
+        graphs.xp_graph(states, self.xp_ax)
+        self.xp_canvas.draw()
+
+        self.health_ax.cla()
+        graphs.live_health_graph(states, self.health_ax)
+        self.health_canvas.draw()
 
 
 class StatsGraph(QWidget):
@@ -819,7 +826,7 @@ class StatsGraph(QWidget):
     def update_graph(self):
         self.selection = self.graph_selection.currentText()
         self.ax.cla()
-        self.figure = graphs.make_stats_graph(self.player_stats.df, self.selection, self.ax)
+        self.figure = graphs.stats_graph(self.player_stats.df, self.selection, self.ax)
         self.canvas.draw()
 
 

@@ -66,6 +66,7 @@ TASK_GETROUNDGATHER = "GetRoundGather"
 TASK_ENDROUNDGATHER = "EndRoundGather"
 TASK_NEWGAME = "TaskNewGame"
 TASK_ENDGAME = "TaskEndGame"
+TASK_ENDCOMBAT = "TaskEndCombat"
 TASK_GETTHISPLAYER = "GetThisPlayer"
 
 JOB_PLAYERINFO = "PlayerInfo"
@@ -246,6 +247,8 @@ def parse(ifs):
     for line in ifs:
         if 'NEW GAME STARTED' in line:
             yield Action(info=None, game_state=GameState.START)
+        if line.startswith('DESTROY:'):
+            yield Action(info=None, game_state=GameState.REAL_SHOP_PHASE)
         elif 'QueueActionRPC' in line:
             chop_idx = line.find('-') + 1
             line = line[chop_idx:]
@@ -257,13 +260,18 @@ def parse(ifs):
 class GameState(Enum):
     START = 1
     END = 2
-    UNKNOWN = 3
+    REAL_SHOP_PHASE = 3
+    UNKNOWN = 4
 
 
 class Action:
     def __init__(self, info, game_state=GameState.UNKNOWN):
         if game_state == GameState.START:
             self.task = TASK_NEWGAME
+            return
+
+        if game_state == GameState.REAL_SHOP_PHASE:
+            self.task = TASK_ENDCOMBAT
             return
 
         if info is not None:
@@ -365,6 +373,7 @@ class SBBPygtail(Pygtail):
 
 def run(queue: Queue, log=logfile):
     inbrawl = False
+    skip_extra_msgs = True
     current_round = None
     current_player_stats = None
     lastupdated = dict()
@@ -375,6 +384,7 @@ def run(queue: Queue, log=logfile):
         for action in parse(ifs):
             if action.task == TASK_NEWGAME:
                 inbrawl = False
+                skip_extra_msgs = True
                 current_round = None
                 lastupdated = dict()
 
@@ -399,13 +409,15 @@ def run(queue: Queue, log=logfile):
             elif inbrawl and action.task == TASK_ENDROUNDGATHER:
                 queue.put(Update(JOB_BOARDINFO, brawldt))
                 inbrawl = False
+                skip_extra_msgs = True
             elif action.task == TASK_GETROUND:
                 queue.put(Update(JOB_ROUNDINFO, action))
             elif action.task == TASK_ENDGAME:
                 queue.put(Update(JOB_ENDGAME, action))
                 current_player_stats = None
-            elif action.action_type != EVENT_ADDPLAYER and int(action.timestamp) == (last_player_timestamp + 1):
-                queue.put(Update(JOB_ENDCOMBAT, action.timestamp))
+            elif skip_extra_msgs and action.task == TASK_ENDCOMBAT:
+                queue.put(Update(JOB_ENDCOMBAT, action))
+                skip_extra_msgs = False
             else:
                 pass
 
