@@ -67,10 +67,10 @@ round_font = QFont("Roboto", 18)
 
 def get_image_location(position: int):
     if position < 4:
-        x = (161 * position) + 300 + (position * 20)
+        x = (161 * position) + 350 + (position * 20)
         y = 0
     elif 4 <= position < 7:
-        x = (161 * (position - 4)) + 300 + (161 / 2) + ((position - 4) * 20)
+        x = (161 * (position - 4)) + 350 + (161 / 2) + ((position - 4) * 20)
         y = 210
     elif 7 <= position < 9:
         x = (161 * (position - 7))
@@ -79,15 +79,15 @@ def get_image_location(position: int):
         x = (161 / 2)
         y = 440
     elif position == 10:
-        x = 900
+        x = 950
         y = 440
     elif position == 11:
-        x = 1090
+        x = 1140
         y = 440
     else:
         x = 0
         y = 0
-    return x, y + 5
+    return x, y + 50
 
 
 def round_to_xp(round_number: int):
@@ -409,8 +409,8 @@ class SBBTracker(FramelessWindow):
         main_layout.addWidget(main_tabs)
 
         self.setCentralWidget(main_widget)
-        self.setMinimumSize(QSize(1400, 900))
-        self.setBaseSize(QSize(1400, 900))
+        self.setMinimumSize(QSize(1400, 960))
+        self.setBaseSize(QSize(1400, 960))
 
         self.github_updates = UpdateCheckThread()
         self.github_updates.signals.github_update.connect(self.github_update_popup)
@@ -550,6 +550,7 @@ This will import all games played since SBB was last opened.
         self.github_updates.terminate()
         self.log_updates.terminate()
         self.player_stats.save()
+        print(self.size())
 
 
 class BoardComp(QWidget):
@@ -756,7 +757,7 @@ class MatchHistory(QWidget):
         start_num = (self.page - 1) * stats.stats_per_page + 1
         self.match_history_table.setVerticalHeaderLabels([str(i) for i in range(start_num,
                                                                                 start_num + stats.stats_per_page + 1)])
-        self.page_indicator.setText(f'Page {self.page} of {self.player_stats.get_num_pages()}')
+        self.page_indicator.setText(f'Page {self.page} of {max(1,self.player_stats.get_num_pages())}')
 
     def update_stats_table(self):
         start, end = default_dates[self.filter]
