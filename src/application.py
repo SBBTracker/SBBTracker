@@ -23,7 +23,8 @@ from PySide6.QtGui import QAction, QBrush, QColor, QDesktopServices, QFont, QFon
     QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView, QApplication,
-    QComboBox, QDialog, QDoubleSpinBox, QErrorMessage, QFileDialog, QFrame, QGraphicsDropShadowEffect, QHBoxLayout,
+    QCheckBox, QComboBox, QDialog, QDoubleSpinBox, QErrorMessage, QFileDialog, QFrame, QGraphicsDropShadowEffect,
+    QHBoxLayout,
     QHeaderView,
     QLabel,
     QLineEdit, QMainWindow,
@@ -284,6 +285,7 @@ class SettingsWindow(FramelessWindow):
     def __init__(self, main_window):
         super().__init__()
         self.hide()
+        self.main_window = main_window
         main_widget = QFrame()
         main_layout = QVBoxLayout(main_widget)
         general_settings = QWidget()
@@ -312,8 +314,18 @@ class SettingsWindow(FramelessWindow):
         # scaling_layout.addWidget(self.scale_slider)
         # scaling_layout.addWidget(self.scale_editor)
 
+        save_stats_widget = QWidget()
+        save_stats_layout = QHBoxLayout(save_stats_widget)
+        save_stats_checkbox = QCheckBox()
+        save_stats_checkbox.setChecked(settings.get("save-stats", True))
+        save_stats_layout.addWidget(QLabel("Save match results"), alignment=Qt.AlignLeft)
+        save_stats_layout.addWidget(save_stats_checkbox, Qt.AlignLeft)
+        save_stats_layout.addStretch()
+        save_stats_checkbox.stateChanged.connect(main_window.toggle_saving)
+
         general_layout.addWidget(export_button, alignment=Qt.AlignTop)
         general_layout.addWidget(delete_button, alignment=Qt.AlignTop)
+        general_layout.addWidget(save_stats_widget, alignment=Qt.AlignTop)
         # general_layout.addLayout(scaling_layout)
         general_layout.addStretch()
 
@@ -336,6 +348,7 @@ class SettingsWindow(FramelessWindow):
     def save(self):
         # scaling = self.scale_slider.value()
         # settings["scaling"] = scaling
+        settings["save-stats"] = self.main_window.save_stats
         save_settings()
         self.hide()
 
@@ -351,6 +364,7 @@ class SBBTracker(FramelessWindow):
         self.round_indicator.setFont(round_font)
         self.player_stats = stats.PlayerStats()
         self.player_ids = []
+        self.save_stats = settings.get("save-stats", True)
 
         self.comp_tabs = QTabWidget()
         for index in self.ids_to_comps:
@@ -464,11 +478,15 @@ class SBBTracker(FramelessWindow):
         self.update()
 
     def update_stats(self, starting_hero: str, player):
-        place = player.place if int(player.health) <= 0 else "1"
-        self.player_stats.update_stats(starting_hero, asset_utils.get_card_art_name(player.heroid, player.heroname),
-                                       place, player.mmr)
-        self.match_history.update_history_table()
-        self.match_history.update_stats_table()
+        if self.save_stats:
+            place = player.place if int(player.health) <= 0 else "1"
+            self.player_stats.update_stats(starting_hero, asset_utils.get_card_art_name(player.heroid, player.heroname),
+                                           place, player.mmr)
+            self.match_history.update_history_table()
+            self.match_history.update_stats_table()
+
+    def toggle_saving(self):
+        self.save_stats = not self.save_stats
 
     def open_url(self, url_string: str):
         url = QUrl(url_string)
@@ -550,7 +568,6 @@ This will import all games played since SBB was last opened.
         self.github_updates.terminate()
         self.log_updates.terminate()
         self.player_stats.save()
-        print(self.size())
 
 
 class BoardComp(QWidget):
