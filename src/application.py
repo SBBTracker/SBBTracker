@@ -68,10 +68,10 @@ round_font = QFont("Roboto", 18)
 
 def get_image_location(position: int):
     if position < 4:
-        x = (161 * position) + 350 + (position * 20)
+        x = (161 * position) + 300 + (position * 20)
         y = 0
     elif 4 <= position < 7:
-        x = (161 * (position - 4)) + 350 + (161 / 2) + ((position - 4) * 20)
+        x = (161 * (position - 4)) + 300 + (161 / 2) + ((position - 4) * 20)
         y = 210
     elif 7 <= position < 9:
         x = (161 * (position - 7))
@@ -80,10 +80,10 @@ def get_image_location(position: int):
         x = (161 / 2)
         y = 440
     elif position == 10:
-        x = 950
+        x = 900
         y = 440
     elif position == 11:
-        x = 1140
+        x = 1040
         y = 440
     else:
         x = 0
@@ -100,7 +100,8 @@ def round_to_xp(round_number: int):
 def update_table(table: QTableWidget, data: list[list]):
     for row in range(len(data)):
         for column in range(len(data[0])):
-            table.setItem(row, column, QTableWidgetItem(str((data[row][column]))))
+            datum = (data[row][column])
+            table.setItem(row, column, QTableWidgetItem(str(datum)))
 
 
 settings_file = stats.sbbtracker_folder.joinpath("settings.json")
@@ -423,7 +424,7 @@ class SBBTracker(FramelessWindow):
         main_layout.addWidget(main_tabs)
 
         self.setCentralWidget(main_widget)
-        self.setMinimumSize(QSize(1400, 960))
+        self.setMinimumSize(QSize(1300, 850))
         self.setBaseSize(QSize(1400, 960))
 
         self.github_updates = UpdateCheckThread()
@@ -618,7 +619,6 @@ class BoardComp(QWidget):
         painter.drawPixmap(card_loc[0], card_loc[1], self.border)
         if actually_is_golden:
             painter.drawPixmap(card_loc[0], card_loc[1], self.golden_overlay)
-        # painter.drawPixmap(card_loc[0], card_loc[1], self.border)
         self.update_card_stats(painter, int(slot), str(health), str(attack))
 
     def update_xp(self, painter: QPainter, xp: str):
@@ -679,9 +679,9 @@ class MatchHistory(QWidget):
         self.filter = "All Matches"
         self.match_history_table.setHorizontalHeaderLabels(["Starting Hero", "Ending Hero", "Place", "+/- MMR"])
         self.match_history_table.setColumnWidth(0, 140)
-        self.match_history_table.setColumnWidth(1, 130)
-        self.match_history_table.setColumnWidth(2, 90)
-        self.match_history_table.setColumnWidth(3, 100)
+        self.match_history_table.setColumnWidth(1, 140)
+        self.match_history_table.setColumnWidth(2, 80)
+        self.match_history_table.setColumnWidth(3, 85)
         self.match_history_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.match_history_table.setFocusPolicy(Qt.NoFocus)
         self.match_history_table.setSelectionMode(QAbstractItemView.NoSelection)
@@ -717,12 +717,17 @@ class MatchHistory(QWidget):
         self.stats_table = QTableWidget(len(asset_utils.hero_ids) + 1, 6)
         self.stats_table.setHorizontalHeaderLabels(stats.headings)
         self.stats_table.setColumnWidth(0, 130)
-        self.stats_table.setColumnWidth(1, 130)
-        self.stats_table.setColumnWidth(2, 130)
+        self.stats_table.setColumnWidth(1, 115)
+        self.stats_table.setColumnWidth(2, 115)
+        self.stats_table.setColumnWidth(3, 90)
+        self.stats_table.setColumnWidth(4, 90)
+        self.stats_table.setColumnWidth(5, 110)
         self.stats_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.stats_table.setFocusPolicy(Qt.NoFocus)
         self.stats_table.setSelectionMode(QAbstractItemView.NoSelection)
         self.stats_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+        self.stats_table.horizontalHeader().sectionClicked.connect(self.sort_stats)
 
         filter_widget = QWidget()
         self.toggle_hero = QComboBox()
@@ -732,14 +737,11 @@ class MatchHistory(QWidget):
         self.filter_combo = QComboBox()
         self.filter_combo.addItems(default_dates.keys())
         self.filter_combo.activated.connect(self.filter_stats)
-        self.sort_combo = QComboBox()
-        self.sort_combo.addItems(stats.headings)
-        self.sort_combo.activated.connect(self.sort_stats)
         self.sort_col = 0
+        self.sort_asc = False
 
         filter_layout = QHBoxLayout(filter_widget)
         filter_layout.addWidget(self.toggle_hero)
-        filter_layout.addWidget(self.sort_combo)
         filter_layout.addWidget(self.filter_combo)
 
         stats_layout.addWidget(filter_widget)
@@ -778,7 +780,7 @@ class MatchHistory(QWidget):
 
     def update_stats_table(self):
         start, end = default_dates[self.filter]
-        hero_stats = self.player_stats.filter(start, end, self.sort_col)
+        hero_stats = self.player_stats.filter(start, end, self.sort_col, self.sort_asc)
         chosen_stats = hero_stats[self.display_starting_hero]
         update_table(self.stats_table, chosen_stats)
 
@@ -791,7 +793,12 @@ class MatchHistory(QWidget):
         self.update_stats_table()
 
     def sort_stats(self, index: int):
+        # ▼ ▲
+        self.sort_asc = (self.sort_col == index) and (not self.sort_asc)
         self.sort_col = index
+        headings = stats.headings.copy()
+        headings[index] = headings[index] + ("▼" if self.sort_asc else "▲")
+        self.stats_table.setHorizontalHeaderLabels(headings)
         self.update_stats_table()
 
 
