@@ -88,7 +88,7 @@ def get_image_location(position: int):
     else:
         x = 0
         y = 0
-    return x, y + 50
+    return x, y + 5
 
 
 def round_to_xp(round_number: int):
@@ -385,7 +385,7 @@ class SBBTracker(FramelessWindow):
         layout.addWidget(round_widget)
         layout.addWidget(self.comp_tabs)
 
-        self.match_history = MatchHistory(self.player_stats)
+        self.match_history = MatchHistory(self, self.player_stats)
         self.live_graphs = LiveGraphs()
         self.stats_graph = StatsGraph(self.player_stats)
 
@@ -424,9 +424,8 @@ class SBBTracker(FramelessWindow):
         main_layout.addWidget(main_tabs)
 
         self.setCentralWidget(main_widget)
-        self.setMinimumSize(QSize(1300, 850))
-        self.setBaseSize(QSize(1400, 960))
-
+        self.setMinimumSize(QSize(1200, 800))
+        self.setBaseSize(QSize(1400, 900))
         self.github_updates = UpdateCheckThread()
         self.github_updates.signals.github_update.connect(self.github_update_popup)
 
@@ -437,6 +436,8 @@ class SBBTracker(FramelessWindow):
         self.log_updates.signals.stats_update.connect(self.update_stats)
         self.log_updates.signals.player_info_update.connect(self.live_graphs.update_graph)
         self.log_updates.signals.new_game.connect(self.new_game)
+
+        self.resize(1300, 800)
 
         self.log_updates.start()
         self.github_updates.start()
@@ -639,12 +640,14 @@ class BoardComp(QWidget):
         if self.composition is not None:
             used_slots = []
             for action in self.composition:
-                slot = action.slot
-                zone = action.zone
-                position = 10 if zone == 'Spell' else (7 + int(slot)) if zone == "Treasure" else slot
-                self.update_card(painter, position, action.cardname, action.content_id, action.cardhealth,
-                                 action.cardattack, action.is_golden)
-                used_slots.append(str(position))
+                if int(action.level) != 1:
+                    #  skip level 1 characters because we can't normally get them
+                    slot = action.slot
+                    zone = action.zone
+                    position = 10 if zone == 'Spell' else (7 + int(slot)) if zone == "Treasure" else slot
+                    self.update_card(painter, position, action.cardname, action.content_id, action.cardhealth,
+                                     action.cardattack, action.is_golden)
+                    used_slots.append(str(position))
         else:
             painter.eraseRect(QRect(0, 0, 1350, 820))
         if self.player:
@@ -670,8 +673,9 @@ class BoardComp(QWidget):
 
 
 class MatchHistory(QWidget):
-    def __init__(self, player_stats: stats.PlayerStats):
+    def __init__(self, parent, player_stats: stats.PlayerStats):
         super().__init__()
+        self.parent = parent
         self.player_stats = player_stats
         self.match_history_table = QTableWidget(stats.stats_per_page, 4)
         self.page = 1
@@ -726,6 +730,12 @@ class MatchHistory(QWidget):
         self.stats_table.setFocusPolicy(Qt.NoFocus)
         self.stats_table.setSelectionMode(QAbstractItemView.NoSelection)
         self.stats_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.stats_table.setStyleSheet("""
+QTabBar::tab:left,
+QTabBar::tab:right{
+  padding: 1px 0;
+  width: 30px;
+}""")
 
         self.stats_table.horizontalHeader().sectionClicked.connect(self.sort_stats)
 
