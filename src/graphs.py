@@ -113,7 +113,7 @@ def hero_freq_graph(df: pd.DataFrame, ax):
 
 
 def mmr_graph(df: pd.DataFrame, ax):
-    mmrs = df["+/-MMR"].tail(20).values
+    mmrs = df["+/-MMR"].tail(20).values.astype(int)
     data = np.cumsum(mmrs)
     timeseries = range(1, len(data) + 1)
     plt.axhline(y=0, color='w', linewidth=2.0)

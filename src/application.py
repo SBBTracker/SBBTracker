@@ -449,6 +449,8 @@ class SBBTracker(FramelessWindow):
 
     def new_game(self):
         self.player_ids.clear()
+        for index in range(0, 8):
+            self.comp_tabs.tabBar().setTabTextColor(index, "white")
         for comp in self.ids_to_comps.values():
             comp.composition = None
             comp.player = None
@@ -465,7 +467,10 @@ class SBBTracker(FramelessWindow):
     def update_player(self, player, round_number):
         index = self.get_player_index(player.playerid)
         real_hero_name = asset_utils.get_card_art_name(player.heroid, player.heroname)
-        title = f"{real_hero_name}" if player.health > 0 else f"{real_hero_name} *DEAD*"
+        title = f"{real_hero_name}"
+        if player.health <= 0:
+            self.comp_tabs.tabBar().setTabTextColor(index, "red")
+            title += " *DEAD"
         self.comp_tabs.tabBar().setTabText(index, title)
         comp = self.get_comp(index)
         comp.player = player
@@ -874,7 +879,13 @@ app = QApplication(sys.argv)
 app.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.RoundPreferFloor)
 apply_stylesheet(app, theme='dark_teal.xml')
 stylesheet = app.styleSheet()
-app.setStyleSheet(stylesheet + "QTabBar{ text-transform: none; }")
+stylesheet = stylesheet.replace("""QTabBar::tab {
+  color: #ffffff;
+  border: 0px;
+}""", """QTabBar::tab {
+  border: 0px;
+}""") + "QTabBar{ text-transform: none; }"
+app.setStyleSheet(stylesheet)
 mainWindow = SBBTracker()
 mainWindow.show()
 
