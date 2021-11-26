@@ -570,6 +570,7 @@ This will import all games played since SBB was last opened.
         self.github_updates.terminate()
         self.log_updates.terminate()
         self.player_stats.save()
+        save_settings()
 
 
 class BoardComp(QWidget):
@@ -680,7 +681,7 @@ class MatchHistory(QWidget):
         self.match_history_table = QTableWidget(stats.stats_per_page, 4)
         self.page = 1
         self.display_starting_hero = 0
-        self.filter = "All Matches"
+        self.filter = settings.get("filter", "All Matches")
         self.match_history_table.setHorizontalHeaderLabels(["Starting Hero", "Ending Hero", "Place", "+/- MMR"])
         self.match_history_table.setColumnWidth(0, 140)
         self.match_history_table.setColumnWidth(1, 140)
@@ -746,6 +747,9 @@ QTabBar::tab:right{
         self.toggle_hero.addItems(hero_types)
         self.filter_combo = QComboBox()
         self.filter_combo.addItems(default_dates.keys())
+        index = self.filter_combo.findText(self.filter)
+        if index != -1:  # -1 for not found
+            self.filter_combo.setCurrentIndex(index)
         self.filter_combo.activated.connect(self.filter_stats)
         self.sort_col = 0
         self.sort_asc = False
@@ -800,6 +804,7 @@ QTabBar::tab:right{
 
     def filter_stats(self):
         self.filter = self.filter_combo.currentText()
+        settings["filter"] = self.filter
         self.update_stats_table()
 
     def sort_stats(self, index: int):
