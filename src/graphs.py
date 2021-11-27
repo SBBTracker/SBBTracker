@@ -85,17 +85,17 @@ def xp_graph(states: LivePlayerStates, ax):
         y = list(xps.values())[0:13]
 
         ax.plot(x, y, label=states.get_hero(player))
-        last_values.append((x[-1], float(display_xps[-1])))
-        ax.annotate(y[-1], (x[-1], float(display_xps[-1])))
+        last_values.append((x[-1], y[-1]))
+        ax.annotate(float(display_xps[-1]), (x[-1], y[-1]))
     ax.legend()
     ax.set_xlabel("Turn")
     ax.set_ylabel("XP")
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     ax.yaxis.set_major_locator(MaxNLocator(integer=True))
     handles, labels = ax.get_legend_handles_labels()
-    healths = [health for (_, health) in last_values]
+    experiences = [health for (_, health) in last_values]
     # sort both labels and handles by labels
-    _, labels, handles = zip(*sorted(zip(healths, labels, handles), key=lambda t: t[0], reverse=True))
+    _, labels, handles = zip(*sorted(zip(experiences, labels, handles), key=lambda t: t[0], reverse=True))
     ax.legend(handles, labels)
     return plt.gcf()
 
