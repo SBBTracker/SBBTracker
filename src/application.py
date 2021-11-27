@@ -3,6 +3,7 @@ import json
 import logging
 import operator
 import os
+import platform
 import sys
 import threading
 from collections import defaultdict
@@ -64,6 +65,7 @@ plt.rcParams.update({'text.color': "white",
                      'axes.labelcolor': "white"})
 
 round_font = QFont("Roboto", 18)
+display_font_family = "Impact" if platform.system() == "Windows" else "Ubuntu Bold"
 
 
 def get_image_location(position: int):
@@ -587,7 +589,8 @@ class BoardComp(QWidget):
         self.last_seen = None
         self.current_round = 0
         self.player = None
-        self.number_display_font = QFont("Impact", 25, weight=QFont.ExtraBold)
+
+        self.number_display_font = QFont(display_font_family, 25, weight=QFont.ExtraBold)
 
     def update_card_stats(self, painter: QPainter, slot: int, health: str, attack: str):
         card_location = get_image_location(slot)

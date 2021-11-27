@@ -1,6 +1,7 @@
 import gzip
 import json
 import os
+import platform
 import time
 from collections import defaultdict
 from enum import Enum
@@ -12,7 +13,14 @@ from pygtail import Pygtail
 
 import stats
 
-sbb_root = Path(os.environ["APPDATA"]).parent.joinpath("LocalLow/Good Luck Games/Storybook Brawl")
+os_name = platform.system()
+if os_name == 'Linux':
+    sbb_root = Path(expanduser("~/.steam/steam/steamapps/compatdata/1367020/pfx/drive_c/users/steamuser"
+                               "/AppData/LocalLow/Good Luck Games/Storybook Brawl"))
+elif os_name == "Windows":
+    sbb_root = Path(os.environ["APPDATA"]).parent.joinpath("LocalLow/Good Luck Games/Storybook Brawl")
+elif os_name == "Darwin":
+    pass  # todo: implement Mac
 logfile = sbb_root.joinpath("Player.log")
 offsetfile = stats.sbbtracker_folder.joinpath("logfile.offset")
 if not stats.sbbtracker_folder.exists():
