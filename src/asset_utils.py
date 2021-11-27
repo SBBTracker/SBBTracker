@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 hero_ids = {
@@ -60,6 +61,10 @@ def get_card_art_name(content_id: str, display_text: str):
     return content_id_lookup.get(content_id, display_text)
 
 
+def get_asset(asset_name: str):
+    return str(Path(__file__).parent.joinpath(f"../assets/{asset_name}"))
+
+
 def get_card_path(card_name: str, content_id: str, is_golden: bool):
     """
     Gets the path for the card asset
@@ -68,16 +73,15 @@ def get_card_path(card_name: str, content_id: str, is_golden: bool):
     :param is_golden: if the card is golden or not
     :return: the path card art if it exists, otherwise path to the blank resource
     """
-    assets_path = Path("../cards/")
+    cards_path = Path(__file__).parent.joinpath("../cards/")
     # what the fuck is this
     actually_is_golden = is_golden if isinstance(is_golden, bool) else is_golden == "True"
     input_content_id = content_id
     if actually_is_golden:
         input_content_id = input_content_id[7:]  # Skipping the "GOLDEN_"
-    # asset_name = get_card_art_name(input_content_id, card_name)
     asset_name = input_content_id
-    # path = assets_path.joinpath(asset_name.replace("'", "_") + (" upgraded" if actually_is_golden else "") + ".png")
-    path = assets_path.joinpath(asset_name.replace("'", "_") + ".png")
+    path = cards_path.joinpath(asset_name.replace("'", "_") + ".png")
     if not path.exists() or asset_name == "empty":
         path = Path("../assets/").joinpath("Empty.png")
     return str(path)
+

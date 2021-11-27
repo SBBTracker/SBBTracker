@@ -8,5 +8,9 @@ sbbtracker/*
 scripts/Output/*
 *.zip
 *.pyc
+release/linux/bin*
+release/linux/cards*
+release/linux/assets*
+*.tar.gz
 ALL SBB ART/*
 old_Cards/*

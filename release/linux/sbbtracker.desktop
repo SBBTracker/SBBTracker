@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=SBBTracker
+Comment=A game tracker for Storybook Brawl
+Exec=sbbtracker
+Icon=sbbtracker
+Categories=Games;KDE;Qt;
+Terminal=false
+Type=Application
+Version=1.0

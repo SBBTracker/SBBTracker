@@ -65,7 +65,7 @@ plt.rcParams.update({'text.color': "white",
                      'axes.labelcolor': "white"})
 
 round_font = QFont("Roboto", 18)
-display_font_family = "Impact" if platform.system() == "Windows" else "Ubuntu Bold"
+display_font_family = "Impact" if log_parser.os_name == "Windows" else "Ubuntu Bold"
 
 
 def get_image_location(position: int):
@@ -223,7 +223,8 @@ class DraggableTitleBar(QToolBar):
         spacer = QWidget()
         spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         titlebar_icon = QLabel()
-        titlebar_icon.setPixmap(QPixmap("../assets/icon.png").scaled(QSize(20, 20), mode=Qt.SmoothTransformation))
+        titlebar_icon.setPixmap(QPixmap(asset_utils.get_asset("icon.png")).scaled(QSize(20, 20),
+                                                                                  mode=Qt.SmoothTransformation))
         self.addWidget(QLabel("  "))
         self.addWidget(titlebar_icon)
         self.title = QLabel("  SBBTracker")
@@ -401,23 +402,23 @@ class SBBTracker(FramelessWindow):
         toolbar = QToolBar(self)
         toolbar.setMinimumHeight(40)
         toolbar.setStyleSheet("QToolBar {border-bottom: none; border-top: none;}")
-        discord_action = QAction(QPixmap("../assets/icons/discord.png"), "&Join our Discord", self)
+        discord_action = QAction(QPixmap(asset_utils.get_asset("icons/discord.png")), "&Join our Discord", self)
         # toolbar.insertAction(toolbar.minimize, discord_action)
         toolbar.addAction(discord_action)
         discord_action.triggered.connect(self.open_discord)
 
-        bug_action = QAction(QPixmap("../assets/icons/bug_report.png"), "&Report a bug", self)
+        bug_action = QAction(QPixmap(asset_utils.get_asset("icons/bug_report.png")), "&Report a bug", self)
         toolbar.insertAction(discord_action, bug_action)
         bug_action.triggered.connect(self.open_issues)
 
         self.settings_window = SettingsWindow(self)
-        settings_action = QAction(QPixmap("../assets/icons/settings.png"), "&Settings", self)
+        settings_action = QAction(QPixmap(asset_utils.get_asset("icons/settings.png")), "&Settings", self)
         toolbar.insertAction(bug_action, settings_action)
         settings_action.triggered.connect(self.settings_window.show)
 
         main_tabs.setCornerWidget(toolbar)
 
-        self.setWindowIcon(QIcon("../assets/icon.png"))
+        self.setWindowIcon(QIcon(asset_utils.get_asset("icon.png")))
 
         main_widget = QWidget()
         main_layout = QVBoxLayout(main_widget)
@@ -512,6 +513,7 @@ class SBBTracker(FramelessWindow):
         self.open_url("https://github.com/SBBTracker/SBBTracker/issues")
 
     def github_update_popup(self, update_notes: str):
+        update_msg = "Would you like to automatically download and install?" if log_parser.os_name == "Windows" else "Would you like to go to the download page?"
         reply = QMessageBox.question(self, "New update available!",
                                      f"""New version available!
  
@@ -519,10 +521,13 @@ class SBBTracker(FramelessWindow):
  
  {update_notes}
  
- Would you like to automatically download and install?""")
+ {update_msg}""")
         if reply == QMessageBox.Yes:
-            # self.open_github_release()
-            self.install_update()
+            if log_parser.os_name == "Windows":
+                self.install_update()
+            else:
+                self.open_github_release()
+
 
     def install_update(self):
         dialog = QDialog(self)
@@ -584,8 +589,8 @@ class BoardComp(QWidget):
     def __init__(self):
         super().__init__()
         self.composition = None
-        self.golden_overlay = QPixmap("../assets/golden_overlay.png")
-        self.border = QPixmap("../assets/neutral_border.png")
+        self.golden_overlay = QPixmap(asset_utils.get_asset("golden_overlay.png"))
+        self.border = QPixmap(asset_utils.get_asset("neutral_border.png"))
         self.last_seen = None
         self.current_round = 0
         self.player = None
@@ -604,7 +609,7 @@ class BoardComp(QWidget):
         health_text_center = tuple(map(operator.sub, health_center, (metrics.horizontalAdvance(health) / 2 - 2, -4)))
         if attack:
             if slot < 7:
-                painter.drawPixmap(QPoint(*att_circle_center), QPixmap("../assets/attack_orb.png"))
+                painter.drawPixmap(QPoint(*att_circle_center), QPixmap(asset_utils.get_asset("attack_orb.png")))
                 path = QPainterPath()
                 path.addText(QPoint(*att_text_center), self.number_display_font, attack)
                 painter.setPen(QPen(QColor("black"), 1))
@@ -612,7 +617,7 @@ class BoardComp(QWidget):
                 painter.drawPath(path)
         if health:
             if slot < 7 or slot == 11:
-                painter.drawPixmap(QPoint(*health_circle_center), QPixmap("../assets/health_orb.png"))
+                painter.drawPixmap(QPoint(*health_circle_center), QPixmap(asset_utils.get_asset("health_orb.png")))
                 path = QPainterPath()
                 path.addText(QPoint(*health_text_center), self.number_display_font, health)
                 painter.setPen(QPen(QColor("black"), 1))
@@ -637,7 +642,7 @@ class BoardComp(QWidget):
         metrics = QFontMetrics(self.number_display_font)
         xp_orb_center = tuple(map(operator.sub, xp_center, (30, 40)))
         xp_text_center = tuple(map(operator.sub, xp_center, (metrics.horizontalAdvance(xp) / 2 - 2, -4)))
-        painter.drawPixmap(QPoint(*xp_orb_center), QPixmap("../assets/xp_orb.png"))
+        painter.drawPixmap(QPoint(*xp_orb_center), QPixmap(asset_utils.get_asset("xp_orb.png")))
         path = QPainterPath()
         path.addText(QPoint(*xp_text_center), self.number_display_font, xp)
         painter.setPen(QPen(QColor("black"), 1))

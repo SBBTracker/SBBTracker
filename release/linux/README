@@ -1,0 +1,8 @@
+To run, change to this folder in a terminal and run the following command:
+
+./bin/SBBTracker
+
+- To install system wide, run 'sudo ./install.sh'
+- To remove in the future, run 'sudo ./uninstall.sh' from the same folder.
+
+To launch, run `sbbtracker`. Alternatively it should also be available in your start menu.
