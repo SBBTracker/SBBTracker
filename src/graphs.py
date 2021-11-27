@@ -16,11 +16,13 @@ class LivePlayerStates:
     def __init__(self):
         self.ids_to_health = defaultdict(dict)
         self.ids_to_xp = defaultdict(dict)
+        self.ids_to_fractional_xp = defaultdict(dict)
         self.ids_to_heroes = {}
 
     def update_player(self, playerid, round_number, health, xp, hero):
         self.ids_to_health[playerid][round_number] = health
         self.ids_to_xp[playerid][round_number] = xp
+        self.ids_to_fractional_xp[playerid][round_number] = float(f"{xp[0]}.{int(xp[2]) * 333333333}")
         self.ids_to_heroes[playerid] = hero
 
     def get_ids(self):
@@ -34,6 +36,9 @@ class LivePlayerStates:
 
     def get_xps(self, player_id):
         return self.ids_to_xp[player_id]
+
+    def get_fractional_xps(self, player_id):
+        return self.ids_to_fractional_xp[player_id]
 
     def clear(self):
         self.ids_to_health.clear()
@@ -74,13 +79,14 @@ def xp_graph(states: LivePlayerStates, ax):
     last_values = []
     # plt.axhline(color='w', linewidth=2.0)
     for player in states.get_ids():
-        xps = states.get_xps(player)
+        xps = states.get_fractional_xps(player)
+        display_xps = list(states.get_xps(player).values())
         x = list(xps.keys())[0:13]  # filtering only the fist 13 rounds because nothing beyond 6.0 matters
         y = list(xps.values())[0:13]
 
         ax.plot(x, y, label=states.get_hero(player))
-        last_values.append((x[-1], y[-1]))
-        ax.annotate(y[-1], (x[-1], y[-1]))
+        last_values.append((x[-1], float(display_xps[-1])))
+        ax.annotate(y[-1], (x[-1], float(display_xps[-1])))
     ax.legend()
     ax.set_xlabel("Turn")
     ax.set_ylabel("XP")

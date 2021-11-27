@@ -80,7 +80,7 @@ def get_image_location(position: int):
         x = (161 / 2)
         y = 440
     elif position == 10:
-        x = 900
+        x = 850
         y = 440
     elif position == 11:
         x = 1040
@@ -178,7 +178,7 @@ class LogThread(QThread):
                 self.signals.round_update.emit(round_number)
             elif job == log_parser.JOB_PLAYERINFO:
                 self.signals.player_update.emit(state, round_number)
-                xp = float(f"{state.level}.{int(state.experience) * 333333333}")
+                xp = f"{state.level}.{state.experience}"
                 states.update_player(state.playerid, round_number, state.health, xp,
                                      asset_utils.get_card_art_name(state.heroid, state.heroname))
             elif job == log_parser.JOB_BOARDINFO:
@@ -470,7 +470,7 @@ class SBBTracker(FramelessWindow):
         title = f"{real_hero_name}"
         if player.health <= 0:
             self.comp_tabs.tabBar().setTabTextColor(index, "red")
-            title += " *DEAD"
+            title += " *DEAD*"
         self.comp_tabs.tabBar().setTabText(index, title)
         comp = self.get_comp(index)
         comp.player = player
