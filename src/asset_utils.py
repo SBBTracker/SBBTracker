@@ -33,7 +33,7 @@ hero_ids = {
     "SBB_HERO_GANDALF": "Pup the Magic Dragon",
     "SBB_HERO_DRACULA": "Sad Dracula",
     "SBB_HERO_SIRGALAHAD": "Sir Galahad",
-    "SBB_HERO_SKIP": "Skip, the Time Skipper",
+    "SBB_HERO_SKIP,THETIMESKIPPER": "Skip, the Time Skipper",
     "SBB_HERO_MAIDMARIAN": "Snow Angel",
     "SBB_HERO_THEGREEDCURSED": "The Cursed King",
     "SBB_HERO_FATE": "The Fates",

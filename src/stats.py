@@ -16,6 +16,8 @@ if not sbbtracker_folder.exists():
 headings = ["Hero", "# Matches", "Avg Place", "Top 4", "Wins", "Net MMR"]
 stats_per_page = 26
 
+pd.options.mode.chained_assignment = None
+
 
 def sorting_key(sort_col: int):
     """
