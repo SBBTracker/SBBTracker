@@ -696,6 +696,7 @@ class MatchHistory(QWidget):
         self.match_history_table.setFocusPolicy(Qt.NoFocus)
         self.match_history_table.setSelectionMode(QAbstractItemView.NoSelection)
         self.match_history_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.match_history_table.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
         paged_table = QWidget()
         paged_table.setMaximumWidth(533)
@@ -736,13 +737,14 @@ class MatchHistory(QWidget):
         self.stats_table.setFocusPolicy(Qt.NoFocus)
         self.stats_table.setSelectionMode(QAbstractItemView.NoSelection)
         self.stats_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.stats_table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.stats_table.setStyleSheet("""
 QTabBar::tab:left,
 QTabBar::tab:right{
   padding: 1px 0;
   width: 30px;
 }""")
-
+        self.stats_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.stats_table.horizontalHeader().sectionClicked.connect(self.sort_stats)
 
         filter_widget = QWidget()

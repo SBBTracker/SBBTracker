@@ -14,7 +14,7 @@ if not sbbtracker_folder.exists():
     sbbtracker_folder.mkdir()
 
 headings = ["Hero", "# Matches", "Avg Place", "Top 4", "Wins", "Net MMR"]
-stats_per_page = 26
+stats_per_page = 20
 
 pd.options.mode.chained_assignment = None
 
