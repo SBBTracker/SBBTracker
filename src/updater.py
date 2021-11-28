@@ -30,11 +30,15 @@ def check_updates():
 def self_update(progress_handler):
     release_request = requests.get("https://api.github.com/repos/SBBTracker/SBBTracker/releases/latest")
     response = json.loads(release_request.text)
-    download_url = response["assets"][0]["browser_download_url"]
+    download_url = None
+    for asset in response["assets"]:
+        if asset["name"] == "SBBTracker_installer.exe":
+            download_url = asset["browser_download_url"]
+            break
 
-    destination = Path(expanduser('~/Downloads')).joinpath("SBBTracker_installer.exe")
-
-    download = urlretrieve(download_url, destination, progress_handler)
-    subprocess.Popen(f'{destination} /SILENT /RESTARTAPPLICATIONS')
+    if download_url:
+        destination = Path(expanduser('~/Downloads')).joinpath("SBBTracker_installer.exe")
+        download = urlretrieve(download_url, destination, progress_handler)
+        subprocess.Popen(f'{destination} /SILENT /RESTARTAPPLICATIONS')
 
 
