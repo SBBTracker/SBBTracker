@@ -323,15 +323,21 @@ class SettingsWindow(FramelessWindow):
         enable_overlay_checkbox.setChecked(settings.setdefault("enable-overlay", False))
         enable_overlay_checkbox.stateChanged.connect(main_window.toggle_overlay)
 
+        choose_monitor = QComboBox()
+        monitors = QGuiApplication.screens()
+        choose_monitor.addItems([f"Monitor {i+1}" for i in range(0, len(monitors))])
+        choose_monitor.setCurrentIndex(settings.setdefault("monitor", 1))
+        choose_monitor.currentIndexChanged.connect(self.main_window.overlay.select_monitor)
         overlay_layout.addRow("Enable overlay", enable_overlay_checkbox)
+        overlay_layout.addRow("Choose overlay monitor", choose_monitor)
 
         save_close_layout = QHBoxLayout()
-        save_button = QPushButton("Save")
-        save_button.clicked.connect(self.save)
+        self.save_button = QPushButton("Save")
+        self.save_button.clicked.connect(self.save)
         close_button = QPushButton("Cancel")
         close_button.clicked.connect(self.hide)
         save_close_layout.addStretch()
-        save_close_layout.addWidget(save_button)
+        save_close_layout.addWidget(self.save_button)
         save_close_layout.addWidget(close_button)
 
         main_layout.addWidget(settings_tabs)
@@ -343,7 +349,9 @@ class SettingsWindow(FramelessWindow):
     def save(self):
         save_settings()
         self.hide()
+        self.main_window.overlay.update_monitor()
         self.main_window.show_overlay()
+
 
 
 class SBBTracker(FramelessWindow):
@@ -357,6 +365,10 @@ class SBBTracker(FramelessWindow):
         self.player_stats = stats.PlayerStats()
         self.player_ids = []
         self.save_stats = settings.get("save-stats", True)
+
+        self.overlay = OverlayWindow(self)
+        settings.setdefault("enable-overlay", False)
+        self.show_overlay()
 
         self.comp_tabs = QTabWidget()
         for index in range(len(self.comps)):
@@ -426,16 +438,13 @@ class SBBTracker(FramelessWindow):
         self.log_updates.signals.round_update.connect(self.update_round_num)
         self.log_updates.signals.stats_update.connect(self.update_stats)
         self.log_updates.signals.player_info_update.connect(self.live_graphs.update_graph)
+        self.log_updates.signals.player_info_update.connect(self.overlay.update_placements)
         self.log_updates.signals.new_game.connect(self.new_game)
 
         self.resize(1300, 800)
 
         self.log_updates.start()
         self.github_updates.start()
-
-        self.overlay = OverlayWindow()
-        settings.setdefault("enable-overlay", False)
-        self.show_overlay()
 
     def get_player_index(self, player_id: str):
         if player_id not in self.player_ids:
@@ -476,7 +485,7 @@ class SBBTracker(FramelessWindow):
         comp = self.get_comp(index)
         comp.player = player
         comp.current_round = round_number
-        self.overlay.places[int(player.place)] = index
+        self.overlay.new_places[int(player.place)] = index
         self.update()
 
     def update_comp(self, player_id, player, round_number):
@@ -904,27 +913,29 @@ def resoultion_offset(resolution: (int, int)):
         return 0
 
 
+hover_size = (84, 68)
+p1_loc = (38, 247)
+hover_distance = 15
+base_size = (1920, 1080)
+
+
 class OverlayWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, main_window):
         super().__init__()
         self.setAttribute(Qt.WA_TranslucentBackground, True)
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.SubWindow)
 
-        monitor = QGuiApplication.screens()[0]
-        self.resize(monitor.size())
-        self.setGeometry(monitor.geometry())
-
-        size = monitor.size()
-        hover_size = (84, 68)
-        p1_loc = (38, 247)
-        hover_distance = 15
-        base_size = (1920, 1080)
-
-        scale_factor = tuple(map(operator.truediv, size.toTuple(), base_size))
+        self.main_window = main_window
+        self.monitor = None
+        self.scale_factor = (1,1)
+        self.select_monitor(settings.get("monitor", 0))
+        self.hover_regions = [HoverRegion(self, *map(operator.mul, hover_size, self.scale_factor)) for _ in range(0, 8)]
+        self.update_monitor()
 
         self.comps = [BoardComp() for _ in range(0, 8)]
         self.comp_widgets = [QWidget(self) for _ in range(0, 8)]
         self.places = {index: (index - 1) for index in range(1, 9)}
+        self.new_places = {}
         for index in range(len(self.comps)):
             comp = self.comps[index]
             widget = self.comp_widgets[index]
@@ -936,20 +947,13 @@ class OverlayWindow(QMainWindow):
             comp.setMinimumSize(1100, 650)
             widget.move(round(self.size().width() / 2 - 100), 0)
 
-        self.hover_regions = [HoverRegion(self, *map(operator.mul, hover_size, scale_factor)) for _ in range(0, 8)]
+        self.show_button = QPushButton("Show Tracker", self)
+        self.show_button.clicked.connect(self.show_hide_main_window)
+        self.show_button.move(40, 40)
+        self.show_button.resize(self.show_button.sizeHint().width(),  self.show_button.sizeHint().height())
 
-        # self.simulator_stats = SimulatorStats(self)
-        # self.simulator_stats.move(round(size.width() / 2), 0)
-        # self.simulator_stats.resize(2000, 200)
-
-        for i in range(len(self.hover_regions)):
-            hover = self.hover_regions[i]
-            loc = (p1_loc[0] * scale_factor[0], (p1_loc[1] * scale_factor[1]) + (hover_distance * (scale_factor[1]) * i) +
-                   (hover_size[1] * scale_factor[1] * i) + resoultion_offset(size.toTuple()))
-            hover.move(*loc)
-            hover.resize(*hover_size)
-            hover.enter_hover.connect(lambda y=i+1:  self.show_comp(y))
-            hover.leave_hover.connect(lambda y=i+1:  self.hide_comp(y))
+    def show_hide_main_window(self):
+        self.main_window.setWindowState(Qt.WindowState.WindowActive)
 
     def show_comp(self, index):
         widget = self.comp_widgets[self.places[index]]
@@ -964,6 +968,37 @@ class OverlayWindow(QMainWindow):
         comp.composition = player
         comp.last_seen = round_number
         self.update()
+
+    def update_placements(self):
+        self.places = self.new_places.copy()
+        self.new_places.clear()
+
+    def select_monitor(self, index):
+        self.monitor = QGuiApplication.screens()[index]
+        settings["monitor"] = index
+
+    def update_monitor(self):
+        self.resize(self.monitor.size())
+        self.setGeometry(self.monitor.geometry())
+        self.scale_factor = tuple(map(operator.truediv, self.monitor.size().toTuple(), base_size))
+        self.update_hovers()
+
+    def update_hovers(self):
+        size = self.monitor.size()
+
+        for i in range(len(self.hover_regions)):
+            hover = self.hover_regions[i]
+            loc = (p1_loc[0] * self.scale_factor[0], (p1_loc[1] * self.scale_factor[1]) +
+                   (hover_distance * (self.scale_factor[1]) * i) +
+                   (hover_size[1] * self.scale_factor[1] * i) + resoultion_offset(size.toTuple()))
+            hover.move(*loc)
+            new_size = tuple(map(operator.mul, hover_size, self.scale_factor))
+            hover.resize(*new_size)
+            hover.background.setMinimumSize(*new_size)
+            hover.enter_hover.connect(lambda y=i+1:  self.show_comp(y))
+            hover.leave_hover.connect(lambda y=i+1:  self.hide_comp(y))
+        self.update()
+
 
 
 class SimulatorStats(QWidget):
@@ -1009,10 +1044,10 @@ class HoverRegion(QWidget):
 
     def __init__(self, parent, width, height):
         super().__init__(parent)
-        background = QWidget(self)
-        background.setMinimumSize(width, height)
-        # self.setStyleSheet("background-color: rgba(0, 0, 0, 0.01);")
-        self.setStyleSheet("background-color: rgba(255, 255, 255, 1);")
+        self.background = QWidget(self)
+        self.background.setMinimumSize(width, height)
+        self.setStyleSheet("background-color: rgba(0, 0, 0, 0.01);")
+        # self.setStyleSheet("background-color: rgba(255, 255, 255, 1);")
         self.setMinimumSize(width, height)
 
     def enterEvent(self, event):
