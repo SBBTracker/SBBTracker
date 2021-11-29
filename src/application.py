@@ -13,18 +13,20 @@ from queue import Queue
 
 import matplotlib
 
-matplotlib.use('Qt5Agg')
+# matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
 import seaborn as sns
 from PySide6 import QtGui
 from PySide6.QtCore import QObject, QPoint, QRect, QSettings, QSize, QThread, QUrl, Qt, Signal
-from PySide6.QtGui import QAction, QBrush, QColor, QDesktopServices, QFont, QFontMetrics, QIcon, QIntValidator, \
+from PySide6.QtGui import QAction, QBrush, QColor, QDesktopServices, QFont, QFontMetrics, QGuiApplication, QIcon, \
+    QIntValidator, \
     QPainter, QPainterPath, \
     QPen, \
     QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView, QApplication,
-    QCheckBox, QComboBox, QDialog, QDoubleSpinBox, QErrorMessage, QFileDialog, QFrame, QGraphicsDropShadowEffect,
+    QCheckBox, QComboBox, QDialog, QDoubleSpinBox, QErrorMessage, QFileDialog, QFormLayout, QFrame,
+    QGraphicsDropShadowEffect,
     QHBoxLayout,
     QHeaderView,
     QLabel,
@@ -293,45 +295,35 @@ class SettingsWindow(FramelessWindow):
         main_widget = QFrame()
         main_layout = QVBoxLayout(main_widget)
         general_settings = QWidget()
+        overlay_settings = QWidget()
         settings_tabs = QTabWidget()
         settings_tabs.addTab(general_settings, "General")
+        settings_tabs.addTab(overlay_settings, "Overlay")
 
-        general_layout = QVBoxLayout(general_settings)
+        self.setWindowIcon(QIcon(asset_utils.get_asset("icon.png")))
+        self.setWindowTitle("Settings")
+
+        general_layout = QFormLayout(general_settings)
 
         export_button = QPushButton("Export Stats")
         export_button.clicked.connect(main_window.export_csv)
         delete_button = QPushButton("Delete Stats")
         delete_button.clicked.connect(lambda: main_window.delete_stats(self))
 
-        # scaling_layout = QHBoxLayout()
-        # scaling_layout.addWidget(QLabel("UI Scaling Factor"))
-        # self.scale_slider = QSlider(Qt.Horizontal)
-        # self.scale_editor = QLineEdit()
-        # saved_scaling = settings.get("scaling", 100)
-        # self.scale_slider.setValue(saved_scaling)
-        # self.scale_slider.setMaximum(200)
-        # self.scale_slider.setMinimum(50)
-        # self.scale_slider.valueChanged.connect(lambda val: self.scale_editor.setText(str(val)))
-        # self.scale_editor.setValidator(QIntValidator(0, 200))
-        # self.scale_editor.setText(str(saved_scaling))
-        # self.scale_editor.textEdited.connect(lambda text: self.scale_slider.setValue(int(text)) if text != '' else None)
-        # scaling_layout.addWidget(self.scale_slider)
-        # scaling_layout.addWidget(self.scale_editor)
-
-        save_stats_widget = QWidget()
-        save_stats_layout = QHBoxLayout(save_stats_widget)
         save_stats_checkbox = QCheckBox()
-        save_stats_checkbox.setChecked(settings.get("save-stats", True))
-        save_stats_layout.addWidget(QLabel("Save match results"), alignment=Qt.AlignLeft)
-        save_stats_layout.addWidget(save_stats_checkbox, Qt.AlignLeft)
-        save_stats_layout.addStretch()
+        save_stats_checkbox.setChecked(settings.setdefault("save-stats", True))
         save_stats_checkbox.stateChanged.connect(main_window.toggle_saving)
 
-        general_layout.addWidget(export_button, alignment=Qt.AlignTop)
-        general_layout.addWidget(delete_button, alignment=Qt.AlignTop)
-        general_layout.addWidget(save_stats_widget, alignment=Qt.AlignTop)
-        # general_layout.addLayout(scaling_layout)
-        general_layout.addStretch()
+        general_layout.addWidget(export_button)
+        general_layout.addWidget(delete_button)
+        general_layout.addRow("Save match results", save_stats_checkbox)
+
+        overlay_layout = QFormLayout(overlay_settings)
+        enable_overlay_checkbox = QCheckBox()
+        enable_overlay_checkbox.setChecked(settings.setdefault("enable-overlay", False))
+        enable_overlay_checkbox.stateChanged.connect(main_window.toggle_overlay)
+
+        overlay_layout.addRow("Enable overlay", enable_overlay_checkbox)
 
         save_close_layout = QHBoxLayout()
         save_button = QPushButton("Save")
@@ -342,7 +334,6 @@ class SettingsWindow(FramelessWindow):
         save_close_layout.addWidget(save_button)
         save_close_layout.addWidget(close_button)
 
-        # main_layout.addWidget(self.titleBar)
         main_layout.addWidget(settings_tabs)
         main_layout.addLayout(save_close_layout)
 
@@ -350,11 +341,9 @@ class SettingsWindow(FramelessWindow):
         self.setFixedSize(600, 600)
 
     def save(self):
-        # scaling = self.scale_slider.value()
-        # settings["scaling"] = scaling
-        settings["save-stats"] = self.main_window.save_stats
         save_settings()
         self.hide()
+        self.main_window.show_overlay()
 
 
 class SBBTracker(FramelessWindow):
@@ -362,8 +351,7 @@ class SBBTracker(FramelessWindow):
         super().__init__()
 
         self.setWindowTitle("SBBTracker")
-        self.first_comp = BoardComp()
-        self.ids_to_comps = {index: BoardComp() for index in range(0, 8)}
+        self.comps = [BoardComp() for _ in range(0, 8)]
         self.round_indicator = QLabel("Waiting for match to start...")
         self.round_indicator.setFont(round_font)
         self.player_stats = stats.PlayerStats()
@@ -371,8 +359,8 @@ class SBBTracker(FramelessWindow):
         self.save_stats = settings.get("save-stats", True)
 
         self.comp_tabs = QTabWidget()
-        for index in self.ids_to_comps:
-            self.comp_tabs.addTab(self.ids_to_comps[index], f"Player{index}")
+        for index in range(len(self.comps)):
+            self.comp_tabs.addTab(self.comps[index], f"Player{index}")
 
         self.reset_button = QPushButton("Reattach to Storybook Brawl")
         self.reset_button.setMaximumWidth(self.reset_button.fontMetrics().boundingRect("Reattach to Storybook Brawl")
@@ -445,6 +433,10 @@ class SBBTracker(FramelessWindow):
         self.log_updates.start()
         self.github_updates.start()
 
+        self.overlay = OverlayWindow()
+        settings.setdefault("enable-overlay", False)
+        self.show_overlay()
+
     def get_player_index(self, player_id: str):
         if player_id not in self.player_ids:
             self.player_ids.append(player_id)
@@ -454,14 +446,20 @@ class SBBTracker(FramelessWindow):
         self.player_ids.clear()
         for index in range(0, 8):
             self.comp_tabs.tabBar().setTabTextColor(index, "white")
-        for comp in self.ids_to_comps.values():
+            comp = self.comps[index]
             comp.composition = None
             comp.player = None
             comp.current_round = 0
             comp.last_seen = None
 
+            overlay_comp = self.overlay.comps[index]
+            overlay_comp.composition = None
+            overlay_comp.player = None
+            overlay_comp.current_round = 0
+            overlay_comp.last_seen = None
+
     def get_comp(self, index: int):
-        return self.ids_to_comps[index]
+        return self.comps[index]
 
     def update_round_num(self, round_number):
         self.round_indicator.setText(f"Turn {round_number} ({round_to_xp(round_number)})")
@@ -478,6 +476,7 @@ class SBBTracker(FramelessWindow):
         comp = self.get_comp(index)
         comp.player = player
         comp.current_round = round_number
+        self.overlay.places[int(player.place)] = index
         self.update()
 
     def update_comp(self, player_id, player, round_number):
@@ -485,6 +484,8 @@ class SBBTracker(FramelessWindow):
         comp = self.get_comp(index)
         comp.composition = player
         comp.last_seen = round_number
+
+        self.overlay.update_comp(index, player, round_number)
         self.update()
 
     def update_stats(self, starting_hero: str, player):
@@ -497,6 +498,15 @@ class SBBTracker(FramelessWindow):
 
     def toggle_saving(self):
         self.save_stats = not self.save_stats
+
+    def toggle_overlay(self):
+        settings["enable-overlay"] = not settings["enable-overlay"]
+
+    def show_overlay(self):
+        if settings["enable-overlay"]:
+            self.overlay.showFullScreen()
+        else:
+            self.overlay.hide()
 
     def open_url(self, url_string: str):
         url = QUrl(url_string)
@@ -527,7 +537,6 @@ class SBBTracker(FramelessWindow):
                 self.install_update()
             else:
                 self.open_github_release()
-
 
     def install_update(self):
         dialog = QDialog(self)
@@ -582,6 +591,7 @@ This will import all games played since SBB was last opened.
         self.github_updates.terminate()
         self.log_updates.terminate()
         self.player_stats.save()
+        self.overlay.close()
         save_settings()
 
 
@@ -883,6 +893,133 @@ class StatsGraph(QWidget):
         self.ax.cla()
         self.figure = graphs.stats_graph(self.player_stats.df, self.selection, self.ax)
         self.canvas.draw()
+
+
+def resoultion_offset(resolution: (int, int)):
+    if resolution == (1920, 1080):
+        return 0
+    if resolution == (2560, 1440):
+        return 43
+    else:
+        return 0
+
+
+class OverlayWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setAttribute(Qt.WA_TranslucentBackground, True)
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.SubWindow)
+
+        monitor = QGuiApplication.screens()[0]
+        self.resize(monitor.size())
+        self.setGeometry(monitor.geometry())
+
+        size = monitor.size()
+        hover_size = (84, 68)
+        p1_loc = (38, 247)
+        hover_distance = 15
+        base_size = (1920, 1080)
+
+        scale_factor = tuple(map(operator.truediv, size.toTuple(), base_size))
+
+        self.comps = [BoardComp() for _ in range(0, 8)]
+        self.comp_widgets = [QWidget(self) for _ in range(0, 8)]
+        self.places = {index: (index - 1) for index in range(1, 9)}
+        for index in range(len(self.comps)):
+            comp = self.comps[index]
+            widget = self.comp_widgets[index]
+
+            comp.setParent(widget)
+            widget.setStyleSheet("background-color: #31363b")
+            widget.setVisible(False)
+            widget.setMinimumSize(1100, 650)
+            comp.setMinimumSize(1100, 650)
+            widget.move(round(self.size().width() / 2 - 100), 0)
+
+        self.hover_regions = [HoverRegion(self, *map(operator.mul, hover_size, scale_factor)) for _ in range(0, 8)]
+
+        # self.simulator_stats = SimulatorStats(self)
+        # self.simulator_stats.move(round(size.width() / 2), 0)
+        # self.simulator_stats.resize(2000, 200)
+
+        for i in range(len(self.hover_regions)):
+            hover = self.hover_regions[i]
+            loc = (p1_loc[0] * scale_factor[0], (p1_loc[1] * scale_factor[1]) + (hover_distance * (scale_factor[1]) * i) +
+                   (hover_size[1] * scale_factor[1] * i) + resoultion_offset(size.toTuple()))
+            hover.move(*loc)
+            hover.resize(*hover_size)
+            hover.enter_hover.connect(lambda y=i+1:  self.show_comp(y))
+            hover.leave_hover.connect(lambda y=i+1:  self.hide_comp(y))
+
+    def show_comp(self, index):
+        widget = self.comp_widgets[self.places[index]]
+        widget.setVisible(True)
+
+    def hide_comp(self, index):
+        widget = self.comp_widgets[self.places[index]]
+        widget.setVisible(False)
+
+    def update_comp(self, index, player, round_number):
+        comp = self.comps[index]
+        comp.composition = player
+        comp.last_seen = round_number
+        self.update()
+
+
+class SimulatorStats(QWidget):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.win_chance = "33.3"
+        self.tie_chance = "33.3"
+        self.lose_chance = "33.3"
+
+        self.setFont(QFont("Roboto", 16))
+
+        self.win_label = QLabel(self.win_chance, self)
+        self.tie_label = QLabel(self.tie_chance, self)
+        self.lose_label = QLabel(self.lose_chance, self)
+
+        self.setStyleSheet("background-color: #31363b")
+
+        background = QWidget(self)
+        layout = QVBoxLayout(background)
+
+        label_layout = QHBoxLayout()
+        label_layout.addWidget(QLabel("Win %"))
+        label_layout.addWidget(QLabel("Tie %"))
+        label_layout.addWidget(QLabel("Lose %"))
+        label_layout.addStretch()
+
+        chance_layout = QHBoxLayout()
+        chance_layout.addWidget(self.win_label)
+        chance_layout.addWidget(self.tie_label)
+        chance_layout.addWidget(self.lose_label)
+        chance_layout.addStretch()
+
+        layout.addLayout(label_layout)
+        layout.addLayout(chance_layout)
+        layout.addStretch()
+
+        self.setMinimumSize(1000, 200)
+
+
+class HoverRegion(QWidget):
+    enter_hover = Signal()
+    leave_hover = Signal()
+
+    def __init__(self, parent, width, height):
+        super().__init__(parent)
+        background = QWidget(self)
+        background.setMinimumSize(width, height)
+        # self.setStyleSheet("background-color: rgba(0, 0, 0, 0.01);")
+        self.setStyleSheet("background-color: rgba(255, 255, 255, 1);")
+        self.setMinimumSize(width, height)
+
+    def enterEvent(self, event):
+        self.enter_hover.emit()
+
+    def leaveEvent(self, event):
+        self.leave_hover.emit()
 
 
 app = QApplication(sys.argv)
