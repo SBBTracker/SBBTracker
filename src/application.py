@@ -353,7 +353,6 @@ class SettingsWindow(FramelessWindow):
         self.main_window.show_overlay()
 
 
-
 class SBBTracker(FramelessWindow):
     def __init__(self):
         super().__init__()
@@ -513,7 +512,7 @@ class SBBTracker(FramelessWindow):
 
     def show_overlay(self):
         if settings["enable-overlay"]:
-            self.overlay.showFullScreen()
+            self.overlay.show()
         else:
             self.overlay.hide()
 
@@ -927,7 +926,8 @@ class OverlayWindow(QMainWindow):
 
         self.main_window = main_window
         self.monitor = None
-        self.scale_factor = (1,1)
+        self.scale_factor = (1, 1)
+        self.dpi_scale = 1
         self.select_monitor(settings.get("monitor", 0))
         self.hover_regions = [HoverRegion(self, *map(operator.mul, hover_size, self.scale_factor)) for _ in range(0, 8)]
         self.update_monitor()
@@ -978,7 +978,9 @@ class OverlayWindow(QMainWindow):
         settings["monitor"] = index
 
     def update_monitor(self):
-        self.resize(self.monitor.size())
+        self.dpi_scale = self.monitor.logicalDotsPerInch() / 96
+        real_size = tuple(map(operator.mul, (self.dpi_scale, self.dpi_scale), self.monitor.size().toTuple()))
+        self.setMinimumSize(*real_size)
         self.setGeometry(self.monitor.geometry())
         self.scale_factor = tuple(map(operator.truediv, self.monitor.size().toTuple(), base_size))
         self.update_hovers()
@@ -986,19 +988,20 @@ class OverlayWindow(QMainWindow):
     def update_hovers(self):
         size = self.monitor.size()
 
+        true_scale = (self.scale_factor[0] * self.dpi_scale, self.scale_factor[1] * self.dpi_scale,)
+
         for i in range(len(self.hover_regions)):
             hover = self.hover_regions[i]
-            loc = (p1_loc[0] * self.scale_factor[0], (p1_loc[1] * self.scale_factor[1]) +
-                   (hover_distance * (self.scale_factor[1]) * i) +
-                   (hover_size[1] * self.scale_factor[1] * i) + resoultion_offset(size.toTuple()))
+            loc = (p1_loc[0] * true_scale[0], (p1_loc[1] * true_scale[1]) +
+                   (hover_distance * (true_scale[1]) * i) +
+                   (hover_size[1] * true_scale[1] * i) + resoultion_offset(size.toTuple()))
             hover.move(*loc)
-            new_size = tuple(map(operator.mul, hover_size, self.scale_factor))
+            new_size = tuple(map(operator.mul, hover_size, true_scale))
             hover.resize(*new_size)
             hover.background.setMinimumSize(*new_size)
             hover.enter_hover.connect(lambda y=i+1:  self.show_comp(y))
             hover.leave_hover.connect(lambda y=i+1:  self.hide_comp(y))
         self.update()
-
 
 
 class SimulatorStats(QWidget):
