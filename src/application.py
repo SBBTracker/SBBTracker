@@ -452,6 +452,7 @@ class SBBTracker(FramelessWindow):
 
     def new_game(self):
         self.player_ids.clear()
+        self.overlay.enable_hovers()
         for index in range(0, 8):
             self.comp_tabs.tabBar().setTabTextColor(index, "white")
             comp = self.comps[index]
@@ -484,6 +485,7 @@ class SBBTracker(FramelessWindow):
         comp = self.get_comp(index)
         comp.player = player
         comp.current_round = round_number
+        self.overlay.comps[index].current_round = round_number
         self.overlay.new_places[int(player.place)] = index
         self.update()
 
@@ -503,6 +505,7 @@ class SBBTracker(FramelessWindow):
                                            place, player.mmr)
             self.match_history.update_history_table()
             self.match_history.update_stats_table()
+        self.overlay.disable_hovers()
 
     def toggle_saving(self):
         self.save_stats = not self.save_stats
@@ -934,6 +937,8 @@ class OverlayWindow(QMainWindow):
         self.hover_regions = [HoverRegion(self, *map(operator.mul, hover_size, self.scale_factor)) for _ in range(0, 8)]
         self.update_monitor()
 
+        self.show_hide = True
+
         self.comps = [BoardComp() for _ in range(0, 8)]
         self.comp_widgets = [QWidget(self) for _ in range(0, 8)]
         self.places = {index: (index - 1) for index in range(1, 9)}
@@ -954,8 +959,24 @@ class OverlayWindow(QMainWindow):
         self.show_button.move(40, 40)
         self.show_button.resize(self.show_button.sizeHint().width(),  self.show_button.sizeHint().height())
 
+        self.disable_hovers()
+
     def show_hide_main_window(self):
-        self.main_window.setWindowState(Qt.WindowState.WindowActive)
+        if self.show_hide:
+            self.main_window.setWindowState(Qt.WindowState.WindowActive)
+            self.show_button.setText("Hide Tracker")
+        else:
+            self.main_window.showMinimized()
+            self.show_button.setText("Show Tracker")
+        self.show_hide = not self.show_hide
+
+    def disable_hovers(self):
+        for hover in self.hover_regions:
+            hover.setVisible(False)
+
+    def enable_hovers(self):
+        for hover in self.hover_regions:
+            hover.setVisible(True)
 
     def show_comp(self, index):
         widget = self.comp_widgets[self.places[index]]
