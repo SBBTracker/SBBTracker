@@ -43,6 +43,7 @@ class LivePlayerStates:
     def clear(self):
         self.ids_to_health.clear()
         self.ids_to_xp.clear()
+        self.ids_to_fractional_xp.clear()
         self.ids_to_heroes.clear()
 
 
