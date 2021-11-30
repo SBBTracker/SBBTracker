@@ -908,6 +908,8 @@ def resoultion_offset(resolution: (int, int)):
         return 0
     if resolution == (2560, 1440):
         return 43
+    if resolution == (3840, 2160):
+        return 63
     else:
         return 0
 
@@ -978,9 +980,9 @@ class OverlayWindow(QMainWindow):
         settings["monitor"] = index
 
     def update_monitor(self):
-        self.dpi_scale = self.monitor.logicalDotsPerInch() / 96
-        real_size = tuple(map(operator.mul, (self.dpi_scale, self.dpi_scale), self.monitor.size().toTuple()))
-        self.setMinimumSize(*real_size)
+        self.dpi_scale = (self.monitor.logicalDotsPerInch() / 96)
+        self.real_size = tuple(map(operator.mul, (self.dpi_scale, self.dpi_scale), self.monitor.size().toTuple()))
+        self.setMinimumSize(*self.real_size)
         self.setGeometry(self.monitor.geometry())
         self.scale_factor = tuple(map(operator.truediv, self.monitor.size().toTuple(), base_size))
         self.update_hovers()
@@ -994,7 +996,8 @@ class OverlayWindow(QMainWindow):
             hover = self.hover_regions[i]
             loc = (p1_loc[0] * true_scale[0], (p1_loc[1] * true_scale[1]) +
                    (hover_distance * (true_scale[1]) * i) +
-                   (hover_size[1] * true_scale[1] * i) + resoultion_offset(size.toTuple()))
+                   (hover_size[1] * true_scale[1] * i) +
+                   resoultion_offset(tuple(size * self.monitor.devicePixelRatio() for size in self.real_size)))
             hover.move(*loc)
             new_size = tuple(map(operator.mul, hover_size, true_scale))
             hover.resize(*new_size)
