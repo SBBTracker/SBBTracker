@@ -5,6 +5,7 @@ Join the SBBTracker Discord: [![SBBTracker discord](https://discordapp.com/api/g
 
 ## Features
 * Keep track of previous opponent's boards
+* Game overlay
 * See history of players' healths
 * Record game placements
 * Stat analysis of your results
