@@ -58,6 +58,7 @@ health_loc = (137, 181)
 xp_loc = (137, 40)
 
 default_bg_color = "#31363b"
+default_bg_color_rgb = "49, 54, 59"
 sns.set_style("darkgrid", {"axes.facecolor": default_bg_color})
 
 plt.rcParams.update({'text.color': "white",
@@ -68,6 +69,14 @@ plt.rcParams.update({'text.color': "white",
 
 round_font = QFont("Roboto", 18)
 display_font_family = "Impact" if log_parser.os_name == "Windows" else "Ubuntu Bold"
+
+class Settings:
+    boardcomp_transparency = "boardcomp-transparency"
+    save_stats = "save-stats"
+    monitor = "monitor"
+    filter_ = "filter"
+    enable_overlay = "enable-overlay"
+
 
 
 def get_image_location(position: int):
@@ -311,7 +320,7 @@ class SettingsWindow(FramelessWindow):
         delete_button.clicked.connect(lambda: main_window.delete_stats(self))
 
         save_stats_checkbox = QCheckBox()
-        save_stats_checkbox.setChecked(settings.setdefault("save-stats", True))
+        save_stats_checkbox.setChecked(settings.setdefault(Settings.save_stats, True))
         save_stats_checkbox.stateChanged.connect(main_window.toggle_saving)
 
         general_layout.addWidget(export_button)
@@ -320,16 +329,33 @@ class SettingsWindow(FramelessWindow):
 
         overlay_layout = QFormLayout(overlay_settings)
         enable_overlay_checkbox = QCheckBox()
-        enable_overlay_checkbox.setChecked(settings.setdefault("enable-overlay", False))
+        enable_overlay_checkbox.setChecked(settings.setdefault(Settings.enable_overlay, False))
         enable_overlay_checkbox.stateChanged.connect(main_window.toggle_overlay)
 
         choose_monitor = QComboBox()
         monitors = QGuiApplication.screens()
-        choose_monitor.addItems([f"Monitor {i+1}" for i in range(0, len(monitors))])
-        choose_monitor.setCurrentIndex(settings.setdefault("monitor", 1))
+        choose_monitor.addItems([f"Monitor {i + 1}" for i in range(0, len(monitors))])
+        choose_monitor.setCurrentIndex(settings.setdefault(Settings.monitor, 1))
         choose_monitor.currentIndexChanged.connect(self.main_window.overlay.select_monitor)
+
+        slider_editor = QHBoxLayout()
+        self.transparency_slider = QSlider(Qt.Horizontal)
+        self.transparency_editor = QLineEdit()
+        saved_scaling = settings.setdefault(Settings.boardcomp_transparency, 0)
+        self.transparency_slider.setValue(saved_scaling)
+        self.transparency_slider.setMaximum(100)
+        self.transparency_slider.setMinimum(0)
+        self.transparency_slider.valueChanged.connect(lambda val: self.transparency_editor.setText(str(val)))
+        self.transparency_editor.setValidator(QIntValidator(0, 200))
+        self.transparency_editor.setText(str(saved_scaling))
+        self.transparency_editor.textEdited.connect(
+            lambda text: self.transparency_slider.setValue(int(text)) if text != '' else None)
+        slider_editor.addWidget(self.transparency_slider)
+        slider_editor.addWidget(self.transparency_editor)
+
         overlay_layout.addRow("Enable overlay", enable_overlay_checkbox)
         overlay_layout.addRow("Choose overlay monitor", choose_monitor)
+        overlay_layout.addRow("Adjust overlay transparency", slider_editor)
 
         save_close_layout = QHBoxLayout()
         self.save_button = QPushButton("Save")
@@ -347,9 +373,14 @@ class SettingsWindow(FramelessWindow):
         self.setFixedSize(600, 600)
 
     def save(self):
+        settings[Settings.save_stats] = self.main_window.save_stats
+        if self.transparency_editor.text():
+            settings[Settings.boardcomp_transparency] = int(self.transparency_editor.text())
+
         save_settings()
         self.hide()
         self.main_window.overlay.update_monitor()
+        self.main_window.overlay.set_transparency()
         self.main_window.show_overlay()
 
 
@@ -363,10 +394,10 @@ class SBBTracker(FramelessWindow):
         self.round_indicator.setFont(round_font)
         self.player_stats = stats.PlayerStats()
         self.player_ids = []
-        self.save_stats = settings.get("save-stats", True)
+        self.save_stats = settings.get(Settings.save_stats, True)
 
         self.overlay = OverlayWindow(self)
-        settings.setdefault("enable-overlay", False)
+        settings.setdefault(Settings.enable_overlay, False)
         self.show_overlay()
 
         self.comp_tabs = QTabWidget()
@@ -511,10 +542,10 @@ class SBBTracker(FramelessWindow):
         self.save_stats = not self.save_stats
 
     def toggle_overlay(self):
-        settings["enable-overlay"] = not settings["enable-overlay"]
+        settings[Settings.enable_overlay] = not settings[Settings.enable_overlay]
 
     def show_overlay(self):
-        if settings["enable-overlay"]:
+        if settings[Settings.enable_overlay]:
             self.overlay.show()
         else:
             self.overlay.hide()
@@ -715,7 +746,7 @@ class MatchHistory(QWidget):
         self.match_history_table = QTableWidget(stats.stats_per_page, 4)
         self.page = 1
         self.display_starting_hero = 0
-        self.filter = settings.get("filter", "All Matches")
+        self.filter_ = settings.setdefault(Settings.filter_, "All Matches")
         self.match_history_table.setHorizontalHeaderLabels(["Starting Hero", "Ending Hero", "Place", "+/- MMR"])
         self.match_history_table.setColumnWidth(0, 140)
         self.match_history_table.setColumnWidth(1, 140)
@@ -783,7 +814,7 @@ QTabBar::tab:right{
         self.toggle_hero.addItems(hero_types)
         self.filter_combo = QComboBox()
         self.filter_combo.addItems(default_dates.keys())
-        index = self.filter_combo.findText(self.filter)
+        index = self.filter_combo.findText(self.filter_)
         if index != -1:  # -1 for not found
             self.filter_combo.setCurrentIndex(index)
         self.filter_combo.activated.connect(self.filter_stats)
@@ -826,10 +857,10 @@ QTabBar::tab:right{
         start_num = (self.page - 1) * stats.stats_per_page + 1
         self.match_history_table.setVerticalHeaderLabels([str(i) for i in range(start_num,
                                                                                 start_num + stats.stats_per_page + 1)])
-        self.page_indicator.setText(f'Page {self.page} of {max(1,self.player_stats.get_num_pages())}')
+        self.page_indicator.setText(f'Page {self.page} of {max(1, self.player_stats.get_num_pages())}')
 
     def update_stats_table(self):
-        start, end = default_dates[self.filter]
+        start, end = default_dates[self.filter_]
         hero_stats = self.player_stats.filter(start, end, self.sort_col, self.sort_asc)
         chosen_stats = hero_stats[self.display_starting_hero]
         update_table(self.stats_table, chosen_stats)
@@ -839,8 +870,8 @@ QTabBar::tab:right{
         self.update_stats_table()
 
     def filter_stats(self):
-        self.filter = self.filter_combo.currentText()
-        settings["filter"] = self.filter
+        self.filter_ = self.filter_combo.currentText()
+        settings[Settings.filter_] = self.filter_
         self.update_stats_table()
 
     def sort_stats(self, index: int):
@@ -940,7 +971,7 @@ class OverlayWindow(QMainWindow):
         self.show_hide = True
 
         self.comps = [BoardComp() for _ in range(0, 8)]
-        self.comp_widgets = [QWidget(self) for _ in range(0, 8)]
+        self.comp_widgets = [QFrame(self) for _ in range(0, 8)]
         self.places = {index: (index - 1) for index in range(1, 9)}
         self.new_places = {}
         for index in range(len(self.comps)):
@@ -948,16 +979,16 @@ class OverlayWindow(QMainWindow):
             widget = self.comp_widgets[index]
 
             comp.setParent(widget)
-            widget.setStyleSheet("background-color: #31363b")
             widget.setVisible(False)
             widget.setMinimumSize(1100, 650)
             comp.setMinimumSize(1100, 650)
             widget.move(round(self.size().width() / 2 - 100), 0)
+        self.set_transparency()
 
         self.show_button = QPushButton("Show Tracker", self)
         self.show_button.clicked.connect(self.show_hide_main_window)
         self.show_button.move(40, 40)
-        self.show_button.resize(self.show_button.sizeHint().width(),  self.show_button.sizeHint().height())
+        self.show_button.resize(self.show_button.sizeHint().width(), self.show_button.sizeHint().height())
 
         self.disable_hovers()
 
@@ -998,7 +1029,7 @@ class OverlayWindow(QMainWindow):
 
     def select_monitor(self, index):
         self.monitor = QGuiApplication.screens()[index]
-        settings["monitor"] = index
+        settings[Settings.monitor] = index
 
     def update_monitor(self):
         self.dpi_scale = (self.monitor.logicalDotsPerInch() / 96)
@@ -1023,9 +1054,15 @@ class OverlayWindow(QMainWindow):
             new_size = tuple(map(operator.mul, hover_size, true_scale))
             hover.resize(*new_size)
             hover.background.setMinimumSize(*new_size)
-            hover.enter_hover.connect(lambda y=i+1:  self.show_comp(y))
-            hover.leave_hover.connect(lambda y=i+1:  self.hide_comp(y))
+            hover.enter_hover.connect(lambda y=i + 1: self.show_comp(y))
+            hover.leave_hover.connect(lambda y=i + 1: self.hide_comp(y))
         self.update()
+
+    def set_transparency(self):
+        alpha = (100 - settings[Settings.boardcomp_transparency]) / 100
+        style = f"background-color: rgba({default_bg_color_rgb}, {alpha});"
+        for widget in self.comp_widgets:
+            widget.setStyleSheet(style)
 
 
 class SimulatorStats(QWidget):
