@@ -1026,10 +1026,16 @@ class OverlayWindow(QMainWindow):
     def update_placements(self):
         self.places = self.new_places.copy()
         self.new_places.clear()
+        for widget in self.comp_widgets:
+            #  fixes bug where hovering over the hero at the end of combat gets the overlay stuck
+            widget.setVisible(False)
 
     def select_monitor(self, index):
-        self.monitor = QGuiApplication.screens()[index]
-        settings[Settings.monitor] = index
+        screens = QGuiApplication.screens()
+        # if the number of monitors is reduced, just pick the first monitor by default
+        adjusted_index = index if index < len(screens) else 0
+        self.monitor = QGuiApplication.screens()[adjusted_index]
+        settings[Settings.monitor] = adjusted_index
 
     def update_monitor(self):
         self.dpi_scale = (self.monitor.logicalDotsPerInch() / 96)
