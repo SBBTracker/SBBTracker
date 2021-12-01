@@ -1059,7 +1059,7 @@ class OverlayWindow(QMainWindow):
         self.update()
 
     def set_transparency(self):
-        alpha = (100 - settings[Settings.boardcomp_transparency]) / 100
+        alpha = (100 - settings.get(Settings.boardcomp_transparency, 0)) / 100
         style = f"background-color: rgba({default_bg_color_rgb}, {alpha});"
         for widget in self.comp_widgets:
             widget.setStyleSheet(style)
