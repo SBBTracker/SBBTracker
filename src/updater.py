@@ -1,4 +1,5 @@
 import json
+import logging
 import subprocess
 import time
 from os.path import expanduser
@@ -38,7 +39,12 @@ def self_update(progress_handler):
 
     if download_url:
         destination = Path(expanduser('~/Downloads')).joinpath("SBBTracker_installer.exe")
-        download = urlretrieve(download_url, destination, progress_handler)
-        subprocess.Popen(f'{destination} /SILENT /RESTARTAPPLICATIONS')
+        try:
+            download = urlretrieve(download_url, destination, progress_handler)
+            subprocess.Popen(f'{destination} /SILENT /RESTARTAPPLICATIONS')
+        except Exception as e:
+            logging.error(e)
+    else:
+        logging.warning("Couldn't find the .exe to download from the release page")
 
 

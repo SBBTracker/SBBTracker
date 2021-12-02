@@ -50,7 +50,8 @@ import updater
 if not stats.sbbtracker_folder.exists():
     stats.sbbtracker_folder.mkdir()
 logging.basicConfig(filename=stats.sbbtracker_folder.joinpath("sbbtracker.log"), filemode="w",
-                    format='%(name)s - %(levelname)s - %(message)s')
+                    format='%(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+logging.getLogger().addHandler(logging.StreamHandler())
 
 art_dim = (161, 204)
 att_loc = (26, 181)
@@ -122,10 +123,13 @@ settings_file = stats.sbbtracker_folder.joinpath("settings.json")
 
 def load_settings():
     if settings_file.exists():
-        with open(settings_file, "r") as json_file:
-            return json.load(json_file)
-    else:
-        return {}
+        try:
+            with open(settings_file, "r") as json_file:
+                return json.load(json_file)
+        except Exception as e:
+            logging.error("Couldn't load settings file!")
+            logging.error(str(e))
+    return {}
 
 
 settings = load_settings()
@@ -589,6 +593,7 @@ class SBBTracker(FramelessWindow):
         dialog_layout.addWidget(self.download_progress)
         dialog.show()
         dialog.update()
+        logging.info("Starting download...")
         updater.self_update(self.handle_progress)
         self.close()
         sys.exit(0)
@@ -596,9 +601,9 @@ class SBBTracker(FramelessWindow):
     def handle_progress(self, blocknum, blocksize, totalsize):
 
         read_data = blocknum * blocksize
-
         if totalsize > 0:
             download_percentage = read_data * 100 / totalsize
+            logging.info(f"Download at: {download_percentage}%")
 
             self.download_progress.setValue(download_percentage)
 
