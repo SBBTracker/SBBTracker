@@ -77,7 +77,7 @@ class Settings:
     monitor = "monitor"
     filter_ = "filter"
     enable_overlay = "enable-overlay"
-
+    live_palette = "live-palette"
 
 
 def get_image_location(position: int):
@@ -327,9 +327,16 @@ class SettingsWindow(FramelessWindow):
         save_stats_checkbox.setChecked(settings.setdefault(Settings.save_stats, True))
         save_stats_checkbox.stateChanged.connect(main_window.toggle_saving)
 
+        self.graph_color_chooser = QComboBox()
+        palettes = list(graphs.color_palettes.keys())
+        self.graph_color_chooser.addItems(palettes)
+        self.graph_color_chooser.setCurrentIndex(palettes.index(settings.get(Settings.live_palette, "vibrant")))
+        self.graph_color_chooser.currentTextChanged.connect(main_window.live_graphs.set_color_palette)
+
         general_layout.addWidget(export_button)
         general_layout.addWidget(delete_button)
         general_layout.addRow("Save match results", save_stats_checkbox)
+        general_layout.addRow("Graph color palette", self.graph_color_chooser)
 
         overlay_layout = QFormLayout(overlay_settings)
         enable_overlay_checkbox = QCheckBox()
@@ -378,6 +385,7 @@ class SettingsWindow(FramelessWindow):
 
     def save(self):
         settings[Settings.save_stats] = self.main_window.save_stats
+        settings[Settings.live_palette] = self.graph_color_chooser.currentText()
         if self.transparency_editor.text():
             settings[Settings.boardcomp_transparency] = int(self.transparency_editor.text())
 
@@ -893,6 +901,8 @@ class LiveGraphs(QWidget):
     def __init__(self):
         super().__init__()
         self.layout = QVBoxLayout(self)
+        self.user_palette = settings.setdefault(Settings.live_palette, "vibrant")
+        self.states = None
 
         self.health_canvas = FigureCanvasQTAgg(plt.Figure(figsize=(13.5, 18)))
         self.xp_canvas = FigureCanvasQTAgg(plt.Figure(figsize=(13.5, 18)))
@@ -904,14 +914,22 @@ class LiveGraphs(QWidget):
         graphs_tabs.addTab(self.xp_canvas, "XP Graph")
         self.layout.addWidget(graphs_tabs)
 
-    def update_graph(self, states: graphs.LivePlayerStates):
-        self.xp_ax.cla()
-        graphs.xp_graph(states, self.xp_ax)
-        self.xp_canvas.draw()
+    def set_color_palette(self, palette):
+        self.user_palette = palette
+        self.update_graph()
 
-        self.health_ax.cla()
-        graphs.live_health_graph(states, self.health_ax)
-        self.health_canvas.draw()
+    def update_graph(self, states: graphs.LivePlayerStates = None):
+        if states:
+            self.states = states
+
+        if self.states:
+            self.xp_ax.cla()
+            graphs.xp_graph(self.states, self.xp_ax, self.user_palette)
+            self.xp_canvas.draw()
+
+            self.health_ax.cla()
+            graphs.live_health_graph(self.states, self.health_ax, self.user_palette)
+            self.health_canvas.draw()
 
 
 class StatsGraph(QWidget):

@@ -10,7 +10,12 @@ from matplotlib.ticker import MaxNLocator
 
 matches_per_hero = "Matches per Hero"
 mmr_change = "MMR Graph"
-
+color_palettes = {
+    'vibrant': ['#0077BB', '#33BBEE', '#009988', '#EE7733', '#CC3311', '#EE3377', '#BBBBBB', '#000000'],
+    'paired':  ['#a6cee3', '#1f78b4', '#b2df8a', '#33a02c', '#fb9a99', '#e31a1c', '#fdbf6f', '#ff7f00'],
+    'set':     ['#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00', '#ffff33', '#a65628', '#f781bf'],
+    'scarbo':  ['#000000', '#990000', '#0000CC', '#FF0000', '#4747eb', '#e08585', '#bdbddb', '#FFFFFF'],
+}
 
 class LivePlayerStates:
     def __init__(self):
@@ -26,7 +31,7 @@ class LivePlayerStates:
         self.ids_to_heroes[playerid] = hero
 
     def get_ids(self):
-        return self.ids_to_heroes.keys()
+        return list(self.ids_to_heroes.keys())
 
     def get_hero(self, player_id):
         return self.ids_to_heroes[player_id]
@@ -47,57 +52,53 @@ class LivePlayerStates:
         self.ids_to_heroes.clear()
 
 
-def live_health_graph(states: LivePlayerStates, ax):
-    # fig, ax = plt.subplots()
-    last_values = []
-    # plt.axhline(color='w', linewidth=2.0)
-    for player in states.get_ids():
+def live_health_graph(states: LivePlayerStates, ax, palette):
+    players = states.get_ids()
+    last_values = [list(states.get_healths(player).values())[-1] for player in players]
+    colors = color_palettes[palette]
+
+    idx = np.argsort(np.array(last_values))[::-1]
+    players = np.array(players)[idx]
+
+    for index, player in enumerate(players):
         healths = states.get_healths(player)
         x = list(healths.keys())
         y = list(healths.values())
 
         last_health = y[-1]
         opacity = 1 if last_health > 0 else .2
-        ax.plot(x, y, label=states.get_hero(player), alpha=opacity)
-        last_values.append((x[-1], y[-1]))
+        ax.plot(x, y, label=states.get_hero(player), alpha=opacity, color=colors[index], linewidth=3.0)
         ax.annotate(y[-1], (x[-1], y[-1]))
-    ax.legend()
+    ax.legend(framealpha=1, labelcolor=colors)
     ax.set_xlabel("Turn")
     ax.set_ylabel("Health")
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     ax.yaxis.set_major_locator(MaxNLocator(integer=True))
-    # fig.set_size_inches(13.5, 18)
-    handles, labels = ax.get_legend_handles_labels()
-    healths = [health for (_, health) in last_values]
-    # sort both labels and handles by labels
-    _, labels, handles = zip(*sorted(zip(healths, labels, handles), key=lambda t: t[0], reverse=True))
-    ax.legend(handles, labels)
+
     return plt.gcf()
 
 
-def xp_graph(states: LivePlayerStates, ax):
-    # fig, ax = plt.subplots()
-    last_values = []
-    # plt.axhline(color='w', linewidth=2.0)
-    for player in states.get_ids():
+def xp_graph(states: LivePlayerStates, ax, palette):
+    players = states.get_ids()
+    last_values = [list(states.get_fractional_xps(player).values())[-1] for player in players]
+    colors = color_palettes[palette]
+
+    idx = np.argsort(np.array(last_values))[::-1]
+    players = np.array(players)[idx]
+
+    for index, player in enumerate(players):
         xps = states.get_fractional_xps(player)
         display_xps = list(states.get_xps(player).values())
         x = list(xps.keys())[0:13]  # filtering only the fist 13 rounds because nothing beyond 6.0 matters
         y = list(xps.values())[0:13]
 
-        ax.plot(x, y, label=states.get_hero(player))
-        last_values.append((x[-1], y[-1]))
+        ax.plot(x, y, label=states.get_hero(player), color=colors[index], linewidth=3.0)
         ax.annotate(float(display_xps[-1]), (x[-1], y[-1]))
-    ax.legend()
+    ax.legend(framealpha=1, labelcolor=colors)
     ax.set_xlabel("Turn")
     ax.set_ylabel("XP")
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     ax.yaxis.set_major_locator(MaxNLocator(integer=True))
-    handles, labels = ax.get_legend_handles_labels()
-    experiences = [health for (_, health) in last_values]
-    # sort both labels and handles by labels
-    _, labels, handles = zip(*sorted(zip(experiences, labels, handles), key=lambda t: t[0], reverse=True))
-    ax.legend(handles, labels)
     return plt.gcf()
 
 
