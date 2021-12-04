@@ -1,3 +1,4 @@
+import logging
 import math
 import os.path
 from datetime import datetime
@@ -38,7 +39,11 @@ class PlayerStats:
     """
     def __init__(self):
         if os.path.exists(statsfile):
-            self.df = pd.read_csv(str(statsfile))
+            try:
+                self.df = pd.read_csv(str(statsfile))
+            except Exception as e:
+                logging.error(e)
+                self.df = pd.DataFrame(columns=['StartingHero', 'EndingHero', 'Placement', 'Timestamp', '+/-MMR'])
             if 'Hero' in self.df.columns:
                 #  Legacy data
                 self.df = self.df.rename({'Hero': "EndingHero"}, axis='columns')
@@ -61,7 +66,7 @@ class PlayerStats:
                 os.makedirs(filepath.parent)
             self.df.to_csv(str(filepath), index=False)
         except Exception as e:
-            print(e)
+            logging.error(e)
 
     def save(self):
         self.export(statsfile)
@@ -71,7 +76,7 @@ class PlayerStats:
         try:
             os.rename(statsfile, str(statsfile) + "_backup")
         except:
-            print("Unable to move old stats file!")
+            logging.warning("Unable to move old stats file!")
 
     def get_num_pages(self):
         return math.ceil(len(self.df.index) / stats_per_page)

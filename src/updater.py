@@ -1,6 +1,8 @@
 import json
 import logging
+import os
 import subprocess
+import platform
 import time
 from os.path import expanduser
 from pathlib import Path
@@ -10,6 +12,8 @@ import requests
 from packaging import version as vs
 
 from version import __version__
+
+os_name = platform.system()
 
 
 def check_updates():
@@ -24,7 +28,7 @@ def check_updates():
             if update_available:
                 return response["body"]
         except:
-            print("Couldn't parse github update")
+            logging.error("Couldn't parse github update")
         time.sleep(3600)  # Check for updates every hour
 
 
@@ -38,7 +42,8 @@ def self_update(progress_handler):
             break
 
     if download_url:
-        destination = Path(expanduser('~/Downloads')).joinpath("SBBTracker_installer.exe")
+        download_folder = Path('/tmp') if os_name == "Linux" else Path(os.environ["LOCALAPPDATA"]).joinpath("Temp")
+        destination = download_folder.joinpath("SBBTracker_installer.exe")
         try:
             download = urlretrieve(download_url, destination, progress_handler)
             subprocess.Popen(f'{destination} /SILENT /RESTARTAPPLICATIONS')
