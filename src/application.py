@@ -47,6 +47,7 @@ import graphs
 import log_parser
 import stats
 import updater
+import version
 
 if not stats.sbbtracker_folder.exists():
     stats.sbbtracker_folder.mkdir()
@@ -235,12 +236,18 @@ class SettingsWindow(QMainWindow):
         main_layout = QVBoxLayout(main_widget)
         general_settings = QWidget()
         overlay_settings = QWidget()
+        about_tab = QWidget()
         settings_tabs = QTabWidget()
         settings_tabs.addTab(general_settings, "General")
         settings_tabs.addTab(overlay_settings, "Overlay")
+        settings_tabs.addTab(about_tab, "About")
 
         self.setWindowIcon(QIcon(asset_utils.get_asset("icon.png")))
         self.setWindowTitle("Settings")
+
+        about_layout = QVBoxLayout(about_tab)
+        about_layout.addWidget(QLabel(f"SBBTracker v{version.__version__}"))
+        about_layout.addStretch()
 
         general_layout = QFormLayout(general_settings)
 
@@ -409,7 +416,6 @@ class SBBTracker(QMainWindow):
         main_widget = QWidget()
         main_layout = QVBoxLayout(main_widget)
         main_layout.setContentsMargins(0, 0, 0, 0)
-        # main_layout.addWidget(toolbar)
         main_layout.addWidget(main_tabs)
 
         self.setCentralWidget(main_widget)
