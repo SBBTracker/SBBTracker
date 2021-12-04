@@ -5,12 +5,14 @@ import logging
 import operator
 import os
 import platform
+import shutil
 import sys
 import threading
 from collections import defaultdict
 from datetime import date
 from pathlib import Path
 from queue import Queue
+from tempfile import NamedTemporaryFile
 
 import matplotlib
 
@@ -139,8 +141,15 @@ settings = load_settings()
 
 
 def save_settings():
-    with open(settings_file, "w") as json_file:
-        json.dump(settings, json_file)
+    with NamedTemporaryFile(delete=False, mode='w', newline='') as temp_file:
+        json.dump(settings, temp_file)
+        temp_name = temp_file.name
+    try:
+        with open(temp_name) as file:
+            json.load(file)
+        shutil.move(temp_name, settings_file)
+    except:
+        logging.error("Couldn't save settings correctly")
 
 
 today = date.today()

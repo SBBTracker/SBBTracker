@@ -1,9 +1,11 @@
 import logging
 import math
 import os.path
+import shutil
 from datetime import datetime
 from os.path import expanduser
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 
 import pandas as pd
 
@@ -61,12 +63,15 @@ class PlayerStats:
             self.df = pd.DataFrame(columns=['StartingHero', 'EndingHero', 'Placement', 'Timestamp', '+/-MMR'])
 
     def export(self, filepath: Path):
+        with NamedTemporaryFile(delete=False, mode='w', newline='') as temp_file:
+            self.df.to_csv(temp_file, index=False)
+            temp_name = temp_file.name
         try:
-            if not filepath.parent.exists():
-                os.makedirs(filepath.parent)
-            self.df.to_csv(str(filepath), index=False)
-        except Exception as e:
-            logging.error(e)
+            with open(temp_name) as file:
+                pd.read_csv(file)
+            shutil.move(temp_name, filepath)
+        except:
+            logging.error("Couldn't save settings correctly")
 
     def save(self):
         self.export(statsfile)
