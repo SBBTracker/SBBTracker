@@ -209,98 +209,7 @@ class LogThread(QThread):
                                                                                  current_player.heroname), state)
 
 
-class UpdateCheckSignals(QObject):
-    github_update = Signal(str)
-
-
-class UpdateCheckThread(QThread):
-    def __init__(self, *args, **kwargs):
-        super(UpdateCheckThread, self).__init__()
-        self.args = args
-        self.kwargs = kwargs
-        self.signals = UpdateCheckSignals()
-
-    def run(self):
-        release_notes = updater.check_updates()
-        # wait for an update
-        self.signals.github_update.emit(release_notes)
-
-
-class DraggableTitleBar(QToolBar):
-
-    def __init__(self, window: QMainWindow, parent):
-        super(DraggableTitleBar, self).__init__()
-        self.parent = parent
-        self._window = window
-        self._mousePressed = False
-        self.setMaximumHeight(40)
-
-        spacer = QWidget()
-        spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        titlebar_icon = QLabel()
-        titlebar_icon.setPixmap(QPixmap(asset_utils.get_asset("icon.png")).scaled(QSize(20, 20),
-                                                                                  mode=Qt.SmoothTransformation))
-        self.addWidget(QLabel("  "))
-        self.addWidget(titlebar_icon)
-        self.title = QLabel("  SBBTracker")
-        self.title.setFont(QFont("Roboto", 12))
-        self.addWidget(self.title)
-        self.addWidget(spacer)
-        self.minimize = QAction("&🗕", self)
-        self.addAction(self.minimize)
-        self.minimize.triggered.connect(self.parent.showMinimized)
-        self.widgetForAction(self.minimize).setToolTip("")
-
-        self.maximize = QAction("&🗖", self)
-        self.addAction(self.maximize)
-        self.widgetForAction(self.maximize).setToolTip("")
-        self.maximize.triggered.connect(self.btn_max_clicked)
-
-        self.close = QAction("&🗙", self)
-        self.addAction(self.close)
-        self.close.triggered.connect(self.parent.close)
-        self.setObjectName("close-button")
-        close_widget = self.widgetForAction(self.close)
-        close_widget.setStyleSheet("QToolButton:hover { background-color: red; border-right: 10px solid red; "
-                                   "border-left: 10px solid red;}")
-        close_widget.setToolTip("")
-
-    def resizeEvent(self, QResizeEvent):
-        super(DraggableTitleBar, self).resizeEvent(QResizeEvent)
-
-    def mousePressEvent(self, event):
-        self._mousePressed = True
-        self._mousePos = event.globalPosition().toPoint()
-        self._windowPos = self._window.pos()
-
-    def mouseMoveEvent(self, event):
-        if self._mousePressed and (Qt.LeftButton & event.buttons()):
-            self._window.setWindowState(Qt.WindowNoState)
-            self._window.move(self._windowPos +
-                              (event.globalPosition().toPoint() - self._mousePos))
-
-    def btn_close_clicked(self):
-        self.parent.close()
-
-    def btn_max_clicked(self):
-        if self._window.isMaximized():
-            self._window.setWindowState(Qt.WindowNoState)
-        else:
-            self._window.setWindowState(Qt.WindowMaximized)
-
-    def btn_min_clicked(self):
-        self.parent.showMinimized()
-
-
-class FramelessWindow(QMainWindow):
-    def __init__(self):
-        super().__init__()
-        # self.setWindowFlags(Qt.CustomizeWindowHint | Qt.FramelessWindowHint)
-        # self.setWindowFlags(Qt.FramelessWindowHint)
-        self.titleBar = DraggableTitleBar(self, self)
-
-
-class SettingsWindow(FramelessWindow):
+class SettingsWindow(QMainWindow):
     def __init__(self, main_window):
         super().__init__()
         self.hide()
@@ -396,7 +305,7 @@ class SettingsWindow(FramelessWindow):
         self.main_window.show_overlay()
 
 
-class SBBTracker(FramelessWindow):
+class SBBTracker(QMainWindow):
     def __init__(self):
         super().__init__()
 
@@ -471,7 +380,7 @@ class SBBTracker(FramelessWindow):
         self.setCentralWidget(main_widget)
         self.setMinimumSize(QSize(1200, 800))
         self.setBaseSize(QSize(1400, 900))
-        self.github_updates = UpdateCheckThread()
+        self.github_updates = updater.UpdateCheckThread()
         self.github_updates.signals.github_update.connect(self.github_update_popup)
 
         self.log_updates = LogThread()
