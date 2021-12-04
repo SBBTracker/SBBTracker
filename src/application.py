@@ -1,3 +1,4 @@
+import calendar
 import datetime
 import json
 import logging
@@ -142,13 +143,21 @@ def save_settings():
 
 
 today = date.today()
+_, days_this_month = calendar.monthrange(today.year, today.month)
+first_day_this_month = today.replace(day=1)
+last_day_this_month = today.replace(day=days_this_month)
+last_day_prev_month = first_day_this_month - datetime.timedelta(days=1)
+first_day_prev_month = last_day_prev_month.replace(day=1)
+
 default_dates = {
-    "All Matches": ("1970-01-01", today.strftime("%Y-%m-%d")),
-    "Latest Patch (64.2)": ("2021-11-08", today.strftime("%Y-%m-%d")),
+    "All Matches": ("1970-01-01", today.isoformat()),
+    "Latest Patch (64.2)": ("2021-11-08", today.isoformat()),
     "Previous Patch (63.4)": ("2021-10-18", "2021-11-08"),
-    "Today": (today.strftime("%Y-%m-%d"), today.strftime("%Y-%m-%d")),
-    "Last 7 days": ((today - datetime.timedelta(days=7)).strftime("%Y-%m-%d"), today.strftime("%Y-%m-%d")),
-    "Last 30 days": ((today - datetime.timedelta(days=30)).strftime("%Y-%m-%d"), today.strftime("%Y-%m-%d"))
+    "Today": (today.isoformat(), today.isoformat()),
+    "Last 7 days": ((today - datetime.timedelta(days=7)).isoformat(), today.isoformat()),
+    "Last 30 days": ((today - datetime.timedelta(days=30)).strftime("%Y-%m-%d"), today.strftime("%Y-%m-%d")),
+    "This month": (first_day_this_month.isoformat(), last_day_this_month.isoformat()),
+    "Last month": (first_day_prev_month.isoformat(), last_day_prev_month.isoformat()),
 }
 
 
@@ -716,7 +725,6 @@ class MatchHistory(QWidget):
         paged_table = QWidget()
         paged_table.setMaximumWidth(533)
         paged_layout = QVBoxLayout(paged_table)
-        paged_layout.addWidget(self.match_history_table)
 
         buttons_widget = QWidget()
         page_buttons = QHBoxLayout(buttons_widget)
@@ -735,6 +743,7 @@ class MatchHistory(QWidget):
         page_buttons.addWidget(self.next_button, alignment=Qt.AlignLeft)
         page_buttons.setSpacing(0)
 
+        paged_layout.addWidget(self.match_history_table)
         paged_layout.addWidget(buttons_widget)
         paged_table.resize(200, paged_table.height())
 
