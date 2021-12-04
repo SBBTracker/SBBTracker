@@ -76,6 +76,7 @@ TASK_NEWGAME = "TaskNewGame"
 TASK_ENDGAME = "TaskEndGame"
 TASK_ENDCOMBAT = "TaskEndCombat"
 TASK_GETTHISPLAYER = "GetThisPlayer"
+TASK_MATCHMAKING = "TaskMatchmaking"
 
 JOB_PLAYERINFO = "PlayerInfo"
 JOB_INITCURRENTPLAYER = "InitCurrentPlayer"
@@ -85,6 +86,7 @@ JOB_NEWGAME = "StateNewgame"
 JOB_ENDGAME = "StateEndGame"
 JOB_ENDCOMBAT = "EndCombat"
 JOB_HEALTHUPDATE = "HealthUpdate"
+JOB_MATCHMAKING = "StateMatchmaking"
 
 
 def parse_list(line, delimiter):
@@ -256,8 +258,10 @@ def parse(ifs):
     for line in ifs:
         if 'NEW GAME STARTED' in line:
             yield Action(info=None, game_state=GameState.START)
-        if line.startswith('DESTROY:'):
+        elif line.startswith('DESTROY:'):
             yield Action(info=None, game_state=GameState.REAL_SHOP_PHASE)
+        elif 'REQUEST MATCHMAKER FOR' in line:
+            yield Action(info=None, game_state=GameState.MATCHMAKING)
         elif 'QueueActionRPC' in line:
             chop_idx = line.find('-') + 1
             line = line[chop_idx:]
@@ -270,7 +274,8 @@ class GameState(Enum):
     START = 1
     END = 2
     REAL_SHOP_PHASE = 3
-    UNKNOWN = 4
+    MATCHMAKING = 4
+    UNKNOWN = 5
 
 
 class Action:
@@ -281,6 +286,10 @@ class Action:
 
         if game_state == GameState.REAL_SHOP_PHASE:
             self.task = TASK_ENDCOMBAT
+            return
+
+        if game_state == GameState.MATCHMAKING:
+            self.task = TASK_MATCHMAKING
             return
 
         if info is not None:
@@ -425,6 +434,8 @@ def run(queue: Queue, log=logfile):
             elif skip_extra_msgs and action.task == TASK_ENDCOMBAT:
                 queue.put(Update(JOB_ENDCOMBAT, action))
                 skip_extra_msgs = False
+            elif action.task == TASK_MATCHMAKING:
+                queue.put(Update(JOB_MATCHMAKING, action))
             else:
                 pass
 

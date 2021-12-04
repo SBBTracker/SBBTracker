@@ -78,6 +78,7 @@ class Settings:
     filter_ = "filter"
     enable_overlay = "enable-overlay"
     live_palette = "live-palette"
+    matchmaking_only = "matchmaking-only"
 
 
 def get_image_location(position: int):
@@ -158,7 +159,7 @@ class LogSignals(QObject):
     stats_update = Signal(str, object)
     player_info_update = Signal(graphs.LivePlayerStates)
     health_update = Signal(object)
-    new_game = Signal()
+    new_game = Signal(bool)
 
 
 class LogThread(QThread):
@@ -178,16 +179,20 @@ class LogThread(QThread):
         round_number = 0
         current_player = None
         states = graphs.LivePlayerStates()
+        matchmaking = False
         while True:
             update = queue.get()
             job = update.job
             state = update.state
-            if job == log_parser.JOB_NEWGAME:
+            if job == log_parser.JOB_MATCHMAKING:
+                matchmaking = True
+            elif job == log_parser.JOB_NEWGAME:
                 states.clear()
                 current_player = None
                 round_number = 0
-                self.signals.new_game.emit()
+                self.signals.new_game.emit(matchmaking)
                 self.signals.round_update.emit(0)
+                matchmaking = False
             elif job == log_parser.JOB_INITCURRENTPLAYER:
                 current_player = state
                 self.signals.player_update.emit(state, round_number)
@@ -237,7 +242,7 @@ class SettingsWindow(QMainWindow):
 
         save_stats_checkbox = QCheckBox()
         save_stats_checkbox.setChecked(settings.setdefault(Settings.save_stats, True))
-        save_stats_checkbox.stateChanged.connect(main_window.toggle_saving)
+        save_stats_checkbox.stateChanged.connect(self.toggle_saving)
 
         self.graph_color_chooser = QComboBox()
         palettes = list(graphs.color_palettes.keys())
@@ -245,15 +250,24 @@ class SettingsWindow(QMainWindow):
         self.graph_color_chooser.setCurrentIndex(palettes.index(settings.get(Settings.live_palette, "vibrant")))
         self.graph_color_chooser.currentTextChanged.connect(main_window.live_graphs.set_color_palette)
 
+        matchmaking_only_checkbox = QCheckBox()
+        matchmaking_only_checkbox.setChecked(settings.setdefault(Settings.matchmaking_only, False))
+        matchmaking_only_checkbox.setEnabled(save_stats_checkbox.checkState())
+        matchmaking_only_checkbox.stateChanged.connect(self.toggle_matchmaking)
+
+        save_stats_checkbox.stateChanged.connect(lambda state: matchmaking_only_checkbox.setEnabled(bool(state)))
+
         general_layout.addWidget(export_button)
         general_layout.addWidget(delete_button)
         general_layout.addRow("Save match results", save_stats_checkbox)
+        general_layout.addRow("Ignore practice and group lobbies", matchmaking_only_checkbox)
         general_layout.addRow("Graph color palette", self.graph_color_chooser)
 
         overlay_layout = QFormLayout(overlay_settings)
         enable_overlay_checkbox = QCheckBox()
         enable_overlay_checkbox.setChecked(settings.setdefault(Settings.enable_overlay, False))
         enable_overlay_checkbox.stateChanged.connect(main_window.toggle_overlay)
+
 
         choose_monitor = QComboBox()
         monitors = QGuiApplication.screens()
@@ -295,9 +309,16 @@ class SettingsWindow(QMainWindow):
         self.setCentralWidget(main_widget)
         self.setFixedSize(600, 600)
 
+    def toggle_matchmaking(self, state):
+        self.main_window.ignore_nonmatchmaking = bool(state)
+
+    def toggle_saving(self, state):
+        self.main_window.save_stats = bool(state)
+
     def save(self):
         settings[Settings.save_stats] = self.main_window.save_stats
         settings[Settings.live_palette] = self.graph_color_chooser.currentText()
+        settings[Settings.matchmaking_only] = self.main_window.ignore_nonmatchmaking
         if self.transparency_editor.text():
             settings[Settings.boardcomp_transparency] = int(self.transparency_editor.text())
 
@@ -323,6 +344,8 @@ class SBBTracker(QMainWindow):
         self.overlay = OverlayWindow(self)
         settings.setdefault(Settings.enable_overlay, False)
         self.show_overlay()
+        self.in_matchmaking = False
+        self.ignore_nonmatchmaking = False
 
         self.comp_tabs = QTabWidget()
         for index in range(len(self.comps)):
@@ -406,9 +429,10 @@ class SBBTracker(QMainWindow):
             self.player_ids.append(player_id)
         return self.player_ids.index(player_id)
 
-    def new_game(self):
+    def new_game(self, matchmaking):
         self.player_ids.clear()
         self.overlay.enable_hovers()
+        self.in_matchmaking = matchmaking
         for index in range(0, 8):
             self.comp_tabs.tabBar().setTabTextColor(index, "white")
             comp = self.comps[index]
@@ -456,7 +480,7 @@ class SBBTracker(QMainWindow):
         self.update()
 
     def update_stats(self, starting_hero: str, player):
-        if self.save_stats:
+        if self.save_stats and (not self.ignore_nonmatchmaking or self.in_matchmaking):
             place = player.place if int(player.health) <= 0 else "1"
             self.player_stats.update_stats(starting_hero, asset_utils.get_card_art_name(player.heroid, player.heroname),
                                            place, player.mmr)
@@ -470,9 +494,6 @@ class SBBTracker(QMainWindow):
         places = self.overlay.places
         places.remove(index)
         places.insert(new_place - 1, index)
-
-    def toggle_saving(self):
-        self.save_stats = not self.save_stats
 
     def toggle_overlay(self):
         settings[Settings.enable_overlay] = not settings[Settings.enable_overlay]
