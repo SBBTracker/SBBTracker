@@ -84,6 +84,7 @@ JOB_ROUNDINFO = "RoundInfo"
 JOB_NEWGAME = "StateNewgame"
 JOB_ENDGAME = "StateEndGame"
 JOB_ENDCOMBAT = "EndCombat"
+JOB_HEALTHUPDATE = "HealthUpdate"
 
 
 def parse_list(line, delimiter):
@@ -334,10 +335,6 @@ class Action:
                 self.round_num = int(info['Round'])
                 self.attrs = ['round_num']
 
-            elif self.action_type == EVENT_UPDATEEMOTES:
-                self.task = TASK_GETTHISPLAYER
-                self.attrs = []
-
             else:
                 self.task = None
                 self.attrs = []
@@ -398,12 +395,14 @@ def run(queue: Queue, log=logfile):
 
                 queue.put(Update(JOB_NEWGAME, None))
             elif not inbrawl and not current_player_stats and action.task == TASK_ADDPLAYER \
-                    and prev_action is not None and prev_action.task == TASK_GETTHISPLAYER:
+                    and prev_action is not None and prev_action.action_type == EVENT_UPDATEEMOTES:
                 current_player_stats = action
                 queue.put(Update(JOB_INITCURRENTPLAYER, current_player_stats))
+            elif action.task == TASK_ADDPLAYER and prev_action is not None \
+                    and (prev_action.action_type not in [EVENT_ENTERRESULTSPHASE, EVENT_ADDPLAYER, EVENT_UPDATETURNTIMER]):
+                queue.put(Update(JOB_HEALTHUPDATE, action))
             elif not inbrawl and action.task == TASK_ADDPLAYER:
                 queue.put(Update(JOB_PLAYERINFO, action))
-                last_player_timestamp = int(action.timestamp)
             elif not inbrawl and action.task == TASK_GATHERIDS:
                 inbrawl = True
                 brawldt = dict()

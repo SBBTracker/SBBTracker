@@ -157,6 +157,7 @@ class LogSignals(QObject):
     comp_update = Signal(str, object, int)
     stats_update = Signal(str, object)
     player_info_update = Signal(graphs.LivePlayerStates)
+    health_update = Signal(object)
     new_game = Signal()
 
 
@@ -207,6 +208,8 @@ class LogThread(QThread):
                 if state and current_player:
                     self.signals.stats_update.emit(asset_utils.get_card_art_name(current_player.heroid,
                                                                                  current_player.heroname), state)
+            elif job == log_parser.JOB_HEALTHUPDATE:
+                self.signals.health_update.emit(state)
 
 
 class SettingsWindow(QMainWindow):
@@ -391,6 +394,7 @@ class SBBTracker(QMainWindow):
         self.log_updates.signals.player_info_update.connect(self.live_graphs.update_graph)
         self.log_updates.signals.player_info_update.connect(self.overlay.update_placements)
         self.log_updates.signals.new_game.connect(self.new_game)
+        self.log_updates.signals.health_update.connect(self.update_health)
 
         self.resize(1300, 800)
 
@@ -438,7 +442,8 @@ class SBBTracker(QMainWindow):
         comp.player = player
         comp.current_round = round_number
         self.overlay.comps[index].current_round = round_number
-        self.overlay.new_places[int(player.place)] = index
+        self.overlay.new_places[int(player.place) - 1] = index
+
         self.update()
 
     def update_comp(self, player_id, player, round_number):
@@ -458,6 +463,13 @@ class SBBTracker(QMainWindow):
             self.match_history.update_history_table()
             self.match_history.update_stats_table()
         self.overlay.disable_hovers()
+
+    def update_health(self, player):
+        index = self.get_player_index(player.playerid)
+        new_place = int(player.place)
+        places = self.overlay.places
+        places.remove(index)
+        places.insert(new_place - 1, index)
 
     def toggle_saving(self):
         self.save_stats = not self.save_stats
@@ -810,7 +822,7 @@ class LiveGraphs(QWidget):
     def __init__(self):
         super().__init__()
         self.layout = QVBoxLayout(self)
-        self.user_palette = settings.setdefault(Settings.live_palette, "vibrant")
+        self.user_palette = settings.setdefault(Settings.live_palette, "paired")
         self.states = None
 
         self.health_canvas = FigureCanvasQTAgg(plt.Figure(figsize=(13.5, 18)))
@@ -904,8 +916,8 @@ class OverlayWindow(QMainWindow):
 
         self.comps = [BoardComp() for _ in range(0, 8)]
         self.comp_widgets = [QFrame(self) for _ in range(0, 8)]
-        self.places = {index: (index - 1) for index in range(1, 9)}
-        self.new_places = {}
+        self.places = list(range(0, 8))
+        self.new_places = list(range(0, 8))
         for index in range(len(self.comps)):
             comp = self.comps[index]
             widget = self.comp_widgets[index]
@@ -957,7 +969,7 @@ class OverlayWindow(QMainWindow):
 
     def update_placements(self):
         self.places = self.new_places.copy()
-        self.new_places.clear()
+        self.new_places = list(range(0, 8))
         for widget in self.comp_widgets:
             #  fixes bug where hovering over the hero at the end of combat gets the overlay stuck
             widget.setVisible(False)
@@ -992,8 +1004,8 @@ class OverlayWindow(QMainWindow):
             new_size = tuple(map(operator.mul, hover_size, true_scale))
             hover.resize(*new_size)
             hover.background.setMinimumSize(*new_size)
-            hover.enter_hover.connect(lambda y=i + 1: self.show_comp(y))
-            hover.leave_hover.connect(lambda y=i + 1: self.hide_comp(y))
+            hover.enter_hover.connect(lambda y=i: self.show_comp(y))
+            hover.leave_hover.connect(lambda y=i: self.hide_comp(y))
         self.update()
 
     def set_transparency(self):

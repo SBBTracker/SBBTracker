@@ -11,9 +11,9 @@ from matplotlib.ticker import MaxNLocator
 matches_per_hero = "Matches per Hero"
 mmr_change = "MMR Graph"
 color_palettes = {
-    'vibrant': ['#0077BB', '#33BBEE', '#009988', '#EE7733', '#CC3311', '#EE3377', '#BBBBBB', '#000000'],
     'paired':  ['#a6cee3', '#1f78b4', '#b2df8a', '#33a02c', '#fb9a99', '#e31a1c', '#fdbf6f', '#ff7f00'],
     'set':     ['#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00', '#ffff33', '#a65628', '#f781bf'],
+    'vibrant': ['#0077BB', '#33BBEE', '#009988', '#EE7733', '#CC3311', '#EE3377', '#BBBBBB', '#000000'],
     'scarbo':  ['#000000', '#990000', '#0000CC', '#FF0000', '#4747eb', '#e08585', '#bdbddb', '#FFFFFF'],
 }
 
