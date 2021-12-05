@@ -1,3 +1,4 @@
+import asyncio
 import calendar
 import datetime
 import json
@@ -50,6 +51,8 @@ import log_parser
 import stats
 import updater
 import version
+
+from sbbbattlesim import simulate, SBBBSCrocException
 
 if not stats.sbbtracker_folder.exists():
     stats.sbbtracker_folder.mkdir()
@@ -226,6 +229,29 @@ class LogThread(QThread):
             elif job == log_parser.JOB_BOARDINFO:
                 for player_id in state:
                     self.signals.comp_update.emit(player_id, state[player_id], round_number)
+
+                #####################BATTLE SIMULATION#####################
+
+                try:
+                    simulation = asyncio.run(simulate(state, t=4, k=250, timeout=30))
+                except SBBBSCrocException:
+                    exit()
+
+                p1id, p2id = simulation.starting_board.p1.id, simulation.starting_board.p2.id
+                #
+                # logger.error(f'RESULT KEYS {simulation.results.keys()}')
+                #
+                # logger.error(
+                #     f'Simulation Results ({simulation.run_time} - {sum(len(v) for v in simulation.results.values())})')
+                # logger.error(f'{simulation.starting_board.p1}')
+                # logger.error(f'{simulation.starting_board.p2}')
+                #
+                # logger.error(f'{p1id} {simulation.stats.win_rate[p1id]}% {simulation.stats.avg_damage[p1id]}')
+                # logger.error(f'{p2id} {simulation.stats.win_rate[p2id]}% {simulation.stats.avg_damage[p2id]}')
+                # logger.error(f'Tie {simulation.stats.win_rate[None]}%')
+
+                ###########################################################
+
             elif job == log_parser.JOB_ENDCOMBAT:
                 self.signals.player_info_update.emit(states)
             elif job == log_parser.JOB_ENDGAME:
