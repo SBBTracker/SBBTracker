@@ -54,19 +54,16 @@ def self_update(progress_handler):
         logging.warning("Couldn't find the .exe to download from the release page")
 
 
-class UpdateCheckSignals(QObject):
+class UpdateCheckThread(QThread):
     github_update = Signal(str)
 
-
-class UpdateCheckThread(QThread):
     def __init__(self, *args, **kwargs):
         super(UpdateCheckThread, self).__init__()
         self.args = args
         self.kwargs = kwargs
-        self.signals = UpdateCheckSignals()
 
     def run(self):
         release_notes = check_updates()
         # wait for an update
-        self.signals.github_update.emit(release_notes)
+        self.github_update.emit(release_notes)
 

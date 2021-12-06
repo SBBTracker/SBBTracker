@@ -22,7 +22,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from PySide6 import QtGui
 from PySide6.QtCore import QObject, QPoint, QRect, QSettings, QSize, QThread, QUrl, Qt, Signal
-from PySide6.QtGui import QAction, QBrush, QColor, QDesktopServices, QFont, QFontMetrics, QGuiApplication, QIcon, \
+from PySide6.QtGui import QAction, QBrush, QColor, QCursor, QDesktopServices, QFont, QFontMetrics, QGuiApplication, \
+    QIcon, \
     QIntValidator, \
     QPainter, QPainterPath, \
     QPen, \
@@ -77,6 +78,7 @@ plt.rcParams.update({'text.color': "white",
 
 round_font = QFont("Roboto", 18)
 display_font_family = "Impact" if log_parser.os_name == "Windows" else "Ubuntu Bold"
+
 
 class Settings:
     boardcomp_transparency = "boardcomp-transparency"
@@ -174,7 +176,7 @@ default_dates = {
 }
 
 
-class LogSignals(QObject):
+class LogThread(QThread):
     round_update = Signal(int)
     player_update = Signal(object, int)
     comp_update = Signal(str, object, int)
@@ -183,14 +185,11 @@ class LogSignals(QObject):
     health_update = Signal(object)
     new_game = Signal(bool)
 
-
-class LogThread(QThread):
     def __init__(self, *args, **kwargs):
         super(LogThread, self).__init__()
         # Store constructor arguments (re-used for processing)
         self.args = args
         self.kwargs = kwargs
-        self.signals = LogSignals()
 
     def run(self):
         queue = Queue()
@@ -212,23 +211,23 @@ class LogThread(QThread):
                 states.clear()
                 current_player = None
                 round_number = 0
-                self.signals.new_game.emit(matchmaking)
-                self.signals.round_update.emit(0)
+                self.new_game.emit(matchmaking)
+                self.round_update.emit(0)
                 matchmaking = False
             elif job == log_parser.JOB_INITCURRENTPLAYER:
                 current_player = state
-                self.signals.player_update.emit(state, round_number)
+                self.player_update.emit(state, round_number)
             elif job == log_parser.JOB_ROUNDINFO:
                 round_number = state.round_num
-                self.signals.round_update.emit(round_number)
+                self.round_update.emit(round_number)
             elif job == log_parser.JOB_PLAYERINFO:
-                self.signals.player_update.emit(state, round_number)
+                self.player_update.emit(state, round_number)
                 xp = f"{state.level}.{state.experience}"
                 states.update_player(state.playerid, round_number, state.health, xp,
                                      asset_utils.get_card_art_name(state.heroid, state.heroname))
             elif job == log_parser.JOB_BOARDINFO:
                 for player_id in state:
-                    self.signals.comp_update.emit(player_id, state[player_id], round_number)
+                    self.comp_update.emit(player_id, state[player_id], round_number)
 
                 #####################BATTLE SIMULATION#####################
 
@@ -253,13 +252,13 @@ class LogThread(QThread):
                 ###########################################################
 
             elif job == log_parser.JOB_ENDCOMBAT:
-                self.signals.player_info_update.emit(states)
+                self.player_info_update.emit(states)
             elif job == log_parser.JOB_ENDGAME:
                 if state and current_player:
-                    self.signals.stats_update.emit(asset_utils.get_card_art_name(current_player.heroid,
+                    self.stats_update.emit(asset_utils.get_card_art_name(current_player.heroid,
                                                                                  current_player.heroname), state)
             elif job == log_parser.JOB_HEALTHUPDATE:
-                self.signals.health_update.emit(state)
+                self.health_update.emit(state)
 
 
 class SettingsWindow(QMainWindow):
@@ -457,17 +456,17 @@ class SBBTracker(QMainWindow):
         self.setMinimumSize(QSize(1200, 800))
         self.setBaseSize(QSize(1400, 900))
         self.github_updates = updater.UpdateCheckThread()
-        self.github_updates.signals.github_update.connect(self.github_update_popup)
+        self.github_updates.github_update.connect(self.github_update_popup)
 
         self.log_updates = LogThread()
-        self.log_updates.signals.comp_update.connect(self.update_comp)
-        self.log_updates.signals.player_update.connect(self.update_player)
-        self.log_updates.signals.round_update.connect(self.update_round_num)
-        self.log_updates.signals.stats_update.connect(self.update_stats)
-        self.log_updates.signals.player_info_update.connect(self.live_graphs.update_graph)
-        self.log_updates.signals.player_info_update.connect(self.overlay.update_placements)
-        self.log_updates.signals.new_game.connect(self.new_game)
-        self.log_updates.signals.health_update.connect(self.update_health)
+        self.log_updates.comp_update.connect(self.update_comp)
+        self.log_updates.player_update.connect(self.update_player)
+        self.log_updates.round_update.connect(self.update_round_num)
+        self.log_updates.stats_update.connect(self.update_stats)
+        self.log_updates.player_info_update.connect(self.live_graphs.update_graph)
+        self.log_updates.player_info_update.connect(self.overlay.update_placements)
+        self.log_updates.new_game.connect(self.new_game)
+        self.log_updates.health_update.connect(self.update_health)
 
         self.resize(1300, 800)
 
