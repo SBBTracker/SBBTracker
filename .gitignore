@@ -14,3 +14,4 @@ release/linux/assets*
 *.tar.gz
 ALL SBB ART/*
 old_Cards/*
+src/SBBBattleSim/*

@@ -1,0 +1,3 @@
+[submodule "src/SBBBattleSim"]
+	path = src/SBBBattleSim
+	url = https://github.com/SBBTracker/SBBBattleSim.git
