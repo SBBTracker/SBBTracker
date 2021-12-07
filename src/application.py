@@ -3,12 +3,14 @@ import calendar
 import datetime
 import json
 import logging
+import multiprocessing
 import operator
 import os
 import platform
 import shutil
 import sys
 import threading
+import time
 from collections import defaultdict
 from datetime import date
 from pathlib import Path
@@ -19,6 +21,7 @@ import matplotlib
 
 # matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
+import sbbbattlesim.simulate
 import seaborn as sns
 from PySide6 import QtGui
 from PySide6.QtCore import QObject, QPoint, QRect, QSettings, QSize, QThread, QUrl, Qt, Signal
@@ -60,7 +63,7 @@ from sbbbattlesim.exceptions import SBBBSCrocException
 if not stats.sbbtracker_folder.exists():
     stats.sbbtracker_folder.mkdir()
 logging.basicConfig(filename=stats.sbbtracker_folder.joinpath("sbbtracker.log"), filemode="w",
-                    format='%(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+                    format='%(name)s - %(levelname)s - %(message)s', level=logging.WARN)
 logging.getLogger().addHandler(logging.StreamHandler())
 
 art_dim = (161, 204)
@@ -181,22 +184,22 @@ default_dates = {
 class SimulationThread(QThread):
     end_simulation = Signal(object)
 
-    def __init__(self, board):
+    def __init__(self, queue):
         super(SimulationThread, self).__init__()
-        self.board = board
+        self.queue = queue
 
     def run(self):
-        result = None
+        while True:
+            board = self.queue.get()
+            result = None
 
-        print("Running simulation")
-        try:
-            result = asyncio.run(simulate(self.board, t=4, k=250, timeout=30))
-        except SBBBSCrocException:
-            pass
+            try:
+                result = simulate(board, t=4, k=250, timeout=30)
+            except SBBBSCrocException:
+                pass
 
-        print("Finished sim")
-        print(result)
-        self.end_simulation.emit(result)
+            self.end_simulation.emit(result)
+            time.sleep(1)
 
 
 class LogThread(QThread):
@@ -248,7 +251,7 @@ class LogThread(QThread):
                 states.update_player(state.playerid, round_number, state.health, xp,
                                      asset_utils.get_card_art_name(state.heroid, state.heroname))
             elif job == log_parser.JOB_BOARDINFO:
-                    self.comp_update.emit(state, round_number)
+                self.comp_update.emit(state, round_number)
             elif job == log_parser.JOB_ENDCOMBAT:
                 self.player_info_update.emit(states)
             elif job == log_parser.JOB_ENDGAME:
@@ -466,10 +469,15 @@ class SBBTracker(QMainWindow):
         self.log_updates.new_game.connect(self.new_game)
         self.log_updates.health_update.connect(self.update_health)
 
+        self.board_queue = Queue()
+        self.simulation = SimulationThread(self.board_queue)
+        self.simulation.end_simulation.connect(self.simulation_results)
+
         self.resize(1300, 800)
 
         self.log_updates.start()
         self.github_updates.start()
+        self.simulation.start()
 
     def get_player_index(self, player_id: str):
         if player_id not in self.player_ids:
@@ -527,13 +535,14 @@ class SBBTracker(QMainWindow):
 
             self.overlay.update_comp(index, player, round_number)
             self.update()
-        self.simluation = SimulationThread(state)
-        self.simluation.end_simulation.connect(self.simulation_results)
-        self.simluation.start()
+        self.overlay.simulation_stats.update_chances("-", "-", "-", "-", "-")
+        if self.board_queue.qsize() > 3:
+            with self.board_queue.mutex:
+                self.board_queue.queue.clear()
+        self.board_queue.put(state)
 
     def simulation_results(self, results):
-        self.simluation.terminate()
-        self.overlay.simulation_results(results)
+        self.overlay.simulation_results(results, self.player_ids[0])
 
     def update_stats(self, starting_hero: str, player):
         if self.save_stats and (not self.ignore_nonmatchmaking or self.in_matchmaking):
@@ -643,6 +652,7 @@ This will import all games played since SBB was last opened.
         super(QMainWindow, self).closeEvent(*args, **kwargs)
         self.github_updates.terminate()
         self.log_updates.terminate()
+        self.simulation.terminate()
         self.player_stats.save()
         self.overlay.close()
         save_settings()
@@ -976,6 +986,8 @@ base_size = (1920, 1080)
 
 
 class OverlayWindow(QMainWindow):
+    simluation_update = Signal(str, str, str, str, str)
+
     def __init__(self, main_window):
         super().__init__()
         self.setAttribute(Qt.WA_TranslucentBackground, True)
@@ -1093,8 +1105,13 @@ class OverlayWindow(QMainWindow):
         for widget in self.comp_widgets:
             widget.setStyleSheet(style)
 
-    def simulation_results(self, results):
-        print(results)
+    def simulation_results(self, results, current_player_id):
+        keys = set(results.stats.win_rate.keys()) - {current_player_id, None}
+        opponent = keys.pop()
+        win_rate = results.stats.win_rate[current_player_id]
+        tie_rate = results.stats.win_rate[None]
+        loss_rate = results.stats.win_rate[opponent]
+        self.simluation_update.emit(str(win_rate), str(loss_rate), str(tie_rate), "", "")
 
 
 class SimulatorStats(QWidget):
@@ -1106,9 +1123,9 @@ class SimulatorStats(QWidget):
 
         self.setFont(QFont("Roboto", 16))
 
-        self.win_label = QLabel(self.win_chance, self)
-        self.tie_label = QLabel(self.tie_chance, self)
-        self.lose_label = QLabel(self.lose_chance, self)
+        self.win_label = QLabel("-")
+        self.tie_label = QLabel("-")
+        self.lose_label = QLabel("-")
 
         self.setStyleSheet("background-color: #31363b")
 
@@ -1122,14 +1139,16 @@ class SimulatorStats(QWidget):
         label_layout.addStretch()
 
         chance_layout = QHBoxLayout()
-        chance_layout.addWidget(self.win_label)
-        chance_layout.addWidget(self.tie_label)
-        chance_layout.addWidget(self.lose_label)
+        chance_layout.addWidget(self.win_label, alignment=Qt.AlignCenter)
+        chance_layout.addWidget(self.tie_label, alignment=Qt.AlignCenter)
+        chance_layout.addWidget(self.lose_label, alignment=Qt.AlignCenter)
         chance_layout.addStretch()
 
         layout.addLayout(label_layout)
         layout.addLayout(chance_layout)
         layout.addStretch()
+
+        parent.simluation_update.connect(self.update_chances)
 
         self.setMinimumSize(1000, 200)
 
@@ -1158,18 +1177,24 @@ class HoverRegion(QWidget):
         self.leave_hover.emit()
 
 
-app = QApplication(sys.argv)
-app.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.RoundPreferFloor)
-apply_stylesheet(app, theme='dark_teal.xml')
-stylesheet = app.styleSheet()
-stylesheet = stylesheet.replace("""QTabBar::tab {
-  color: #ffffff;
-  border: 0px;
-}""", """QTabBar::tab {
-  border: 0px;
-}""") + "QTabBar{ text-transform: none; }"
-app.setStyleSheet(stylesheet)
-mainWindow = SBBTracker()
-mainWindow.show()
+def main():
+    multiprocessing.freeze_support()
+    app = QApplication(sys.argv)
+    app.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.RoundPreferFloor)
+    apply_stylesheet(app, theme='dark_teal.xml')
+    stylesheet = app.styleSheet()
+    stylesheet = stylesheet.replace("""QTabBar::tab {
+      color: #ffffff;
+      border: 0px;
+    }""", """QTabBar::tab {
+      border: 0px;
+    }""") + "QTabBar{ text-transform: none; }"
+    app.setStyleSheet(stylesheet)
+    main_window = SBBTracker()
+    main_window.show()
+    sys.exit(app.exec())
 
-sys.exit(app.exec())
+
+if __name__ == "__main__":
+    main()
+
