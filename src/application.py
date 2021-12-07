@@ -53,7 +53,9 @@ import stats
 import updater
 import version
 
-from sbbbattlesim import simulate, SBBBSCrocException
+from sbbbattlesim import simulate
+from sbbbattlesim.exceptions import SBBBSCrocException
+
 
 if not stats.sbbtracker_folder.exists():
     stats.sbbtracker_folder.mkdir()
@@ -176,10 +178,31 @@ default_dates = {
 }
 
 
+class SimulationThread(QThread):
+    end_simulation = Signal(object)
+
+    def __init__(self, board):
+        super(SimulationThread, self).__init__()
+        self.board = board
+
+    def run(self):
+        result = None
+
+        print("Running simulation")
+        try:
+            result = asyncio.run(simulate(self.board, t=4, k=250, timeout=30))
+        except SBBBSCrocException:
+            pass
+
+        print("Finished sim")
+        print(result)
+        self.end_simulation.emit(result)
+
+
 class LogThread(QThread):
     round_update = Signal(int)
     player_update = Signal(object, int)
-    comp_update = Signal(str, object, int)
+    comp_update = Signal(object, int)
     stats_update = Signal(str, object)
     player_info_update = Signal(graphs.LivePlayerStates)
     health_update = Signal(object)
@@ -187,7 +210,6 @@ class LogThread(QThread):
 
     def __init__(self, *args, **kwargs):
         super(LogThread, self).__init__()
-        # Store constructor arguments (re-used for processing)
         self.args = args
         self.kwargs = kwargs
 
@@ -226,31 +248,7 @@ class LogThread(QThread):
                 states.update_player(state.playerid, round_number, state.health, xp,
                                      asset_utils.get_card_art_name(state.heroid, state.heroname))
             elif job == log_parser.JOB_BOARDINFO:
-                for player_id in state:
-                    self.comp_update.emit(player_id, state[player_id], round_number)
-
-                #####################BATTLE SIMULATION#####################
-
-                try:
-                    simulation = asyncio.run(simulate(state, t=4, k=250, timeout=30))
-                except SBBBSCrocException:
-                    exit()
-
-                p1id, p2id = simulation.starting_board.p1.id, simulation.starting_board.p2.id
-                #
-                # logger.error(f'RESULT KEYS {simulation.results.keys()}')
-                #
-                # logger.error(
-                #     f'Simulation Results ({simulation.run_time} - {sum(len(v) for v in simulation.results.values())})')
-                # logger.error(f'{simulation.starting_board.p1}')
-                # logger.error(f'{simulation.starting_board.p2}')
-                #
-                # logger.error(f'{p1id} {simulation.stats.win_rate[p1id]}% {simulation.stats.avg_damage[p1id]}')
-                # logger.error(f'{p2id} {simulation.stats.win_rate[p2id]}% {simulation.stats.avg_damage[p2id]}')
-                # logger.error(f'Tie {simulation.stats.win_rate[None]}%')
-
-                ###########################################################
-
+                    self.comp_update.emit(state, round_number)
             elif job == log_parser.JOB_ENDCOMBAT:
                 self.player_info_update.emit(states)
             elif job == log_parser.JOB_ENDGAME:
@@ -519,14 +517,23 @@ class SBBTracker(QMainWindow):
 
         self.update()
 
-    def update_comp(self, player_id, player, round_number):
-        index = self.get_player_index(player_id)
-        comp = self.get_comp(index)
-        comp.composition = player
-        comp.last_seen = round_number
+    def update_comp(self, state, round_number):
+        for player_id in state:
+            player = state[player_id]
+            index = self.get_player_index(player_id)
+            comp = self.get_comp(index)
+            comp.composition = player
+            comp.last_seen = round_number
 
-        self.overlay.update_comp(index, player, round_number)
-        self.update()
+            self.overlay.update_comp(index, player, round_number)
+            self.update()
+        self.simluation = SimulationThread(state)
+        self.simluation.end_simulation.connect(self.simulation_results)
+        self.simluation.start()
+
+    def simulation_results(self, results):
+        self.simluation.terminate()
+        self.overlay.simulation_results(results)
 
     def update_stats(self, starting_hero: str, player):
         if self.save_stats and (not self.ignore_nonmatchmaking or self.in_matchmaking):
@@ -980,6 +987,7 @@ class OverlayWindow(QMainWindow):
         self.dpi_scale = 1
         self.select_monitor(settings.get("monitor", 0))
         self.hover_regions = [HoverRegion(self, *map(operator.mul, hover_size, self.scale_factor)) for _ in range(0, 8)]
+        self.simulation_stats = SimulatorStats(self)
         self.update_monitor()
 
         self.show_hide = True
@@ -1058,6 +1066,7 @@ class OverlayWindow(QMainWindow):
         self.setGeometry(self.monitor.geometry())
         self.scale_factor = tuple(map(operator.truediv, self.monitor.size().toTuple(), base_size))
         self.update_hovers()
+        self.simulation_stats.move(self.real_size[0] / 2, 0)
 
     def update_hovers(self):
         size = self.monitor.size()
@@ -1084,13 +1093,16 @@ class OverlayWindow(QMainWindow):
         for widget in self.comp_widgets:
             widget.setStyleSheet(style)
 
+    def simulation_results(self, results):
+        print(results)
+
 
 class SimulatorStats(QWidget):
     def __init__(self, parent):
         super().__init__(parent)
-        self.win_chance = "33.3"
-        self.tie_chance = "33.3"
-        self.lose_chance = "33.3"
+        self.win_chance = "-"
+        self.tie_chance = "-"
+        self.lose_chance = "-"
 
         self.setFont(QFont("Roboto", 16))
 
@@ -1120,6 +1132,11 @@ class SimulatorStats(QWidget):
         layout.addStretch()
 
         self.setMinimumSize(1000, 200)
+
+    def update_chances(self, win, lose, tie, win_dmg, loss_dmg):
+        self.win_label.setText(win)
+        self.lose_label.setText(lose)
+        self.tie_label.setText(tie)
 
 
 class HoverRegion(QWidget):
