@@ -35,7 +35,7 @@ from PySide6.QtWidgets import (
     QAbstractItemView, QApplication,
     QCheckBox, QComboBox, QDialog, QDoubleSpinBox, QErrorMessage, QFileDialog, QFormLayout, QFrame,
     QGraphicsDropShadowEffect,
-    QHBoxLayout,
+    QGridLayout, QHBoxLayout,
     QHeaderView,
     QLabel,
     QLineEdit, QMainWindow,
@@ -1078,7 +1078,7 @@ class OverlayWindow(QMainWindow):
         self.setGeometry(self.monitor.geometry())
         self.scale_factor = tuple(map(operator.truediv, self.monitor.size().toTuple(), base_size))
         self.update_hovers()
-        self.simulation_stats.move(self.real_size[0] / 2, 0)
+        self.simulation_stats.move(self.real_size[0] / 2 - 100, 0)
 
     def update_hovers(self):
         size = self.monitor.size()
@@ -1111,51 +1111,66 @@ class OverlayWindow(QMainWindow):
         win_rate = results.stats.win_rate[current_player_id]
         tie_rate = results.stats.win_rate[None]
         loss_rate = results.stats.win_rate[opponent]
-        self.simluation_update.emit(str(win_rate), str(loss_rate), str(tie_rate), "", "")
+        win_dmg = round(results.stats.avg_damage[current_player_id], 1)
+        loss_dmg = round(results.stats.avg_damage[opponent], 1)
+        self.simulation_stats.update_chances(str(win_rate), str(loss_rate), str(tie_rate), str(win_dmg), str(loss_dmg))
 
 
 class SimulatorStats(QWidget):
     def __init__(self, parent):
         super().__init__(parent)
-        self.win_chance = "-"
-        self.tie_chance = "-"
-        self.lose_chance = "-"
+        self.setStyleSheet(f"background-color: {default_bg_color}; font-size: 17px")
 
-        self.setFont(QFont("Roboto", 16))
-
+        self.win_dmg = QLabel("-")
+        # self.win_dmg.setStyleSheet('font-size: 24px;')
         self.win_label = QLabel("-")
         self.tie_label = QLabel("-")
-        self.lose_label = QLabel("-")
+        self.loss_label = QLabel("-")
+        self.loss_dmg = QLabel("-")
 
-        self.setStyleSheet("background-color: #31363b")
-
-        background = QWidget(self)
+        background = QFrame(self)
         layout = QVBoxLayout(background)
 
-        label_layout = QHBoxLayout()
-        label_layout.addWidget(QLabel("Win %"))
-        label_layout.addWidget(QLabel("Tie %"))
-        label_layout.addWidget(QLabel("Lose %"))
-        label_layout.addStretch()
+        label_layout = QGridLayout()
 
-        chance_layout = QHBoxLayout()
-        chance_layout.addWidget(self.win_label, alignment=Qt.AlignCenter)
-        chance_layout.addWidget(self.tie_label, alignment=Qt.AlignCenter)
-        chance_layout.addWidget(self.lose_label, alignment=Qt.AlignCenter)
-        chance_layout.addStretch()
+        win_dmg_title = QLabel("Damage")
+        win_percent_title = QLabel("Win")
+        win_dmg_title.setStyleSheet("QLabel { color : #9FD4A3 }")
+        win_percent_title.setStyleSheet("QLabel { color : #9FD4A3 }")
+
+        loss_dmg_title = QLabel("Damage")
+        loss_percent_title = QLabel("Loss")
+        loss_dmg_title.setStyleSheet("QLabel { color : #e3365c }")
+        loss_percent_title.setStyleSheet("QLabel { color : #e3365c }")
+
+        label_layout.addWidget(win_dmg_title, 0, 0)
+        label_layout.addWidget(win_percent_title, 0, 1)
+        label_layout.addWidget(QLabel("Tie"), 0, 2)
+        label_layout.addWidget(loss_percent_title, 0, 3)
+        label_layout.addWidget(loss_dmg_title, 0, 4)
+        label_layout.addWidget(self.win_dmg, 1, 0)
+        label_layout.addWidget(self.win_label, 1, 1)
+        label_layout.addWidget(self.tie_label, 1, 2)
+        label_layout.addWidget(self.loss_label, 1, 3)
+        label_layout.addWidget(self.loss_dmg, 1, 4)
+        label_layout.setSpacing(20)
+        label_layout.setColumnMinimumWidth(0, 50)
+        label_layout.setColumnMinimumWidth(1, 40)
+        label_layout.setColumnMinimumWidth(2, 30)
+        label_layout.setColumnMinimumWidth(3, 40)
+        label_layout.setColumnMinimumWidth(4, 50)
 
         layout.addLayout(label_layout)
-        layout.addLayout(chance_layout)
         layout.addStretch()
 
-        parent.simluation_update.connect(self.update_chances)
-
-        self.setMinimumSize(1000, 200)
+        self.setMinimumSize(1100, 400)
 
     def update_chances(self, win, lose, tie, win_dmg, loss_dmg):
+        self.win_dmg.setText(win_dmg)
         self.win_label.setText(win)
-        self.lose_label.setText(lose)
+        self.loss_label.setText(lose)
         self.tie_label.setText(tie)
+        self.loss_dmg.setText(loss_dmg)
 
 
 class HoverRegion(QWidget):
