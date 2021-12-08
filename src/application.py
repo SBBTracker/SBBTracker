@@ -466,6 +466,7 @@ class SBBTracker(QMainWindow):
         self.log_updates.stats_update.connect(self.update_stats)
         self.log_updates.player_info_update.connect(self.live_graphs.update_graph)
         self.log_updates.player_info_update.connect(self.overlay.update_placements)
+        self.log_updates.player_info_update.connect(self.overlay.simulation_stats.update_labels)
         self.log_updates.new_game.connect(self.new_game)
         self.log_updates.health_update.connect(self.update_health)
 
@@ -536,6 +537,7 @@ class SBBTracker(QMainWindow):
             self.overlay.update_comp(index, player, round_number)
             self.update()
         self.overlay.simulation_stats.update_chances("-", "-", "-", "-", "-")
+        self.overlay.simulation_stats.update_labels()
         if self.board_queue.qsize() > 3:
             with self.board_queue.mutex:
                 self.board_queue.queue.clear()
@@ -1119,14 +1121,20 @@ class OverlayWindow(QMainWindow):
 class SimulatorStats(QWidget):
     def __init__(self, parent):
         super().__init__(parent)
+        self.parent = parent
         self.setStyleSheet(f"background-color: {default_bg_color}; font-size: 17px")
-
-        self.win_dmg = QLabel("-")
-        # self.win_dmg.setStyleSheet('font-size: 24px;')
+        self._mousePressed = False
+        self.win_dmg_label = QLabel("-")
         self.win_label = QLabel("-")
         self.tie_label = QLabel("-")
         self.loss_label = QLabel("-")
-        self.loss_dmg = QLabel("-")
+        self.loss_dmg_label = QLabel("-")
+
+        self.win_dmg = "-"
+        self.win = "-"
+        self.loss = "-"
+        self.tie = "-"
+        self.loss_dmg = "-"
 
         background = QFrame(self)
         layout = QVBoxLayout(background)
@@ -1148,11 +1156,11 @@ class SimulatorStats(QWidget):
         label_layout.addWidget(QLabel("Tie"), 0, 2)
         label_layout.addWidget(loss_percent_title, 0, 3)
         label_layout.addWidget(loss_dmg_title, 0, 4)
-        label_layout.addWidget(self.win_dmg, 1, 0)
+        label_layout.addWidget(self.win_dmg_label, 1, 0)
         label_layout.addWidget(self.win_label, 1, 1)
         label_layout.addWidget(self.tie_label, 1, 2)
         label_layout.addWidget(self.loss_label, 1, 3)
-        label_layout.addWidget(self.loss_dmg, 1, 4)
+        label_layout.addWidget(self.loss_dmg_label, 1, 4)
         label_layout.setSpacing(20)
         label_layout.setColumnMinimumWidth(0, 50)
         label_layout.setColumnMinimumWidth(1, 40)
@@ -1165,12 +1173,30 @@ class SimulatorStats(QWidget):
 
         self.setMinimumSize(1100, 400)
 
-    def update_chances(self, win, lose, tie, win_dmg, loss_dmg):
-        self.win_dmg.setText(win_dmg)
-        self.win_label.setText(win)
-        self.loss_label.setText(lose)
-        self.tie_label.setText(tie)
-        self.loss_dmg.setText(loss_dmg)
+    def update_chances(self, win, loss, tie, win_dmg, loss_dmg):
+        self.win_dmg = win_dmg
+        self.win = win
+        self.loss = loss
+        self.tie = tie
+        self.loss_dmg = loss_dmg
+        print(win, loss, tie, win_dmg, loss_dmg)
+
+    def update_labels(self):
+        self.win_dmg_label.setText(self.win_dmg)
+        self.win_label.setText(self.win)
+        self.loss_label.setText(self.loss)
+        self.tie_label.setText(self.tie)
+        self.loss_dmg_label.setText(self.loss_dmg)
+
+    def mousePressEvent(self, event):
+        self._mousePressed = True
+        self._mousePos = event.globalPosition().toPoint()
+        self._windowPos = self.pos()
+
+    def mouseMoveEvent(self, event):
+        if self._mousePressed and (Qt.LeftButton & event.buttons()):
+            self.move(self._windowPos +
+                              (event.globalPosition().toPoint() - self._mousePos))
 
 
 class HoverRegion(QWidget):
