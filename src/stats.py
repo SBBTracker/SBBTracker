@@ -46,17 +46,17 @@ class PlayerStats:
             except Exception as e:
                 logging.error(e)
                 self.df = pd.DataFrame(columns=['StartingHero', 'EndingHero', 'Placement', 'Timestamp', '+/-MMR'])
-            if 'Hero' in self.df.columns:
-                #  Legacy data
-                self.df = self.df.rename({'Hero': "EndingHero"}, axis='columns')
-                self.df["StartingHero"] = " "
-                self.df = self.df[["StartingHero", "EndingHero", "Placement", "Timestamp"]]
             if 'Timestamp' not in self.df.columns:
                 #  Pre-timestamp data gets an empty-timestamp column
                 self.df["Timestamp"] = "1973-01-01"
             if '+/-MMR' not in self.df.columns:
                 #  Pre-MMR data gets 0 MMR for each game
                 self.df["+/-MMR"] = "0"
+            if 'Hero' in self.df.columns:
+                #  Legacy data
+                self.df = self.df.rename({'Hero': "EndingHero"}, axis='columns')
+                self.df["StartingHero"] = " "
+                self.df = self.df[["StartingHero", "EndingHero", "Placement", "Timestamp", "+/-MMR"]]
             #  clean up empty timestamps into some old time (that I thought was unix epoch but was off by 3 years lol)
             self.df['Timestamp'] = self.df['Timestamp'].replace(r'^\s*$', "1973-01-01", regex=True)
         else:

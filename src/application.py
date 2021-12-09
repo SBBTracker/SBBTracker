@@ -21,6 +21,8 @@ import matplotlib
 
 # matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
+import numpy as np
+
 import sbbbattlesim.simulate
 import seaborn as sns
 from PySide6 import QtGui
@@ -182,7 +184,7 @@ default_dates = {
 
 
 class SimulationThread(QThread):
-    end_simulation = Signal(object)
+    end_simulation = Signal(str, str, str, str, str)
 
     def __init__(self, queue):
         super(SimulationThread, self).__init__()
@@ -190,15 +192,35 @@ class SimulationThread(QThread):
 
     def run(self):
         while True:
-            board = self.queue.get()
-            result = None
+            board, playerid = self.queue.get()
+            stats = None
 
             try:
-                result = simulate(board, t=4, k=250, timeout=30)
+                stats = simulate(board, t=4, k=250, timeout=30)
             except SBBBSCrocException:
                 pass
 
-            self.end_simulation.emit(result)
+            results = stats.results
+            aggregated_results = defaultdict(list)
+            for result in results:
+                aggregated_results[result.win_id].append(result.damage)
+
+            keys = set(aggregated_results.keys()) - {playerid, None}
+            win_damages = aggregated_results[playerid]
+            tie_damages = aggregated_results[None]
+            loss_damages = [] if not keys else aggregated_results[keys.pop()]
+
+            win_percent = round(len(win_damages) / len(results) * 100, 2)
+            tie_percent = round(len(tie_damages) / len(results) * 100, 2)
+            loss_percent = round(len(loss_damages) / len(results) * 100, 2)
+            win_10th_percentile, win_90th_percentile = (0, 0) if (len(win_damages) == 0) \
+                else np.percentile(win_damages, [10, 90])
+            loss_10th_percentile, loss_90th_percentile = (0, 0) if (len(loss_damages) == 0) \
+                else np.percentile(loss_damages, [10, 90])
+
+            self.end_simulation.emit(str(win_percent), str(tie_percent), str(loss_percent),
+                                     f"{int(win_10th_percentile)} - {int(win_90th_percentile)}",
+                                     f"{int(loss_10th_percentile)} - {int(loss_90th_percentile)}")
             time.sleep(1)
 
 
@@ -472,7 +494,7 @@ class SBBTracker(QMainWindow):
 
         self.board_queue = Queue()
         self.simulation = SimulationThread(self.board_queue)
-        self.simulation.end_simulation.connect(self.simulation_results)
+        self.simulation.end_simulation.connect(self.overlay.simulation_stats.update_chances)
 
         self.resize(1300, 800)
 
@@ -541,10 +563,7 @@ class SBBTracker(QMainWindow):
         if self.board_queue.qsize() > 3:
             with self.board_queue.mutex:
                 self.board_queue.queue.clear()
-        self.board_queue.put(state)
-
-    def simulation_results(self, results):
-        self.overlay.simulation_results(results, self.player_ids[0])
+        self.board_queue.put((state, self.player_ids[0]))
 
     def update_stats(self, starting_hero: str, player):
         if self.save_stats and (not self.ignore_nonmatchmaking or self.in_matchmaking):
@@ -1107,16 +1126,6 @@ class OverlayWindow(QMainWindow):
         for widget in self.comp_widgets:
             widget.setStyleSheet(style)
 
-    def simulation_results(self, results, current_player_id):
-        keys = set(results.stats.win_rate.keys()) - {current_player_id, None}
-        opponent = keys.pop()
-        win_rate = results.stats.win_rate[current_player_id]
-        tie_rate = results.stats.win_rate[None]
-        loss_rate = results.stats.win_rate[opponent]
-        win_dmg = round(results.stats.avg_damage[current_player_id], 1)
-        loss_dmg = round(results.stats.avg_damage[opponent], 1)
-        self.simulation_stats.update_chances(str(win_rate), str(loss_rate), str(tie_rate), str(win_dmg), str(loss_dmg))
-
 
 class SimulatorStats(QWidget):
     def __init__(self, parent):
@@ -1173,13 +1182,12 @@ class SimulatorStats(QWidget):
 
         self.setMinimumSize(1100, 400)
 
-    def update_chances(self, win, loss, tie, win_dmg, loss_dmg):
+    def update_chances(self, win, tie, loss, win_dmg, loss_dmg):
         self.win_dmg = win_dmg
         self.win = win
         self.loss = loss
         self.tie = tie
         self.loss_dmg = loss_dmg
-        print(win, loss, tie, win_dmg, loss_dmg)
 
     def update_labels(self):
         self.win_dmg_label.setText(self.win_dmg)
