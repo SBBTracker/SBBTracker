@@ -6,7 +6,6 @@ import logging
 import multiprocessing
 import operator
 import os
-import platform
 import shutil
 import sys
 import threading
@@ -17,15 +16,10 @@ from pathlib import Path
 from queue import Queue
 from tempfile import NamedTemporaryFile
 
-import matplotlib
-
-# matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 
-import sbbbattlesim.simulate
 import seaborn as sns
-from PySide6 import QtGui
 from PySide6.QtCore import QObject, QPoint, QRect, QSettings, QSize, QThread, QUrl, Qt, Signal
 from PySide6.QtGui import QAction, QBrush, QColor, QCursor, QDesktopServices, QFont, QFontMetrics, QGuiApplication, \
     QIcon, \
@@ -193,34 +187,39 @@ class SimulationThread(QThread):
     def run(self):
         while True:
             board, playerid = self.queue.get()
-            stats = None
+            simulation_stats = None
 
             try:
-                stats = simulate(board, t=4, k=250, timeout=30)
+                simulation_stats = simulate(board, t=4, k=250, timeout=30)
             except SBBBSCrocException:
                 pass
+            except Exception as e:
+                logging.error(e)
+                with open(stats.sbbtracker_folder.joinpath("error_board.json"), "w") as file:
+                    json.dump(board, file, default=lambda o: o.__dict__)
 
-            results = stats.results
-            aggregated_results = defaultdict(list)
-            for result in results:
-                aggregated_results[result.win_id].append(result.damage)
+            if simulation_stats:
+                results = simulation_stats.results
+                aggregated_results = defaultdict(list)
+                for result in results:
+                    aggregated_results[result.win_id].append(result.damage)
 
-            keys = set(aggregated_results.keys()) - {playerid, None}
-            win_damages = aggregated_results[playerid]
-            tie_damages = aggregated_results[None]
-            loss_damages = [] if not keys else aggregated_results[keys.pop()]
+                keys = set(aggregated_results.keys()) - {playerid, None}
+                win_damages = aggregated_results[playerid]
+                tie_damages = aggregated_results[None]
+                loss_damages = [] if not keys else aggregated_results[keys.pop()]
 
-            win_percent = round(len(win_damages) / len(results) * 100, 2)
-            tie_percent = round(len(tie_damages) / len(results) * 100, 2)
-            loss_percent = round(len(loss_damages) / len(results) * 100, 2)
-            win_10th_percentile, win_90th_percentile = (0, 0) if (len(win_damages) == 0) \
-                else np.percentile(win_damages, [10, 90])
-            loss_10th_percentile, loss_90th_percentile = (0, 0) if (len(loss_damages) == 0) \
-                else np.percentile(loss_damages, [10, 90])
+                win_percent = round(len(win_damages) / len(results) * 100, 2)
+                tie_percent = round(len(tie_damages) / len(results) * 100, 2)
+                loss_percent = round(len(loss_damages) / len(results) * 100, 2)
+                win_10th_percentile, win_90th_percentile = (0, 0) if (len(win_damages) == 0) \
+                    else np.percentile(win_damages, [10, 90])
+                loss_10th_percentile, loss_90th_percentile = (0, 0) if (len(loss_damages) == 0) \
+                    else np.percentile(loss_damages, [10, 90])
 
-            self.end_simulation.emit(str(win_percent), str(tie_percent), str(loss_percent),
-                                     f"{int(win_10th_percentile)} - {int(win_90th_percentile)}",
-                                     f"{int(loss_10th_percentile)} - {int(loss_90th_percentile)}")
+                self.end_simulation.emit(str(win_percent), str(tie_percent), str(loss_percent),
+                                         f"{int(win_10th_percentile)} - {int(win_90th_percentile)}",
+                                         f"{int(loss_10th_percentile)} - {int(loss_90th_percentile)}")
             time.sleep(1)
 
 
