@@ -156,8 +156,9 @@ def save_settings():
         with open(temp_name) as file:
             json.load(file)
         shutil.move(temp_name, settings_file)
-    except:
+    except Exception as e:
         logging.error("Couldn't save settings correctly")
+
 
 def toggle_setting(setting: str):
     settings[setting] = not settings[setting]
@@ -198,8 +199,8 @@ class SimulationThread(QThread):
                 simulation_stats = simulate(board, t=4, k=250, timeout=30)
             except SBBBSCrocException:
                 pass
-            except Exception as e:
-                logging.error(e)
+            except Exception:
+                logging.exception("Error in simulation!")
                 with open(stats.sbbtracker_folder.joinpath("error_board.json"), "w") as file:
                     json.dump(board, file, default=lambda o: o.__dict__)
 
@@ -379,6 +380,7 @@ class SettingsWindow(QMainWindow):
         slider_editor.addWidget(self.transparency_editor)
 
         overlay_layout.addRow("Enable overlay", enable_overlay_checkbox)
+        overlay_layout.addWidget(QLabel("Currently the overlay only works for borderless window mode"))
         overlay_layout.addRow("Enable simulator", enable_sim_checkbox)
         overlay_layout.addRow("Enable \"Show Tracker\" button", show_tracker_button_checkbox)
         overlay_layout.addRow("Choose overlay monitor", choose_monitor)
