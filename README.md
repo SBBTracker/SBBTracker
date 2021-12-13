@@ -3,6 +3,10 @@ A game tracker for storybook brawl
 
 Join the SBBTracker Discord: [![SBBTracker discord](https://discordapp.com/api/guilds/909995539888762902/widget.png)](https://discord.gg/2AJctfj239)
 
+## Troubleshooting
+See the [FAQ](https://github.com/SBBTracker/SBBTracker/wiki/FAQ) first if you have any issues.
+If FAQ doesn't help you, consider creating an issue or posting in the #bugs channel on Discord.
+
 ## Features
 * Keep track of previous opponent's boards
 * Game overlay
