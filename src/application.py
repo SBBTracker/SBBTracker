@@ -747,8 +747,8 @@ class BoardComp(QWidget):
         if self.composition is not None:
             used_slots = []
             for action in self.composition:
-                if int(action.level) != 1:
-                    #  skip level 1 characters because we can't normally get them
+                if int(action.level) != 1 and action.zone != "Hero":
+                    #  skip level 1 characters because we can't normally get them and skip hero because we handle it elsewhere
                     slot = action.slot
                     zone = action.zone
                     position = 10 if zone == 'Spell' else (7 + int(slot)) if zone == "Treasure" else slot
@@ -1170,11 +1170,11 @@ class SimulatorStats(QWidget):
         label_layout.addWidget(self.loss_label, 1, 3)
         label_layout.addWidget(self.loss_dmg_label, 1, 4)
         label_layout.setSpacing(20)
-        label_layout.setColumnMinimumWidth(0, 50)
+        label_layout.setColumnMinimumWidth(0, 60)
         label_layout.setColumnMinimumWidth(1, 40)
         label_layout.setColumnMinimumWidth(2, 30)
         label_layout.setColumnMinimumWidth(3, 40)
-        label_layout.setColumnMinimumWidth(4, 50)
+        label_layout.setColumnMinimumWidth(4, 60)
 
         layout.addLayout(label_layout)
         layout.addStretch()
