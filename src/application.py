@@ -158,6 +158,7 @@ def save_settings():
         shutil.move(temp_name, settings_file)
     except Exception as e:
         logging.error("Couldn't save settings correctly")
+        logging.error(str(e))
 
 
 def toggle_setting(setting: str):
