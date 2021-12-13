@@ -156,8 +156,9 @@ def save_settings():
         with open(temp_name) as file:
             json.load(file)
         shutil.move(temp_name, settings_file)
-    except:
+    except Exception as e:
         logging.error("Couldn't save settings correctly")
+        logging.error(str(e))
 
 def toggle_setting(setting: str):
     settings[setting] = not settings[setting]
