@@ -87,6 +87,8 @@ class Settings:
     monitor = "monitor"
     filter_ = "filter"
     enable_overlay = "enable-overlay"
+    enable_sim = "enable-sim"
+    show_tracker_button = "show-tracker-button"
     live_palette = "live-palette"
     matchmaking_only = "matchmaking-only"
 
@@ -156,6 +158,9 @@ def save_settings():
         shutil.move(temp_name, settings_file)
     except:
         logging.error("Couldn't save settings correctly")
+
+def toggle_setting(setting: str):
+    settings[setting] = not settings[setting]
 
 
 today = date.today()
@@ -314,7 +319,7 @@ class SettingsWindow(QMainWindow):
 
         save_stats_checkbox = QCheckBox()
         save_stats_checkbox.setChecked(settings.setdefault(Settings.save_stats, True))
-        save_stats_checkbox.stateChanged.connect(self.toggle_saving)
+        save_stats_checkbox.stateChanged.connect(lambda: toggle_setting(Settings.save_stats))
 
         self.graph_color_chooser = QComboBox()
         palettes = list(graphs.color_palettes.keys())
@@ -325,7 +330,7 @@ class SettingsWindow(QMainWindow):
         matchmaking_only_checkbox = QCheckBox()
         matchmaking_only_checkbox.setChecked(settings.setdefault(Settings.matchmaking_only, False))
         matchmaking_only_checkbox.setEnabled(save_stats_checkbox.checkState())
-        matchmaking_only_checkbox.stateChanged.connect(self.toggle_matchmaking)
+        matchmaking_only_checkbox.stateChanged.connect(lambda: toggle_setting(Settings.matchmaking_only))
 
         save_stats_checkbox.stateChanged.connect(lambda state: matchmaking_only_checkbox.setEnabled(bool(state)))
 
@@ -338,8 +343,19 @@ class SettingsWindow(QMainWindow):
         overlay_layout = QFormLayout(overlay_settings)
         enable_overlay_checkbox = QCheckBox()
         enable_overlay_checkbox.setChecked(settings.setdefault(Settings.enable_overlay, False))
-        enable_overlay_checkbox.stateChanged.connect(main_window.toggle_overlay)
+        enable_overlay_checkbox.stateChanged.connect(lambda: toggle_setting(Settings.enable_overlay))
 
+        enable_sim_checkbox = QCheckBox()
+        enable_sim_checkbox.setEnabled(enable_overlay_checkbox.checkState())
+        enable_sim_checkbox.setChecked(settings.setdefault(Settings.enable_sim, True))
+        enable_sim_checkbox.stateChanged.connect(lambda: toggle_setting(Settings.enable_sim))
+
+        enable_overlay_checkbox.stateChanged.connect(lambda state: enable_sim_checkbox.setEnabled(bool(state)))
+
+        show_tracker_button_checkbox = QCheckBox()
+        show_tracker_button_checkbox.setEnabled(enable_overlay_checkbox.checkState())
+        show_tracker_button_checkbox.setChecked(settings.setdefault(Settings.show_tracker_button, True))
+        show_tracker_button_checkbox.stateChanged.connect(lambda: toggle_setting(Settings.show_tracker_button))
 
         choose_monitor = QComboBox()
         monitors = QGuiApplication.screens()
@@ -363,6 +379,8 @@ class SettingsWindow(QMainWindow):
         slider_editor.addWidget(self.transparency_editor)
 
         overlay_layout.addRow("Enable overlay", enable_overlay_checkbox)
+        overlay_layout.addRow("Enable simulator", enable_sim_checkbox)
+        overlay_layout.addRow("Enable \"Show Tracker\" button", show_tracker_button_checkbox)
         overlay_layout.addRow("Choose overlay monitor", choose_monitor)
         overlay_layout.addRow("Adjust overlay transparency", slider_editor)
 
@@ -381,16 +399,8 @@ class SettingsWindow(QMainWindow):
         self.setCentralWidget(main_widget)
         self.setFixedSize(600, 600)
 
-    def toggle_matchmaking(self, state):
-        self.main_window.ignore_nonmatchmaking = bool(state)
-
-    def toggle_saving(self, state):
-        self.main_window.save_stats = bool(state)
-
     def save(self):
-        settings[Settings.save_stats] = self.main_window.save_stats
         settings[Settings.live_palette] = self.graph_color_chooser.currentText()
-        settings[Settings.matchmaking_only] = self.main_window.ignore_nonmatchmaking
         if self.transparency_editor.text():
             settings[Settings.boardcomp_transparency] = int(self.transparency_editor.text())
 
@@ -399,6 +409,8 @@ class SettingsWindow(QMainWindow):
         self.main_window.overlay.update_monitor()
         self.main_window.overlay.set_transparency()
         self.main_window.show_overlay()
+        self.main_window.overlay.simulation_stats.setVisible(settings[Settings.enable_sim])
+        self.main_window.overlay.show_button.setVisible(settings[Settings.show_tracker_button])
 
 
 class SBBTracker(QMainWindow):
@@ -411,13 +423,11 @@ class SBBTracker(QMainWindow):
         self.round_indicator.setFont(round_font)
         self.player_stats = stats.PlayerStats()
         self.player_ids = []
-        self.save_stats = settings.get(Settings.save_stats, True)
 
         self.overlay = OverlayWindow(self)
         settings.setdefault(Settings.enable_overlay, False)
         self.show_overlay()
         self.in_matchmaking = False
-        self.ignore_nonmatchmaking = False
 
         self.comp_tabs = QTabWidget()
         for index in range(len(self.comps)):
@@ -565,7 +575,7 @@ class SBBTracker(QMainWindow):
         self.board_queue.put((state, self.player_ids[0]))
 
     def update_stats(self, starting_hero: str, player):
-        if self.save_stats and (not self.ignore_nonmatchmaking or self.in_matchmaking):
+        if settings.get(Settings.save_stats, True) and (not settings[Settings.matchmaking_only] or self.in_matchmaking):
             place = player.place if int(player.health) <= 0 else "1"
             self.player_stats.update_stats(starting_hero, asset_utils.get_card_art_name(player.heroid, player.heroname),
                                            place, player.mmr)
@@ -579,9 +589,6 @@ class SBBTracker(QMainWindow):
         places = self.overlay.places
         places.remove(index)
         places.insert(new_place - 1, index)
-
-    def toggle_overlay(self):
-        settings[Settings.enable_overlay] = not settings[Settings.enable_overlay]
 
     def show_overlay(self):
         if settings[Settings.enable_overlay]:
@@ -1020,6 +1027,7 @@ class OverlayWindow(QMainWindow):
         self.select_monitor(settings.get("monitor", 0))
         self.hover_regions = [HoverRegion(self, *map(operator.mul, hover_size, self.scale_factor)) for _ in range(0, 8)]
         self.simulation_stats = SimulatorStats(self)
+        self.simulation_stats.setVisible(settings.get(Settings.enable_sim, True))
         self.update_monitor()
 
         self.show_hide = True
