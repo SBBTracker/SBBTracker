@@ -52,15 +52,18 @@ import stats
 import updater
 import version
 
-from sbbbattlesim import simulate
+from sbbbattlesim import from_state, simulate
 from sbbbattlesim.exceptions import SBBBSCrocException
 
 
 if not stats.sbbtracker_folder.exists():
     stats.sbbtracker_folder.mkdir()
 logging.basicConfig(filename=stats.sbbtracker_folder.joinpath("sbbtracker.log"), filemode="w",
-                    format='%(name)s - %(levelname)s - %(message)s', level=logging.WARN)
-logging.getLogger().addHandler(logging.StreamHandler())
+                    format='%(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+
+
+logger = logging.getLogger("application")
+logger.addHandler(logging.StreamHandler())
 
 art_dim = (161, 204)
 att_loc = (26, 181)
@@ -140,8 +143,8 @@ def load_settings():
             with open(settings_file, "r") as json_file:
                 return json.load(json_file)
         except Exception as e:
-            logging.error("Couldn't load settings file!")
-            logging.error(str(e))
+            logger.error("Couldn't load settings file!")
+            logger.error(str(e))
     return {}
 
 
@@ -157,8 +160,8 @@ def save_settings():
             json.load(file)
         shutil.move(temp_name, settings_file)
     except Exception as e:
-        logging.error("Couldn't save settings correctly")
-        logging.error(str(e))
+        logger.error("Couldn't save settings correctly")
+        logger.error(str(e))
 
 
 def toggle_setting(setting: str):
@@ -201,9 +204,11 @@ class SimulationThread(QThread):
             except SBBBSCrocException:
                 pass
             except Exception:
-                logging.exception("Error in simulation!")
+                logger.exception("Error in simulation!")
                 with open(stats.sbbtracker_folder.joinpath("error_board.json"), "w") as file:
-                    json.dump(board, file, default=lambda o: o.__dict__)
+                    json.dump(from_state(board), file, default=lambda o: o.__dict__)
+
+            logger.error(from_state(board))
 
             if simulation_stats:
                 results = simulation_stats.results
@@ -562,14 +567,20 @@ class SBBTracker(QMainWindow):
 
     def update_comp(self, state, round_number):
         for player_id in state:
-            player = state[player_id]
+            board = state[player_id]
             index = self.get_player_index(player_id)
             comp = self.get_comp(index)
-            comp.composition = player
-            comp.last_seen = round_number
 
-            self.overlay.update_comp(index, player, round_number)
+            player = comp.player
+            if player:
+                board.append(comp.player)
+                player.zone = "Hero"
+                player.content_id = player.heroid
+            comp.composition = board
+            comp.last_seen = round_number
+            self.overlay.update_comp(index, board, round_number)
             self.update()
+
         self.overlay.simulation_stats.update_chances("-", "-", "-", "-", "-")
         self.overlay.simulation_stats.update_labels()
         if self.board_queue.qsize() > 3:
@@ -638,7 +649,7 @@ class SBBTracker(QMainWindow):
         dialog_layout.addWidget(self.download_progress)
         dialog.show()
         dialog.update()
-        logging.info("Starting download...")
+        logger.info("Starting download...")
         updater.self_update(self.handle_progress)
         self.close()
         sys.exit(0)
@@ -648,7 +659,7 @@ class SBBTracker(QMainWindow):
         read_data = blocknum * blocksize
         if totalsize > 0:
             download_percentage = read_data * 100 / totalsize
-            logging.info(f"Download at: {download_percentage}%")
+            logger.info(f"Download at: {download_percentage}%")
 
             self.download_progress.setValue(download_percentage)
 
@@ -675,7 +686,7 @@ This will import all games played since SBB was last opened.
             try:
                 os.remove(log_parser.offsetfile)
             except Exception as e:
-                logging.warning(str(e))
+                logger.warning(str(e))
         self.update()
 
     def closeEvent(self, *args, **kwargs):
