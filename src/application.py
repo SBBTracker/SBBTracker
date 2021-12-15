@@ -163,8 +163,8 @@ first_day_prev_month = last_day_prev_month.replace(day=1)
 
 default_dates = {
     "All Matches": ("1970-01-01", today.isoformat()),
-    "Latest Patch (64.2)": ("2021-11-08", today.isoformat()),
-    "Previous Patch (63.4)": ("2021-10-18", "2021-11-08"),
+    "Latest Patch (65.10)": ("2021-12-14", today.isoformat()),
+    "Previous Patch (64.2)": ("2021-11-08", "2021-12-14"),
     "Today": (today.isoformat(), today.isoformat()),
     "Last 7 days": ((today - datetime.timedelta(days=7)).isoformat(), today.isoformat()),
     "Last 30 days": ((today - datetime.timedelta(days=30)).strftime("%Y-%m-%d"), today.strftime("%Y-%m-%d")),
@@ -726,6 +726,9 @@ class MatchHistory(QWidget):
         self.page = 1
         self.display_starting_hero = 0
         self.filter_ = settings.setdefault(Settings.filter_, "All Matches")
+        if self.filter_ not in default_dates:
+            self.filter_ = "All Matches"
+            settings[Settings.filter_] = self.filter_
         self.match_history_table.setHorizontalHeaderLabels(["Starting Hero", "Ending Hero", "Place", "+/- MMR"])
         self.match_history_table.setColumnWidth(0, 140)
         self.match_history_table.setColumnWidth(1, 140)
