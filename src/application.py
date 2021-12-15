@@ -661,7 +661,8 @@ class BoardComp(QWidget):
         pixmap = QPixmap(path)
         painter.drawPixmap(card_loc[0], card_loc[1], pixmap)
         painter.drawPixmap(card_loc[0], card_loc[1], self.border)
-        painter.drawText(card_loc[0], card_loc[1], str(content_id))
+        painter.setPen(QPen(QColor("white"), 1))
+        painter.drawText(card_loc[0] + 75, card_loc[1] + 100, str(content_id))
         if actually_is_golden:
             painter.drawPixmap(card_loc[0], card_loc[1], self.golden_overlay)
         self.update_card_stats(painter, int(slot), str(health), str(attack))
