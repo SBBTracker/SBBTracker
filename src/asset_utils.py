@@ -51,24 +51,22 @@ character_ids = {
 content_id_lookup = hero_ids | character_ids
 
 
-def get_card_art_name(content_id: str, display_text: str):
+def get_card_art_name(content_id: str):
     """
     Map the content ID to the card to prevent issues with skins/renames.
     :param content_id: content_id of the card, e.g. SBB_HERO_GWEN
-    :param display_text: the displayed text of a card
-    :return: the base card art name if found, otherwise 'display_text'
+    :return: the base card art name
     """
-    return content_id_lookup.get(content_id, display_text)
+    return content_id_lookup.get(content_id)
 
 
 def get_asset(asset_name: str):
     return str(Path(__file__).parent.joinpath(f"../assets/{asset_name}"))
 
 
-def get_card_path(card_name: str, content_id: str, is_golden: bool):
+def get_card_path(content_id: str, is_golden: bool):
     """
     Gets the path for the card asset
-    :param card_name: the display name of a card
     :param content_id: the content id of the card, e.g. SBB_HERO_GWEN
     :param is_golden: if the card is golden or not
     :return: the path card art if it exists, otherwise path to the blank resource

@@ -221,7 +221,7 @@ class LogThread(QThread):
                 self.player_update.emit(state, round_number)
                 xp = f"{state.level}.{state.experience}"
                 states.update_player(state.playerid, round_number, state.health, xp,
-                                     asset_utils.get_card_art_name(state.heroid, state.heroname))
+                                     asset_utils.get_card_art_name(state.heroid))
             elif job == log_parser.JOB_BOARDINFO:
                 for player_id in state:
                     self.comp_update.emit(player_id, state[player_id], round_number)
@@ -229,8 +229,7 @@ class LogThread(QThread):
                 self.player_info_update.emit(states)
             elif job == log_parser.JOB_ENDGAME:
                 if state and current_player:
-                    self.stats_update.emit(asset_utils.get_card_art_name(current_player.heroid,
-                                                                                 current_player.heroname), state)
+                    self.stats_update.emit(asset_utils.get_card_art_name(current_player.heroid), state)
             elif job == log_parser.JOB_HEALTHUPDATE:
                 self.health_update.emit(state)
 
@@ -479,7 +478,7 @@ class SBBTracker(QMainWindow):
 
     def update_player(self, player, round_number):
         index = self.get_player_index(player.playerid)
-        real_hero_name = asset_utils.get_card_art_name(player.heroid, player.heroname)
+        real_hero_name = asset_utils.get_card_art_name(player.heroid)
         title = f"{real_hero_name}"
         if player.health <= 0:
             self.comp_tabs.tabBar().setTabTextColor(index, "red")
@@ -505,7 +504,7 @@ class SBBTracker(QMainWindow):
     def update_stats(self, starting_hero: str, player):
         if self.save_stats and (not self.ignore_nonmatchmaking or self.in_matchmaking):
             place = player.place if int(player.health) <= 0 else "1"
-            self.player_stats.update_stats(starting_hero, asset_utils.get_card_art_name(player.heroid, player.heroname),
+            self.player_stats.update_stats(starting_hero, asset_utils.get_card_art_name(player.heroid),
                                            place, player.mmr)
             self.match_history.update_history_table()
             self.match_history.update_stats_table()
@@ -654,14 +653,15 @@ class BoardComp(QWidget):
                 painter.setBrush(QBrush("white"))
                 painter.drawPath(path)
 
-    def update_card(self, painter: QPainter, slot, cardname: str, content_id: str, health: str,
+    def update_card(self, painter: QPainter, slot, content_id: str, health: str,
                     attack: str, is_golden):
         card_loc = get_image_location(int(slot))
         actually_is_golden = is_golden if isinstance(is_golden, bool) else is_golden == "True"
-        path = asset_utils.get_card_path(cardname, content_id, actually_is_golden)
+        path = asset_utils.get_card_path(content_id, actually_is_golden)
         pixmap = QPixmap(path)
         painter.drawPixmap(card_loc[0], card_loc[1], pixmap)
         painter.drawPixmap(card_loc[0], card_loc[1], self.border)
+        painter.drawText(card_loc[0], card_loc[1], str(content_id))
         if actually_is_golden:
             painter.drawPixmap(card_loc[0], card_loc[1], self.golden_overlay)
         self.update_card_stats(painter, int(slot), str(health), str(attack))
@@ -684,18 +684,18 @@ class BoardComp(QWidget):
         if self.composition is not None:
             used_slots = []
             for action in self.composition:
-                if int(action.level) != 1:
+                if int(action.cost) != 1:
                     #  skip level 1 characters because we can't normally get them
                     slot = action.slot
                     zone = action.zone
                     position = 10 if zone == 'Spell' else (7 + int(slot)) if zone == "Treasure" else slot
-                    self.update_card(painter, position, action.cardname, action.content_id, action.cardhealth,
+                    self.update_card(painter, position, action.content_id, action.cardhealth,
                                      action.cardattack, action.is_golden)
                     used_slots.append(str(position))
         else:
             painter.eraseRect(QRect(0, 0, 1350, 820))
         if self.player:
-            self.update_card(painter, 11, self.player.heroname, self.player.heroid, self.player.health, "", False)
+            self.update_card(painter, 11, self.player.heroid, self.player.health, "", False)
             self.update_xp(painter, f"{self.player.level}.{self.player.experience}")
         last_seen_text = ""
         if self.last_seen is not None:
