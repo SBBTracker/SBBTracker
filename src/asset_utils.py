@@ -3,9 +3,10 @@ import os
 from pathlib import Path
 
 try:
-    with open("../assets/template-ids.json", "r") as json_file:
+    with open(Path(__file__).parent.joinpath("../assets/template-ids.json"), "r") as json_file:
         content_id_lookup = json.load(json_file)
-except:
+except Exception as e:
+    print(e)
     pass
 
 
