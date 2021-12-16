@@ -196,6 +196,7 @@ class LogThread(QThread):
                          daemon=True).start()
         round_number = 0
         current_player = None
+        counter = 0
         states = graphs.LivePlayerStates()
         matchmaking = False
         while True:
@@ -221,15 +222,18 @@ class LogThread(QThread):
                 self.player_update.emit(state, round_number)
                 xp = f"{state.level}.{state.experience}"
                 states.update_player(state.playerid, round_number, state.health, xp,
-                                     asset_utils.get_card_art_name(state.heroid))
+                                     asset_utils.get_hero_name(state.heroid))
+                counter += 1
+                if counter == 7:
+                    self.player_info_update.emit(states)
             elif job == log_parser.JOB_BOARDINFO:
                 for player_id in state:
                     self.comp_update.emit(player_id, state[player_id], round_number)
             elif job == log_parser.JOB_ENDCOMBAT:
-                self.player_info_update.emit(states)
+                counter = 0
             elif job == log_parser.JOB_ENDGAME:
                 if state and current_player:
-                    self.stats_update.emit(asset_utils.get_card_art_name(current_player.heroid), state)
+                    self.stats_update.emit(asset_utils.get_hero_name(current_player.heroid), state)
             elif job == log_parser.JOB_HEALTHUPDATE:
                 self.health_update.emit(state)
 
@@ -253,7 +257,17 @@ class SettingsWindow(QMainWindow):
         self.setWindowTitle("Settings")
 
         about_layout = QVBoxLayout(about_tab)
-        about_layout.addWidget(QLabel(f"SBBTracker v{version.__version__}"))
+        about_layout.addWidget(QLabel(f"""SBBTracker v{version.__version__}
+
+
+Special thanks to:
+
+Asado,
+HamiO,
+chickenArise,
+bnor,
+and Lunco
+"""))
         about_layout.addStretch()
 
         general_layout = QFormLayout(general_settings)
@@ -446,6 +460,8 @@ class SBBTracker(QMainWindow):
         self.log_updates.start()
         self.github_updates.start()
 
+        self.counter = 0
+
     def get_player_index(self, player_id: str):
         if player_id not in self.player_ids:
             self.player_ids.append(player_id)
@@ -478,7 +494,7 @@ class SBBTracker(QMainWindow):
 
     def update_player(self, player, round_number):
         index = self.get_player_index(player.playerid)
-        real_hero_name = asset_utils.get_card_art_name(player.heroid)
+        real_hero_name = asset_utils.get_hero_name(player.heroid)
         title = f"{real_hero_name}"
         if player.health <= 0:
             self.comp_tabs.tabBar().setTabTextColor(index, "red")
@@ -504,7 +520,7 @@ class SBBTracker(QMainWindow):
     def update_stats(self, starting_hero: str, player):
         if self.save_stats and (not self.ignore_nonmatchmaking or self.in_matchmaking):
             place = player.place if int(player.health) <= 0 else "1"
-            self.player_stats.update_stats(starting_hero, asset_utils.get_card_art_name(player.heroid),
+            self.player_stats.update_stats(starting_hero, asset_utils.get_hero_name(player.heroid),
                                            place, player.mmr)
             self.match_history.update_history_table()
             self.match_history.update_stats_table()
@@ -659,10 +675,10 @@ class BoardComp(QWidget):
         actually_is_golden = is_golden if isinstance(is_golden, bool) else is_golden == "True"
         path = asset_utils.get_card_path(content_id, actually_is_golden)
         pixmap = QPixmap(path)
-        painter.drawPixmap(card_loc[0], card_loc[1], pixmap)
-        painter.drawPixmap(card_loc[0], card_loc[1], self.border)
         painter.setPen(QPen(QColor("white"), 1))
         painter.drawText(card_loc[0] + 75, card_loc[1] + 100, str(content_id))
+        painter.drawPixmap(card_loc[0], card_loc[1], pixmap)
+        painter.drawPixmap(card_loc[0], card_loc[1], self.border)
         if actually_is_golden:
             painter.drawPixmap(card_loc[0], card_loc[1], self.golden_overlay)
         self.update_card_stats(painter, int(slot), str(health), str(attack))
@@ -683,16 +699,15 @@ class BoardComp(QWidget):
     def paintEvent(self, event):
         painter = QPainter(self)
         if self.composition is not None:
-            used_slots = []
             for action in self.composition:
-                if int(action.cost) != 1:
+                if action.zone != 'Spell':
                     #  skip level 1 characters because we can't normally get them
+                    #  spells broke
                     slot = action.slot
                     zone = action.zone
                     position = 10 if zone == 'Spell' else (7 + int(slot)) if zone == "Treasure" else slot
                     self.update_card(painter, position, action.content_id, action.cardhealth,
                                      action.cardattack, action.is_golden)
-                    used_slots.append(str(position))
         else:
             painter.eraseRect(QRect(0, 0, 1350, 820))
         if self.player:
@@ -767,7 +782,7 @@ class MatchHistory(QWidget):
 
         stats_widget = QWidget()
         stats_layout = QVBoxLayout(stats_widget)
-        self.stats_table = QTableWidget(len(asset_utils.hero_ids) + 1, 6)
+        self.stats_table = QTableWidget(asset_utils.get_num_heroes() + 1, 6)
         self.stats_table.setHorizontalHeaderLabels(stats.headings)
         self.stats_table.setColumnWidth(0, 130)
         self.stats_table.setColumnWidth(1, 115)
