@@ -1190,12 +1190,12 @@ class SimulatorStats(QWidget):
 
         label_layout = QGridLayout()
 
-        win_dmg_title = QLabel("Damage")
+        win_dmg_title = QLabel("Dmg")
         win_percent_title = QLabel("Win")
         win_dmg_title.setStyleSheet("QLabel { color : #9FD4A3 }")
         win_percent_title.setStyleSheet("QLabel { color : #9FD4A3 }")
 
-        loss_dmg_title = QLabel("Damage")
+        loss_dmg_title = QLabel("Dmg")
         loss_percent_title = QLabel("Loss")
         loss_dmg_title.setStyleSheet("QLabel { color : #e3365c }")
         loss_percent_title.setStyleSheet("QLabel { color : #e3365c }")
