@@ -258,11 +258,9 @@ def parse(ifs):
     for line in ifs:
         if 'NEW GAME STARTED' in line:
             yield Action(info=None, game_state=GameState.START)
-        elif line.startswith('DESTROY:'):
-            yield Action(info=None, game_state=GameState.REAL_SHOP_PHASE)
         elif 'REQUEST MATCHMAKER FOR' in line:
             yield Action(info=None, game_state=GameState.MATCHMAKING)
-        elif 'QueueActionRPC' in line:
+        elif 'Writing binary data to recorder for action:' in line:
             chop_idx = line.find('-') + 1
             line = line[chop_idx:]
             info = process_line(line, ifs)
@@ -298,18 +296,18 @@ class Action:
             if self.action_type == EVENT_ADDPLAYER or self.action_type == EVENT_ENTERRESULTSPHASE:
                 self.task = TASK_ADDPLAYER
                 self.displayname = info['DisplayName']
-                self.heroname = info['Hero']['Card']['DisplayName']
-                self.heroid = info['Hero']['Card']['ContentId']
-                self.health = int(info['Hero']['Card']['Health'])
-                self.playerid = info['Hero']['Card']['PlayerId']
+                self.heroid = info['Hero']['Card']['CardTemplateId']
+                self.health = int(info['Health'])
+                self.playerid = info.get("Player", "").replace("Id ", "")
                 self.place = info['Place']
                 self.experience = info['Experience']
                 self.level = info['Level']
-                self.attrs = ['displayname', 'heroname', 'playerid', 'health', 'heroid', 'place', 'level', 'experience']
+                self.attrs = ['displayname', 'playerid', 'health', 'heroid', 'place', 'level', 'experience']
 
                 if self.action_type == EVENT_ENTERRESULTSPHASE:
                     self.task = TASK_ENDGAME
                     self.mmr = info['Hero']['Card']['RankReward']
+                    self.playerid = info["PlayerData"].replace("Id ", "")
                     self.attrs.append('mmr')
 
             elif self.action_type == EVENT_ENTERBRAWLPHASE:
@@ -320,20 +318,19 @@ class Action:
 
             elif self.action_type == EVENT_CREATECARD:
                 self.task = TASK_GETROUNDGATHER
-                cardinfo = info['Action']['Card']['Card']
+                cardinfo = info['Action']['Card']['[ClientCardCard]']['CardTemplate']['Card']['Delta']['[CardDelta]']
 
                 self.playerid = cardinfo['PlayerId']
-                self.cardname = cardinfo['DisplayName']
                 self.cardattack = cardinfo['Attack']
                 self.cardhealth = cardinfo['Health']
                 self.is_golden = cardinfo['IsGolden']
                 self.slot = cardinfo['Slot']
                 self.zone = cardinfo['Zone']
                 self.cost = cardinfo['Cost']
-                self.level = cardinfo['Level']
                 self.subtypes = cardinfo['Subtypes']
-                self.content_id = cardinfo['ContentId']
-                self.attrs = ['cardname', 'cardattack', 'cardhealth', 'is_golden', 'slot', 'zone', 'cost', 'level', 'subtypes', 'content_id']
+
+                self.content_id = info['Action']['Card']['[ClientCardCard]']['CardTemplate']['Card']['CardTemplateId']
+                self.attrs = ['cardattack', 'cardhealth', 'is_golden', 'slot', 'zone', 'cost', 'subtypes', 'template_id']
 
             elif self.action_type in [EVENT_BRAWLCOMPLETE, EVENT_SUMMONCHARACTER, EVENT_ATTACK, EVENT_DEALDAMAGE]:
                 self.task = TASK_ENDROUNDGATHER
@@ -343,6 +340,10 @@ class Action:
                 self.task = TASK_GETROUND
                 self.round_num = int(info['Round'])
                 self.attrs = ['round_num']
+
+            elif self.action_type == EVENT_UPDATETURNTIMER:
+                self.task = TASK_ENDCOMBAT
+                self.attrs = []
 
             else:
                 self.task = None
@@ -431,7 +432,7 @@ def run(queue: Queue, log=logfile):
             elif action.task == TASK_ENDGAME:
                 queue.put(Update(JOB_ENDGAME, action))
                 current_player_stats = None
-            elif skip_extra_msgs and action.task == TASK_ENDCOMBAT:
+            elif action.task == TASK_ENDCOMBAT:
                 queue.put(Update(JOB_ENDCOMBAT, action))
                 skip_extra_msgs = False
             elif action.task == TASK_MATCHMAKING:

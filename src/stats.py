@@ -108,11 +108,11 @@ class PlayerStats:
         df["+/-MMR"] = pd.to_numeric(df["+/-MMR"])
         stats = []
         for hero_type in ["StartingHero", "EndingHero"]:
-            # heroes = sorted(set(df[hero_type]))
-
             data = []
-            for hero in asset_utils.hero_ids.values():
-                if not hero.isspace():
+            for value in asset_utils.content_id_lookup.values():
+                hero = value['Name']
+                heroid = value['Id']
+                if heroid.startswith("SBB_HERO"):
                     bool_df = df[hero_type] == hero
                     total_matches = sum(bool_df)
                     avg = round(df.loc[bool_df, 'Placement'].mean(), 2)
@@ -123,7 +123,7 @@ class PlayerStats:
                     net_mmr = df.loc[bool_df, '+/-MMR'].sum()
                     data.append([hero, str(total_matches), str(avg), str(total_top4), str(total_wins), str(net_mmr)])
 
-            padding = [["", "", "", "", "", ""] for _ in range(len(asset_utils.hero_ids) - len(data))]
+            padding = [["", "", "", "", "", ""] for _ in range(asset_utils.get_num_heroes() - len(data))]
             data = data + padding
             global_matches = len(df)
             global_avg = round(df["Placement"].mean(), 2)
