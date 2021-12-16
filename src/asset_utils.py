@@ -23,8 +23,11 @@ def get_card_art_name(content_id: str, is_golden: bool):
 
 
 def get_hero_name(content_id: str):
-    return content_id_lookup.get(str(content_id))["Name"]
-
+    try:
+        return content_id_lookup.get(str(content_id))["Name"]
+    except TypeError:
+        print(content_id)
+        return ""
 
 def get_num_heroes():
     return len([v for v in content_id_lookup.values() if v['Id'].startswith("SBB_HERO")])
