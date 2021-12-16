@@ -12,4 +12,5 @@
 7. Install dependencies by running:
    `pip install -r requirements.txt`
 8. Clone the assets repo from https://github.com/SBBTracker/assets and copy the `cards` folder into the SBBTracker repo.
-9. Run the application via `python3 src/application.py`
+9. `cd src`
+10. Run the application via `python3 application.py`
