@@ -258,8 +258,6 @@ def parse(ifs):
     for line in ifs:
         if 'NEW GAME STARTED' in line:
             yield Action(info=None, game_state=GameState.START)
-        elif line.startswith('DESTROY:'):
-            yield Action(info=None, game_state=GameState.REAL_SHOP_PHASE)
         elif 'REQUEST MATCHMAKER FOR' in line:
             yield Action(info=None, game_state=GameState.MATCHMAKING)
         elif 'Writing binary data to recorder for action:' in line:
@@ -342,6 +340,10 @@ class Action:
                 self.task = TASK_GETROUND
                 self.round_num = int(info['Round'])
                 self.attrs = ['round_num']
+
+            elif self.action_type == EVENT_UPDATETURNTIMER:
+                self.task = TASK_ENDCOMBAT
+                self.attrs = []
 
             else:
                 self.task = None
@@ -430,7 +432,7 @@ def run(queue: Queue, log=logfile):
             elif action.task == TASK_ENDGAME:
                 queue.put(Update(JOB_ENDGAME, action))
                 current_player_stats = None
-            elif skip_extra_msgs and action.task == TASK_ENDCOMBAT:
+            elif action.task == TASK_ENDCOMBAT:
                 queue.put(Update(JOB_ENDCOMBAT, action))
                 skip_extra_msgs = False
             elif action.task == TASK_MATCHMAKING:
