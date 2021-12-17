@@ -200,7 +200,7 @@ class SimulationThread(QThread):
             simulation_stats = None
 
             try:
-                simulation_stats = simulate(board, t=4, k=250, timeout=30)
+                simulation_stats = simulate(asset_utils.replace_template_ids(board), t=4, k=250, timeout=30)
             except SBBBSCrocException:
                 pass
             except Exception:
@@ -376,6 +376,8 @@ and Lunco
         show_tracker_button_checkbox.setEnabled(enable_overlay_checkbox.checkState())
         show_tracker_button_checkbox.setChecked(settings.setdefault(Settings.show_tracker_button, True))
         show_tracker_button_checkbox.stateChanged.connect(lambda: toggle_setting(Settings.show_tracker_button))
+
+        enable_overlay_checkbox.stateChanged.connect(lambda state: show_tracker_button_checkbox.setEnabled(bool(state)))
 
         choose_monitor = QComboBox()
         monitors = QGuiApplication.screens()
@@ -598,10 +600,11 @@ class SBBTracker(QMainWindow):
 
         self.overlay.simulation_stats.update_chances("-", "-", "-", "-", "-")
         self.overlay.simulation_stats.update_labels()
-        if self.board_queue.qsize() > 3:
-            with self.board_queue.mutex:
-                self.board_queue.queue.clear()
-        self.board_queue.put((state, self.player_ids[0]))
+        if settings[Settings.enable_sim]:
+            if self.board_queue.qsize() > 3:
+                with self.board_queue.mutex:
+                    self.board_queue.queue.clear()
+            self.board_queue.put((state, self.player_ids[0]))
 
     def update_stats(self, starting_hero: str, player):
         if settings.get(Settings.save_stats, True) and (not settings[Settings.matchmaking_only] or self.in_matchmaking):

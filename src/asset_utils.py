@@ -1,33 +1,33 @@
+import copy
 import json
+import logging
 import os
 from pathlib import Path
 
-try:
-    with open("../assets/template-ids.json", "r") as json_file:
-        content_id_lookup = json.load(json_file)
-except:
-    pass
+with open("../assets/template-ids.json", "r") as json_file:
+    content_id_lookup = json.load(json_file)
 
 
-def get_card_art_name(content_id: str, is_golden: bool):
+def get_card_art_name(template_id: str, is_golden: bool):
     """
     Map the content ID to the card to prevent issues with skins/renames.
     :param content_id: content_id of the card, e.g. SBB_HERO_GWEN
     :return: the base card art name
     """
     try:
-        return content_id_lookup.get(str(int(content_id) - int(is_golden)))["Id"]
+        return content_id_lookup.get(str(int(template_id) - int(is_golden)))["Id"]
     except TypeError:
-        print(content_id)
+        logging.error(template_id)
         return ""
 
 
-def get_hero_name(content_id: str):
+def get_hero_name(template_id: str):
     try:
-        return content_id_lookup.get(str(content_id))["Name"]
+        return content_id_lookup.get(str(template_id))["Name"]
     except TypeError:
-        print(content_id)
+        logging.error(template_id)
         return ""
+
 
 def get_num_heroes():
     return len([v for v in content_id_lookup.values() if v['Id'].startswith("SBB_HERO")])
@@ -53,4 +53,15 @@ def get_card_path(content_id: str, is_golden: bool):
     if not path.exists() or asset_name == "empty":
         path = Path("../assets/").joinpath("Empty.png")
     return str(path)
+
+
+def replace_template_ids(state):
+    copied = copy.deepcopy(state)
+    for playerid in copied:
+        for character in copied[playerid]:
+            templateid = character.content_id
+            is_golden = character.is_golden if hasattr(character, "is_golden") else False
+            actually_is_golden = is_golden if isinstance(is_golden, bool) else is_golden == "True"
+            character.content_id = get_card_art_name(templateid, actually_is_golden)
+    return copied
 
