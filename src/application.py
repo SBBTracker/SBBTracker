@@ -190,25 +190,25 @@ default_dates = {
 class SimulationThread(QThread):
     end_simulation = Signal(str, str, str, str, str)
 
-    def __init__(self, queue):
+    def __init__(self, comp_queue):
         super(SimulationThread, self).__init__()
-        self.queue = queue
+        self.comp_queue = comp_queue
 
     def run(self):
         while True:
-            board, playerid = self.queue.get()
+            board, playerid = self.comp_queue.get()
             simulation_stats = None
 
+            simulator_board = asset_utils.replace_template_ids(board)
+
             try:
-                simulation_stats = simulate(asset_utils.replace_template_ids(board), t=4, k=250, timeout=30)
+                simulation_stats = simulate(simulator_board, t=4, k=250, timeout=30)
             except SBBBSCrocException:
                 pass
             except Exception:
                 logger.exception("Error in simulation!")
                 with open(stats.sbbtracker_folder.joinpath("error_board.json"), "w") as file:
-                    json.dump(from_state(board), file, default=lambda o: o.__dict__)
-
-            logger.error(from_state(board))
+                    json.dump(from_state(simulator_board), file, default=lambda o: o.__dict__)
 
             if simulation_stats:
                 results = simulation_stats.results
@@ -217,8 +217,8 @@ class SimulationThread(QThread):
                     aggregated_results[result.win_id].append(result.damage)
 
                 keys = set(aggregated_results.keys()) - {playerid, None}
-                win_damages = aggregated_results[playerid]
-                tie_damages = aggregated_results[None]
+                win_damages = aggregated_results.get(playerid, [])
+                tie_damages = aggregated_results.get(None, [])
                 loss_damages = [] if not keys else aggregated_results[keys.pop()]
 
                 win_percent = round(len(win_damages) / len(results) * 100, 2)
@@ -243,6 +243,7 @@ class LogThread(QThread):
     player_info_update = Signal(graphs.LivePlayerStates)
     health_update = Signal(object)
     new_game = Signal(bool)
+    end_combat = Signal()
 
     def __init__(self, *args, **kwargs):
         super(LogThread, self).__init__()
@@ -260,6 +261,7 @@ class LogThread(QThread):
         counter = 0
         states = graphs.LivePlayerStates()
         matchmaking = False
+        after_first_combat = False
         while True:
             update = queue.get()
             job = update.job
@@ -273,6 +275,7 @@ class LogThread(QThread):
                 self.new_game.emit(matchmaking)
                 self.round_update.emit(0)
                 matchmaking = False
+                after_first_combat = False
             elif job == log_parser.JOB_INITCURRENTPLAYER:
                 current_player = state
                 self.player_update.emit(state, round_number)
@@ -287,11 +290,16 @@ class LogThread(QThread):
                 counter += 1
                 if counter == 8:
                     self.player_info_update.emit(states)
+                    if after_first_combat:
+                        self.end_combat.emit()
+                if not after_first_combat:
+                    after_first_combat = True
             elif job == log_parser.JOB_BOARDINFO:
                 self.comp_update.emit(state, round_number)
             elif job == log_parser.JOB_ENDCOMBAT:
                 counter = 0
             elif job == log_parser.JOB_ENDGAME:
+                self.end_combat.emit()
                 if state and current_player:
                     self.stats_update.emit(asset_utils.get_hero_name(current_player.heroid), state)
             elif job == log_parser.JOB_HEALTHUPDATE:
@@ -520,9 +528,9 @@ class SBBTracker(QMainWindow):
         self.log_updates.stats_update.connect(self.update_stats)
         self.log_updates.player_info_update.connect(self.live_graphs.update_graph)
         self.log_updates.player_info_update.connect(self.overlay.update_placements)
-        self.log_updates.player_info_update.connect(self.overlay.simulation_stats.update_labels)
         self.log_updates.new_game.connect(self.new_game)
         self.log_updates.health_update.connect(self.update_health)
+        self.log_updates.end_combat.connect(self.end_combat)
 
         self.board_queue = Queue()
         self.simulation = SimulationThread(self.board_queue)
@@ -558,6 +566,10 @@ class SBBTracker(QMainWindow):
             overlay_comp.player = None
             overlay_comp.current_round = 0
             overlay_comp.last_seen = None
+        self.overlay.simulation_stats.reset_chances()
+
+    def end_combat(self):
+        self.overlay.simulation_stats.update_labels()
 
     def get_comp(self, index: int):
         return self.comps[index]
@@ -598,13 +610,10 @@ class SBBTracker(QMainWindow):
             self.overlay.update_comp(index, board, round_number)
             self.update()
 
-        self.overlay.simulation_stats.update_chances("-", "-", "-", "-", "-")
-        self.overlay.simulation_stats.update_labels()
+        self.overlay.simulation_stats.reset_chances()
         if settings[Settings.enable_sim]:
-            if self.board_queue.qsize() > 3:
-                with self.board_queue.mutex:
-                    self.board_queue.queue.clear()
-            self.board_queue.put((state, self.player_ids[0]))
+            if self.board_queue.qsize() == 0:
+                self.board_queue.put((state, self.player_ids[0]))
 
     def update_stats(self, starting_hero: str, player):
         if settings.get(Settings.save_stats, True) and (not settings[Settings.matchmaking_only] or self.in_matchmaking):
@@ -1187,6 +1196,7 @@ class SimulatorStats(QWidget):
         self.loss = "-"
         self.tie = "-"
         self.loss_dmg = "-"
+        self.displayable = False
 
         background = QFrame(self)
         layout = QVBoxLayout(background)
@@ -1225,12 +1235,28 @@ class SimulatorStats(QWidget):
 
         self.setMinimumSize(1100, 400)
 
+    def reset_chances(self):
+        self.win_dmg = "-"
+        self.win = "-"
+        self.tie = "-"
+        self.loss = "-"
+        self.loss_dmg = "-"
+        self.win_dmg_label.setText(self.win_dmg)
+        self.win_label.setText(self.win)
+        self.loss_label.setText(self.loss)
+        self.tie_label.setText(self.tie)
+        self.loss_dmg_label.setText(self.loss_dmg)
+        self.displayable = False
+
     def update_chances(self, win, tie, loss, win_dmg, loss_dmg):
         self.win_dmg = win_dmg
         self.win = win
         self.loss = loss
         self.tie = tie
         self.loss_dmg = loss_dmg
+        if self.displayable:
+            self.update_labels()
+        self.displayable = False
 
     def update_labels(self):
         self.win_dmg_label.setText(self.win_dmg)
@@ -1238,6 +1264,7 @@ class SimulatorStats(QWidget):
         self.loss_label.setText(self.loss)
         self.tie_label.setText(self.tie)
         self.loss_dmg_label.setText(self.loss_dmg)
+        self.displayable = True
 
     def mousePressEvent(self, event):
         self._mousePressed = True
