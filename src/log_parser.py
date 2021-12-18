@@ -330,7 +330,7 @@ class Action:
                 self.subtypes = cardinfo['Subtypes']
 
                 self.content_id = info['Action']['Card']['[ClientCardCard]']['CardTemplate']['Card']['CardTemplateId']
-                self.attrs = ['cardattack', 'cardhealth', 'is_golden', 'slot', 'zone', 'cost', 'subtypes', 'template_id']
+                self.attrs = ['cardattack', 'cardhealth', 'is_golden', 'slot', 'zone', 'cost', 'subtypes', 'content_id']
 
             elif self.action_type in [EVENT_BRAWLCOMPLETE, EVENT_SUMMONCHARACTER, EVENT_ATTACK, EVENT_DEALDAMAGE]:
                 self.task = TASK_ENDROUNDGATHER

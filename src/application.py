@@ -1,25 +1,25 @@
+import asyncio
 import calendar
 import datetime
 import json
 import logging
+import multiprocessing
 import operator
 import os
-import platform
 import shutil
 import sys
 import threading
+import time
 from collections import defaultdict
 from datetime import date
 from pathlib import Path
 from queue import Queue
 from tempfile import NamedTemporaryFile
 
-import matplotlib
-
-# matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
+import numpy as np
+
 import seaborn as sns
-from PySide6 import QtGui
 from PySide6.QtCore import QObject, QPoint, QRect, QSettings, QSize, QThread, QUrl, Qt, Signal
 from PySide6.QtGui import QAction, QBrush, QColor, QCursor, QDesktopServices, QFont, QFontMetrics, QGuiApplication, \
     QIcon, \
@@ -31,7 +31,7 @@ from PySide6.QtWidgets import (
     QAbstractItemView, QApplication,
     QCheckBox, QComboBox, QDialog, QDoubleSpinBox, QErrorMessage, QFileDialog, QFormLayout, QFrame,
     QGraphicsDropShadowEffect,
-    QHBoxLayout,
+    QGridLayout, QHBoxLayout,
     QHeaderView,
     QLabel,
     QLineEdit, QMainWindow,
@@ -52,11 +52,16 @@ import stats
 import updater
 import version
 
+from sbbbattlesim import from_state, simulate
+from sbbbattlesim.exceptions import SBBBSCrocException
+
 if not stats.sbbtracker_folder.exists():
     stats.sbbtracker_folder.mkdir()
 logging.basicConfig(filename=stats.sbbtracker_folder.joinpath("sbbtracker.log"), filemode="w",
                     format='%(name)s - %(levelname)s - %(message)s', level=logging.INFO)
-logging.getLogger().addHandler(logging.StreamHandler())
+
+logger = logging.getLogger("application")
+logger.addHandler(logging.StreamHandler())
 
 art_dim = (161, 204)
 att_loc = (26, 181)
@@ -83,8 +88,11 @@ class Settings:
     monitor = "monitor"
     filter_ = "filter"
     enable_overlay = "enable-overlay"
+    enable_sim = "enable-sim"
+    show_tracker_button = "show-tracker-button"
     live_palette = "live-palette"
     matchmaking_only = "matchmaking-only"
+    simulator_position = "simulator-position"
 
 
 def get_image_location(position: int):
@@ -134,8 +142,8 @@ def load_settings():
             with open(settings_file, "r") as json_file:
                 return json.load(json_file)
         except Exception as e:
-            logging.error("Couldn't load settings file!")
-            logging.error(str(e))
+            logger.error("Couldn't load settings file!")
+            logger.error(str(e))
     return {}
 
 
@@ -150,8 +158,13 @@ def save_settings():
         with open(temp_name) as file:
             json.load(file)
         shutil.move(temp_name, settings_file)
-    except:
-        logging.error("Couldn't save settings correctly")
+    except Exception as e:
+        logger.error("Couldn't save settings correctly")
+        logger.error(str(e))
+
+
+def toggle_setting(setting: str):
+    settings[setting] = not settings[setting]
 
 
 today = date.today()
@@ -173,18 +186,66 @@ default_dates = {
 }
 
 
+class SimulationThread(QThread):
+    end_simulation = Signal(str, str, str, str, str)
+
+    def __init__(self, comp_queue):
+        super(SimulationThread, self).__init__()
+        self.comp_queue = comp_queue
+
+    def run(self):
+        while True:
+            board, playerid = self.comp_queue.get()
+            simulation_stats = None
+
+            simulator_board = asset_utils.replace_template_ids(board)
+
+            try:
+                simulation_stats = simulate(simulator_board, t=4, k=250, timeout=30)
+            except SBBBSCrocException:
+                pass
+            except Exception:
+                logger.exception("Error in simulation!")
+                with open(stats.sbbtracker_folder.joinpath("error_board.json"), "w") as file:
+                    json.dump(from_state(simulator_board), file, default=lambda o: o.__dict__)
+
+            if simulation_stats:
+                results = simulation_stats.results
+                aggregated_results = defaultdict(list)
+                for result in results:
+                    aggregated_results[result.win_id].append(result.damage)
+
+                keys = set(aggregated_results.keys()) - {playerid, None}
+                win_damages = aggregated_results.get(playerid, [])
+                tie_damages = aggregated_results.get(None, [])
+                loss_damages = [] if not keys else aggregated_results[keys.pop()]
+
+                win_percent = round(len(win_damages) / len(results) * 100, 2)
+                tie_percent = round(len(tie_damages) / len(results) * 100, 2)
+                loss_percent = round(len(loss_damages) / len(results) * 100, 2)
+                win_10th_percentile, win_90th_percentile = (0, 0) if (len(win_damages) == 0) \
+                    else np.percentile(win_damages, [10, 90])
+                loss_10th_percentile, loss_90th_percentile = (0, 0) if (len(loss_damages) == 0) \
+                    else np.percentile(loss_damages, [10, 90])
+
+                self.end_simulation.emit(str(win_percent), str(tie_percent), str(loss_percent),
+                                         f"{int(win_10th_percentile)} - {int(win_90th_percentile)}",
+                                         f"{int(loss_10th_percentile)} - {int(loss_90th_percentile)}")
+            time.sleep(1)
+
+
 class LogThread(QThread):
     round_update = Signal(int)
     player_update = Signal(object, int)
-    comp_update = Signal(str, object, int)
+    comp_update = Signal(object, int)
     stats_update = Signal(str, object)
     player_info_update = Signal(graphs.LivePlayerStates)
     health_update = Signal(object)
     new_game = Signal(bool)
+    end_combat = Signal()
 
     def __init__(self, *args, **kwargs):
         super(LogThread, self).__init__()
-        # Store constructor arguments (re-used for processing)
         self.args = args
         self.kwargs = kwargs
 
@@ -199,6 +260,7 @@ class LogThread(QThread):
         counter = 0
         states = graphs.LivePlayerStates()
         matchmaking = False
+        after_first_combat = False
         while True:
             update = queue.get()
             job = update.job
@@ -212,6 +274,7 @@ class LogThread(QThread):
                 self.new_game.emit(matchmaking)
                 self.round_update.emit(0)
                 matchmaking = False
+                after_first_combat = False
             elif job == log_parser.JOB_INITCURRENTPLAYER:
                 current_player = state
                 self.player_update.emit(state, round_number)
@@ -226,12 +289,16 @@ class LogThread(QThread):
                 counter += 1
                 if counter == 8:
                     self.player_info_update.emit(states)
+                    if after_first_combat:
+                        self.end_combat.emit()
+                if not after_first_combat:
+                    after_first_combat = True
             elif job == log_parser.JOB_BOARDINFO:
-                for player_id in state:
-                    self.comp_update.emit(player_id, state[player_id], round_number)
+                self.comp_update.emit(state, round_number)
             elif job == log_parser.JOB_ENDCOMBAT:
                 counter = 0
             elif job == log_parser.JOB_ENDGAME:
+                self.end_combat.emit()
                 if state and current_player:
                     self.stats_update.emit(asset_utils.get_hero_name(current_player.heroid), state)
             elif job == log_parser.JOB_HEALTHUPDATE:
@@ -260,8 +327,13 @@ class SettingsWindow(QMainWindow):
         about_layout.addWidget(QLabel(f"""SBBTracker v{version.__version__}
 
 
-Special thanks to:
+SBBBattleSim by:
+reggles44
+isik
+fredyybob
 
+
+Special thanks to:
 Asado,
 HamiO,
 chickenArise,
@@ -279,7 +351,7 @@ and Lunco
 
         save_stats_checkbox = QCheckBox()
         save_stats_checkbox.setChecked(settings.setdefault(Settings.save_stats, True))
-        save_stats_checkbox.stateChanged.connect(self.toggle_saving)
+        save_stats_checkbox.stateChanged.connect(lambda: toggle_setting(Settings.save_stats))
 
         self.graph_color_chooser = QComboBox()
         palettes = list(graphs.color_palettes.keys())
@@ -290,7 +362,7 @@ and Lunco
         matchmaking_only_checkbox = QCheckBox()
         matchmaking_only_checkbox.setChecked(settings.setdefault(Settings.matchmaking_only, False))
         matchmaking_only_checkbox.setEnabled(save_stats_checkbox.checkState())
-        matchmaking_only_checkbox.stateChanged.connect(self.toggle_matchmaking)
+        matchmaking_only_checkbox.stateChanged.connect(lambda: toggle_setting(Settings.matchmaking_only))
 
         save_stats_checkbox.stateChanged.connect(lambda state: matchmaking_only_checkbox.setEnabled(bool(state)))
 
@@ -303,8 +375,21 @@ and Lunco
         overlay_layout = QFormLayout(overlay_settings)
         enable_overlay_checkbox = QCheckBox()
         enable_overlay_checkbox.setChecked(settings.setdefault(Settings.enable_overlay, False))
-        enable_overlay_checkbox.stateChanged.connect(main_window.toggle_overlay)
+        enable_overlay_checkbox.stateChanged.connect(lambda: toggle_setting(Settings.enable_overlay))
 
+        enable_sim_checkbox = QCheckBox()
+        enable_sim_checkbox.setEnabled(enable_overlay_checkbox.checkState())
+        enable_sim_checkbox.setChecked(settings.setdefault(Settings.enable_sim, True))
+        enable_sim_checkbox.stateChanged.connect(lambda: toggle_setting(Settings.enable_sim))
+
+        enable_overlay_checkbox.stateChanged.connect(lambda state: enable_sim_checkbox.setEnabled(bool(state)))
+
+        show_tracker_button_checkbox = QCheckBox()
+        show_tracker_button_checkbox.setEnabled(enable_overlay_checkbox.checkState())
+        show_tracker_button_checkbox.setChecked(settings.setdefault(Settings.show_tracker_button, True))
+        show_tracker_button_checkbox.stateChanged.connect(lambda: toggle_setting(Settings.show_tracker_button))
+
+        enable_overlay_checkbox.stateChanged.connect(lambda state: show_tracker_button_checkbox.setEnabled(bool(state)))
 
         choose_monitor = QComboBox()
         monitors = QGuiApplication.screens()
@@ -328,6 +413,10 @@ and Lunco
         slider_editor.addWidget(self.transparency_editor)
 
         overlay_layout.addRow("Enable overlay", enable_overlay_checkbox)
+        overlay_layout.addRow("Currently the overlay only works for borderless window mode", None)
+        overlay_layout.addRow("Enable simulator *BETA*", enable_sim_checkbox)
+        overlay_layout.addRow("Beta version of the simulator may not show all results or be accurate", None)
+        overlay_layout.addRow("Enable \"Show Tracker\" button", show_tracker_button_checkbox)
         overlay_layout.addRow("Choose overlay monitor", choose_monitor)
         overlay_layout.addRow("Adjust overlay transparency", slider_editor)
 
@@ -346,16 +435,8 @@ and Lunco
         self.setCentralWidget(main_widget)
         self.setFixedSize(600, 600)
 
-    def toggle_matchmaking(self, state):
-        self.main_window.ignore_nonmatchmaking = bool(state)
-
-    def toggle_saving(self, state):
-        self.main_window.save_stats = bool(state)
-
     def save(self):
-        settings[Settings.save_stats] = self.main_window.save_stats
         settings[Settings.live_palette] = self.graph_color_chooser.currentText()
-        settings[Settings.matchmaking_only] = self.main_window.ignore_nonmatchmaking
         if self.transparency_editor.text():
             settings[Settings.boardcomp_transparency] = int(self.transparency_editor.text())
 
@@ -364,6 +445,8 @@ and Lunco
         self.main_window.overlay.update_monitor()
         self.main_window.overlay.set_transparency()
         self.main_window.show_overlay()
+        self.main_window.overlay.simulation_stats.setVisible(settings[Settings.enable_sim])
+        self.main_window.overlay.show_button.setVisible(settings[Settings.show_tracker_button])
 
 
 class SBBTracker(QMainWindow):
@@ -376,13 +459,11 @@ class SBBTracker(QMainWindow):
         self.round_indicator.setFont(round_font)
         self.player_stats = stats.PlayerStats()
         self.player_ids = []
-        self.save_stats = settings.get(Settings.save_stats, True)
 
         self.overlay = OverlayWindow(self)
         settings.setdefault(Settings.enable_overlay, False)
         self.show_overlay()
         self.in_matchmaking = False
-        self.ignore_nonmatchmaking = False
 
         self.comp_tabs = QTabWidget()
         for index in range(len(self.comps)):
@@ -454,11 +535,17 @@ class SBBTracker(QMainWindow):
         self.log_updates.player_info_update.connect(self.overlay.update_placements)
         self.log_updates.new_game.connect(self.new_game)
         self.log_updates.health_update.connect(self.update_health)
+        self.log_updates.end_combat.connect(self.end_combat)
+
+        self.board_queue = Queue()
+        self.simulation = SimulationThread(self.board_queue)
+        self.simulation.end_simulation.connect(self.overlay.simulation_stats.update_chances)
 
         self.resize(1300, 800)
 
         self.log_updates.start()
         self.github_updates.start()
+        self.simulation.start()
 
         self.counter = 0
 
@@ -484,6 +571,10 @@ class SBBTracker(QMainWindow):
             overlay_comp.player = None
             overlay_comp.current_round = 0
             overlay_comp.last_seen = None
+        self.overlay.simulation_stats.reset_chances()
+
+    def end_combat(self):
+        self.overlay.simulation_stats.update_labels()
 
     def get_comp(self, index: int):
         return self.comps[index]
@@ -508,17 +599,29 @@ class SBBTracker(QMainWindow):
 
         self.update()
 
-    def update_comp(self, player_id, player, round_number):
-        index = self.get_player_index(player_id)
-        comp = self.get_comp(index)
-        comp.composition = player
-        comp.last_seen = round_number
+    def update_comp(self, state, round_number):
+        for player_id in state:
+            board = state[player_id]
+            index = self.get_player_index(player_id)
+            comp = self.get_comp(index)
 
-        self.overlay.update_comp(index, player, round_number)
-        self.update()
+            player = comp.player
+            if player:
+                board.append(comp.player)
+                player.zone = "Hero"
+                player.content_id = player.heroid
+            comp.composition = board
+            comp.last_seen = round_number
+            self.overlay.update_comp(index, board, round_number)
+            self.update()
+
+        self.overlay.simulation_stats.reset_chances()
+        if settings[Settings.enable_sim]:
+            if self.board_queue.qsize() == 0:
+                self.board_queue.put((state, self.player_ids[0]))
 
     def update_stats(self, starting_hero: str, player):
-        if self.save_stats and (not self.ignore_nonmatchmaking or self.in_matchmaking):
+        if settings.get(Settings.save_stats, True) and (not settings[Settings.matchmaking_only] or self.in_matchmaking):
             place = player.place if int(player.health) <= 0 else "1"
             self.player_stats.update_stats(starting_hero, asset_utils.get_hero_name(player.heroid),
                                            place, player.mmr)
@@ -532,9 +635,6 @@ class SBBTracker(QMainWindow):
         places = self.overlay.places
         places.remove(index)
         places.insert(new_place - 1, index)
-
-    def toggle_overlay(self):
-        settings[Settings.enable_overlay] = not settings[Settings.enable_overlay]
 
     def show_overlay(self):
         if settings[Settings.enable_overlay]:
@@ -581,7 +681,7 @@ class SBBTracker(QMainWindow):
         dialog_layout.addWidget(self.download_progress)
         dialog.show()
         dialog.update()
-        logging.info("Starting download...")
+        logger.info("Starting download...")
         updater.self_update(self.handle_progress)
         self.close()
         sys.exit(0)
@@ -591,7 +691,7 @@ class SBBTracker(QMainWindow):
         read_data = blocknum * blocksize
         if totalsize > 0:
             download_percentage = read_data * 100 / totalsize
-            logging.info(f"Download at: {download_percentage}%")
+            logger.info(f"Download at: {download_percentage}%")
 
             self.download_progress.setValue(download_percentage)
 
@@ -618,13 +718,14 @@ This will import all games played since SBB was last opened.
             try:
                 os.remove(log_parser.offsetfile)
             except Exception as e:
-                logging.warning(str(e))
+                logger.warning(str(e))
         self.update()
 
     def closeEvent(self, *args, **kwargs):
         super(QMainWindow, self).closeEvent(*args, **kwargs)
         self.github_updates.terminate()
         self.log_updates.terminate()
+        self.simulation.terminate()
         self.player_stats.save()
         self.overlay.close()
         save_settings()
@@ -700,8 +801,8 @@ class BoardComp(QWidget):
         painter = QPainter(self)
         if self.composition is not None:
             for action in self.composition:
-                if action.zone != 'Spell':
-                    #  skip level 1 characters because we can't normally get them
+                if action.zone != "Hero" and action.zone != 'Spell':
+                    #  skip hero because we handle it elsewhere
                     #  spells broke
                     slot = action.slot
                     zone = action.zone
@@ -962,6 +1063,8 @@ base_size = (1920, 1080)
 
 
 class OverlayWindow(QMainWindow):
+    simluation_update = Signal(str, str, str, str, str)
+
     def __init__(self, main_window):
         super().__init__()
         self.setAttribute(Qt.WA_TranslucentBackground, True)
@@ -973,6 +1076,8 @@ class OverlayWindow(QMainWindow):
         self.dpi_scale = 1
         self.select_monitor(settings.get("monitor", 0))
         self.hover_regions = [HoverRegion(self, *map(operator.mul, hover_size, self.scale_factor)) for _ in range(0, 8)]
+        self.simulation_stats = SimulatorStats(self)
+        self.simulation_stats.setVisible(settings.get(Settings.enable_sim, True))
         self.update_monitor()
 
         self.show_hide = True
@@ -1052,6 +1157,12 @@ class OverlayWindow(QMainWindow):
         self.scale_factor = tuple(map(operator.truediv, self.monitor.size().toTuple(), base_size))
         self.update_hovers()
 
+        simulator_position = settings.setdefault(Settings.simulator_position, (self.real_size[0] / 2 - 100, 0))
+        if simulator_position[0] > self.real_size[0] or simulator_position[1] > self.real_size[1]:
+            simulator_position = (self.real_size[0] / 2 - 100, 0)
+            settings[Settings.simulator_position] = simulator_position
+        self.simulation_stats.move(*simulator_position)
+
     def update_hovers(self):
         size = self.monitor.size()
 
@@ -1081,38 +1192,106 @@ class OverlayWindow(QMainWindow):
 class SimulatorStats(QWidget):
     def __init__(self, parent):
         super().__init__(parent)
-        self.win_chance = "33.3"
-        self.tie_chance = "33.3"
-        self.lose_chance = "33.3"
+        self.parent = parent
+        self.setStyleSheet(f"background-color: {default_bg_color}; font-size: 17px")
 
-        self.setFont(QFont("Roboto", 16))
+        self._mousePressed = False
+        self._mousePos = None
+        self._windowPos = self.pos()
 
-        self.win_label = QLabel(self.win_chance, self)
-        self.tie_label = QLabel(self.tie_chance, self)
-        self.lose_label = QLabel(self.lose_chance, self)
+        self.win_dmg_label = QLabel("-")
+        self.win_label = QLabel("-")
+        self.tie_label = QLabel("-")
+        self.loss_label = QLabel("-")
+        self.loss_dmg_label = QLabel("-")
 
-        self.setStyleSheet("background-color: #31363b")
+        self.win_dmg = "-"
+        self.win = "-"
+        self.loss = "-"
+        self.tie = "-"
+        self.loss_dmg = "-"
+        self.displayable = False
 
-        background = QWidget(self)
+        background = QFrame(self)
         layout = QVBoxLayout(background)
 
-        label_layout = QHBoxLayout()
-        label_layout.addWidget(QLabel("Win %"))
-        label_layout.addWidget(QLabel("Tie %"))
-        label_layout.addWidget(QLabel("Lose %"))
-        label_layout.addStretch()
+        label_layout = QGridLayout()
 
-        chance_layout = QHBoxLayout()
-        chance_layout.addWidget(self.win_label)
-        chance_layout.addWidget(self.tie_label)
-        chance_layout.addWidget(self.lose_label)
-        chance_layout.addStretch()
+        win_dmg_title = QLabel("Dmg")
+        win_percent_title = QLabel("Win")
+        win_dmg_title.setStyleSheet("QLabel { color : #9FD4A3 }")
+        win_percent_title.setStyleSheet("QLabel { color : #9FD4A3 }")
+
+        loss_dmg_title = QLabel("Dmg")
+        loss_percent_title = QLabel("Loss")
+        loss_dmg_title.setStyleSheet("QLabel { color : #e3365c }")
+        loss_percent_title.setStyleSheet("QLabel { color : #e3365c }")
+
+        label_layout.addWidget(win_dmg_title, 0, 0)
+        label_layout.addWidget(win_percent_title, 0, 1)
+        label_layout.addWidget(QLabel("Tie"), 0, 2)
+        label_layout.addWidget(loss_percent_title, 0, 3)
+        label_layout.addWidget(loss_dmg_title, 0, 4)
+        label_layout.addWidget(self.win_dmg_label, 1, 0)
+        label_layout.addWidget(self.win_label, 1, 1)
+        label_layout.addWidget(self.tie_label, 1, 2)
+        label_layout.addWidget(self.loss_label, 1, 3)
+        label_layout.addWidget(self.loss_dmg_label, 1, 4)
+        label_layout.setSpacing(20)
+        label_layout.setColumnMinimumWidth(0, 60)
+        label_layout.setColumnMinimumWidth(1, 40)
+        label_layout.setColumnMinimumWidth(2, 30)
+        label_layout.setColumnMinimumWidth(3, 40)
+        label_layout.setColumnMinimumWidth(4, 60)
 
         layout.addLayout(label_layout)
-        layout.addLayout(chance_layout)
         layout.addStretch()
 
-        self.setMinimumSize(1000, 200)
+        self.setMinimumSize(1100, 400)
+
+    def reset_chances(self):
+        self.win_dmg = "-"
+        self.win = "-"
+        self.tie = "-"
+        self.loss = "-"
+        self.loss_dmg = "-"
+        self.win_dmg_label.setText(self.win_dmg)
+        self.win_label.setText(self.win)
+        self.loss_label.setText(self.loss)
+        self.tie_label.setText(self.tie)
+        self.loss_dmg_label.setText(self.loss_dmg)
+        self.displayable = False
+
+    def update_chances(self, win, tie, loss, win_dmg, loss_dmg):
+        self.win_dmg = win_dmg
+        self.win = win
+        self.loss = loss
+        self.tie = tie
+        self.loss_dmg = loss_dmg
+        if self.displayable:
+            self.update_labels()
+        self.displayable = False
+
+    def update_labels(self):
+        self.win_dmg_label.setText(self.win_dmg)
+        self.win_label.setText(self.win)
+        self.loss_label.setText(self.loss)
+        self.tie_label.setText(self.tie)
+        self.loss_dmg_label.setText(self.loss_dmg)
+        self.displayable = True
+
+    def mousePressEvent(self, event):
+        self._mousePressed = True
+        self._mousePos = event.globalPosition().toPoint()
+        self._windowPos = self.pos()
+
+    def mouseMoveEvent(self, event):
+        if self._mousePressed and (Qt.LeftButton & event.buttons()):
+            self.move(self._windowPos +
+                      (event.globalPosition().toPoint() - self._mousePos))
+
+    def mouseReleaseEvent(self, event):
+        settings[Settings.simulator_position] = self.pos().toTuple()
 
 
 class HoverRegion(QWidget):
@@ -1134,18 +1313,23 @@ class HoverRegion(QWidget):
         self.leave_hover.emit()
 
 
-app = QApplication(sys.argv)
-app.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.RoundPreferFloor)
-apply_stylesheet(app, theme='dark_teal.xml')
-stylesheet = app.styleSheet()
-stylesheet = stylesheet.replace("""QTabBar::tab {
-  color: #ffffff;
-  border: 0px;
-}""", """QTabBar::tab {
-  border: 0px;
-}""") + "QTabBar{ text-transform: none; }"
-app.setStyleSheet(stylesheet)
-mainWindow = SBBTracker()
-mainWindow.show()
+def main():
+    multiprocessing.freeze_support()
+    app = QApplication(sys.argv)
+    app.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.RoundPreferFloor)
+    apply_stylesheet(app, theme='dark_teal.xml')
+    stylesheet = app.styleSheet()
+    stylesheet = stylesheet.replace("""QTabBar::tab {
+      color: #ffffff;
+      border: 0px;
+    }""", """QTabBar::tab {
+      border: 0px;
+    }""") + "QTabBar{ text-transform: none; }"
+    app.setStyleSheet(stylesheet)
+    main_window = SBBTracker()
+    main_window.show()
+    sys.exit(app.exec())
 
-sys.exit(app.exec())
+
+if __name__ == "__main__":
+    main()
