@@ -843,6 +843,10 @@
     "Id": "SBB_TREASURE_HELMOFTHEUGLYGOSLING",
     "Name": "Helm of the Ugly Gosling"
   },
+  "351": {
+    "Id": "SBB_TREASURE_THENINTHBOOKOFMERLIN",
+    "Name": "The 9th Book of Merlin"
+  },
   "352": {
     "Id": "SBB_CHARACTER_WORLDSERPENT",
     "Name": "Jormungand"
