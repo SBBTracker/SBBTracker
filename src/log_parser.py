@@ -20,7 +20,7 @@ if os_name == 'Linux':
 elif os_name == "Windows":
     sbb_root = Path(os.environ["APPDATA"]).parent.joinpath("LocalLow/Good Luck Games/Storybook Brawl")
 elif os_name == "Darwin":
-    pass  # todo: implement Mac
+    sbb_root = Path(expanduser("~"))
 logfile = sbb_root.joinpath("Player.log")
 offsetfile = stats.sbbtracker_folder.joinpath("logfile.offset")
 if not stats.sbbtracker_folder.exists():
