@@ -3,6 +3,9 @@
 version=$(grep "current_version" .bumpversion.cfg | sed s,"current_version = ",,)
 rm -rf ./dist
 . venv/bin/activate
+cd src/SBBBattleSim
+pip install .
+cd ../../
 pyinstaller SBBTracker.spec
 cp -r dist/SBBTracker/. release/linux/bin
 cp -r assets release/linux/assets
