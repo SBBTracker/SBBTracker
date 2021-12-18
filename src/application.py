@@ -55,12 +55,10 @@ import version
 from sbbbattlesim import from_state, simulate
 from sbbbattlesim.exceptions import SBBBSCrocException
 
-
 if not stats.sbbtracker_folder.exists():
     stats.sbbtracker_folder.mkdir()
 logging.basicConfig(filename=stats.sbbtracker_folder.joinpath("sbbtracker.log"), filemode="w",
                     format='%(name)s - %(levelname)s - %(message)s', level=logging.INFO)
-
 
 logger = logging.getLogger("application")
 logger.addHandler(logging.StreamHandler())
@@ -94,6 +92,7 @@ class Settings:
     show_tracker_button = "show-tracker-button"
     live_palette = "live-palette"
     matchmaking_only = "matchmaking-only"
+    simulator_position = "simulator-position"
 
 
 def get_image_location(position: int):
@@ -410,7 +409,8 @@ and Lunco
 
         overlay_layout.addRow("Enable overlay", enable_overlay_checkbox)
         overlay_layout.addWidget(QLabel("Currently the overlay only works for borderless window mode"))
-        overlay_layout.addRow("Enable simulator", enable_sim_checkbox)
+        overlay_layout.addRow("Enable simulator *BETA*", enable_sim_checkbox)
+        overlay_layout.addWidget(QLabel("Beta version of the simulator may not work 100% of the time (or be accurate)"))
         overlay_layout.addRow("Enable \"Show Tracker\" button", show_tracker_button_checkbox)
         overlay_layout.addRow("Choose overlay monitor", choose_monitor)
         overlay_layout.addRow("Adjust overlay transparency", slider_editor)
@@ -1151,7 +1151,12 @@ class OverlayWindow(QMainWindow):
         self.setGeometry(self.monitor.geometry())
         self.scale_factor = tuple(map(operator.truediv, self.monitor.size().toTuple(), base_size))
         self.update_hovers()
-        self.simulation_stats.move(self.real_size[0] / 2 - 100, 0)
+
+        simulator_position = settings.setdefault(Settings.simulator_position, (self.real_size[0] / 2 - 100, 0))
+        if simulator_position[0] > self.real_size[0] or simulator_position[1] > self.real_size[1]:
+            simulator_position = (self.real_size[0] / 2 - 100, 0)
+            settings[Settings.simulator_position] = simulator_position
+        self.simulation_stats.move(*simulator_position)
 
     def update_hovers(self):
         size = self.monitor.size()
@@ -1184,7 +1189,11 @@ class SimulatorStats(QWidget):
         super().__init__(parent)
         self.parent = parent
         self.setStyleSheet(f"background-color: {default_bg_color}; font-size: 17px")
+
         self._mousePressed = False
+        self._mousePos = None
+        self._windowPos = self.pos()
+
         self.win_dmg_label = QLabel("-")
         self.win_label = QLabel("-")
         self.tie_label = QLabel("-")
@@ -1274,7 +1283,10 @@ class SimulatorStats(QWidget):
     def mouseMoveEvent(self, event):
         if self._mousePressed and (Qt.LeftButton & event.buttons()):
             self.move(self._windowPos +
-                              (event.globalPosition().toPoint() - self._mousePos))
+                      (event.globalPosition().toPoint() - self._mousePos))
+
+    def mouseReleaseEvent(self, event):
+        settings[Settings.simulator_position] = self.pos().toTuple()
 
 
 class HoverRegion(QWidget):
@@ -1316,4 +1328,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
