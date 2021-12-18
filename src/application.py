@@ -224,7 +224,7 @@ class LogThread(QThread):
                 states.update_player(state.playerid, round_number, state.health, xp,
                                      asset_utils.get_hero_name(state.heroid))
                 counter += 1
-                if counter == 7:
+                if counter == 8:
                     self.player_info_update.emit(states)
             elif job == log_parser.JOB_BOARDINFO:
                 for player_id in state:
