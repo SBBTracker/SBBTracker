@@ -327,8 +327,13 @@ class SettingsWindow(QMainWindow):
         about_layout.addWidget(QLabel(f"""SBBTracker v{version.__version__}
 
 
-Special thanks to:
+SBBBattleSim by:
+reggles44
+isik
+fredyybob
 
+
+Special thanks to:
 Asado,
 HamiO,
 chickenArise,
@@ -408,9 +413,9 @@ and Lunco
         slider_editor.addWidget(self.transparency_editor)
 
         overlay_layout.addRow("Enable overlay", enable_overlay_checkbox)
-        overlay_layout.addWidget(QLabel("Currently the overlay only works for borderless window mode"))
+        overlay_layout.addRow("Currently the overlay only works for borderless window mode", None)
         overlay_layout.addRow("Enable simulator *BETA*", enable_sim_checkbox)
-        overlay_layout.addWidget(QLabel("Beta version of the simulator may not work 100% of the time (or be accurate)"))
+        overlay_layout.addRow("Beta version of the simulator may not show all results or be accurate", None)
         overlay_layout.addRow("Enable \"Show Tracker\" button", show_tracker_button_checkbox)
         overlay_layout.addRow("Choose overlay monitor", choose_monitor)
         overlay_layout.addRow("Adjust overlay transparency", slider_editor)
