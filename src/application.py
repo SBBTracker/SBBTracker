@@ -7,6 +7,7 @@ import multiprocessing
 import operator
 import os
 import shutil
+import subprocess
 import sys
 import threading
 import time
@@ -95,6 +96,7 @@ class Settings:
     simulator_position = "simulator-position"
     number_simulations = "number-simulations"
     number_threads = "number-threads"
+    export_comp_button = "export-comp-button"
 
 
 def get_image_location(position: int):
@@ -341,9 +343,11 @@ class SettingsWindow(QMainWindow):
         general_settings = QWidget()
         overlay_settings = QWidget()
         about_tab = QWidget()
+        advanced_tab = QWidget()
         settings_tabs = QTabWidget()
         settings_tabs.addTab(general_settings, "General")
         settings_tabs.addTab(overlay_settings, "Overlay")
+        settings_tabs.addTab(advanced_tab, "Advanced")
         settings_tabs.addTab(about_tab, "About")
 
         self.setWindowIcon(QIcon(asset_utils.get_asset("icon.png")))
@@ -440,6 +444,12 @@ and Lunco
         overlay_layout.addRow("Choose overlay monitor", choose_monitor)
         overlay_layout.addRow("Adjust overlay transparency", self.transparency_slider)
 
+        advanced_layout = QFormLayout(advanced_tab)
+        enable_export_comp_checkbox = QCheckBox()
+        enable_sim_checkbox.setChecked(settings.setdefault(Settings.export_comp_button, False))
+        enable_export_comp_checkbox.stateChanged.connect(lambda: toggle_setting(Settings.export_comp_button))
+        advanced_layout.addRow("Enable export last comp button", enable_export_comp_checkbox)
+
         save_close_layout = QHBoxLayout()
         self.save_button = QPushButton("Save")
         self.save_button.clicked.connect(self.save)
@@ -468,6 +478,7 @@ and Lunco
         self.main_window.show_overlay()
         self.main_window.overlay.simulation_stats.setVisible(settings[Settings.enable_sim])
         self.main_window.overlay.show_button.setVisible(settings[Settings.show_tracker_button])
+        self.main_window.export_comp_action.setVisible(settings[Settings.export_comp_button])
 
 
 class SBBTracker(QMainWindow):
@@ -480,6 +491,7 @@ class SBBTracker(QMainWindow):
         self.round_indicator.setFont(round_font)
         self.player_stats = stats.PlayerStats()
         self.player_ids = []
+        self.most_recent_combat = None
 
         self.overlay = OverlayWindow(self)
         settings.setdefault(Settings.enable_overlay, False)
@@ -531,6 +543,11 @@ class SBBTracker(QMainWindow):
         settings_action = QAction(QPixmap(asset_utils.get_asset("icons/settings.png")), "&Settings", self)
         toolbar.insertAction(bug_action, settings_action)
         settings_action.triggered.connect(self.settings_window.show)
+
+        self.export_comp_action = QAction(QPixmap(asset_utils.get_asset("icons/file-export.png")), "&Export last combat", self)
+        toolbar.insertAction(bug_action, self.export_comp_action)
+        self.export_comp_action.triggered.connect(self.export_last_comp)
+        self.export_comp_action.setVisible(settings[Settings.export_comp_button])
 
         main_tabs.setCornerWidget(toolbar)
 
@@ -637,6 +654,7 @@ class SBBTracker(QMainWindow):
             self.update()
 
         self.overlay.simulation_stats.reset_chances()
+        self.most_recent_combat = state
         if settings[Settings.enable_sim]:
             if self.board_queue.qsize() == 0:
                 self.board_queue.put((state, self.player_ids[0], settings.get(Settings.number_simulations, 1000),
@@ -663,6 +681,11 @@ class SBBTracker(QMainWindow):
             self.overlay.show()
         else:
             self.overlay.hide()
+
+    def export_last_comp(self):
+        if self.most_recent_combat:
+            with open(stats.sbbtracker_folder.joinpath("last_combat.json"), "w") as file:
+                json.dump(from_state(self.most_recent_combat), file, default=lambda o: o.__dict__)
 
     def open_url(self, url_string: str):
         url = QUrl(url_string)
