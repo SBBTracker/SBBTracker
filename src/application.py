@@ -93,6 +93,8 @@ class Settings:
     live_palette = "live-palette"
     matchmaking_only = "matchmaking-only"
     simulator_position = "simulator-position"
+    number_simulations = "number-simulations"
+    number_threads = "number-threads"
 
 
 def get_image_location(position: int):
@@ -195,19 +197,22 @@ class SimulationThread(QThread):
 
     def run(self):
         while True:
-            board, playerid = self.comp_queue.get()
+            board, playerid, num_simulations, num_threads = self.comp_queue.get()
             simulation_stats = None
 
             simulator_board = asset_utils.replace_template_ids(board)
 
             try:
-                simulation_stats = simulate(simulator_board, t=4, k=250, timeout=30)
+                simulation_stats = simulate(simulator_board, t=num_threads, k=int(num_simulations / num_threads),
+                                            timeout=30)
             except SBBBSCrocException:
                 pass
             except Exception:
                 logger.exception("Error in simulation!")
                 with open(stats.sbbtracker_folder.joinpath("error_board.json"), "w") as file:
                     json.dump(from_state(simulator_board), file, default=lambda o: o.__dict__)
+
+            logging.error(from_state(simulator_board))
 
             if simulation_stats:
                 results = simulation_stats.results
@@ -305,6 +310,27 @@ class LogThread(QThread):
                 self.health_update.emit(state)
 
 
+class SliderCombo(QWidget):
+    def __init__(self, minimum, maximum, default):
+        super().__init__()
+        slider_editor = QHBoxLayout(self)
+        self.slider = QSlider(Qt.Horizontal)
+        self.editor = QLineEdit()
+        self.slider.setValue(default)
+        self.slider.setMaximum(maximum)
+        self.slider.setMinimum(minimum)
+        self.slider.valueChanged.connect(lambda val: self.editor.setText(str(val)))
+        self.editor.setValidator(QIntValidator(0, maximum))
+        self.editor.setText(str(default))
+        self.editor.textEdited.connect(
+            lambda text: self.slider.setValue(int(text)) if text != '' else None)
+        slider_editor.addWidget(self.slider)
+        slider_editor.addWidget(self.editor)
+
+    def get_value(self):
+        return int(self.editor.text()) if self.editor.text() else 0
+
+
 class SettingsWindow(QMainWindow):
     def __init__(self, main_window):
         super().__init__()
@@ -397,28 +423,21 @@ and Lunco
         choose_monitor.setCurrentIndex(settings.setdefault(Settings.monitor, 1))
         choose_monitor.currentIndexChanged.connect(self.main_window.overlay.select_monitor)
 
-        slider_editor = QHBoxLayout()
-        self.transparency_slider = QSlider(Qt.Horizontal)
-        self.transparency_editor = QLineEdit()
-        saved_scaling = settings.setdefault(Settings.boardcomp_transparency, 0)
-        self.transparency_slider.setValue(saved_scaling)
-        self.transparency_slider.setMaximum(100)
-        self.transparency_slider.setMinimum(0)
-        self.transparency_slider.valueChanged.connect(lambda val: self.transparency_editor.setText(str(val)))
-        self.transparency_editor.setValidator(QIntValidator(0, 200))
-        self.transparency_editor.setText(str(saved_scaling))
-        self.transparency_editor.textEdited.connect(
-            lambda text: self.transparency_slider.setValue(int(text)) if text != '' else None)
-        slider_editor.addWidget(self.transparency_slider)
-        slider_editor.addWidget(self.transparency_editor)
+        self.transparency_slider = SliderCombo(0, 100,  settings.setdefault(Settings.boardcomp_transparency, 0))
+
+        self.num_sims_silder = SliderCombo(0, 3000, settings.setdefault(Settings.number_simulations, 1000))
+        self.num_threads_slider = SliderCombo(0, 4, settings.setdefault(Settings.number_threads, 3))
 
         overlay_layout.addRow("Enable overlay", enable_overlay_checkbox)
-        overlay_layout.addRow("Currently the overlay only works for borderless window mode", None)
+        # overlay_layout.addRow("Currently the overlay only works for borderless window mode", None)
         overlay_layout.addRow("Enable simulator *BETA*", enable_sim_checkbox)
-        overlay_layout.addRow("Beta version of the simulator may not show all results or be accurate", None)
+        # overlay_layout.addRow("Beta version of the simulator may not show all results or be accurate", None)
+        overlay_layout.addRow("Number of simulations", self.num_sims_silder)
+        overlay_layout.addRow("Number of threads", self.num_threads_slider)
+        overlay_layout.addRow("", None)
         overlay_layout.addRow("Enable \"Show Tracker\" button", show_tracker_button_checkbox)
         overlay_layout.addRow("Choose overlay monitor", choose_monitor)
-        overlay_layout.addRow("Adjust overlay transparency", slider_editor)
+        overlay_layout.addRow("Adjust overlay transparency", self.transparency_slider)
 
         save_close_layout = QHBoxLayout()
         self.save_button = QPushButton("Save")
@@ -437,8 +456,9 @@ and Lunco
 
     def save(self):
         settings[Settings.live_palette] = self.graph_color_chooser.currentText()
-        if self.transparency_editor.text():
-            settings[Settings.boardcomp_transparency] = int(self.transparency_editor.text())
+        settings[Settings.boardcomp_transparency] = self.transparency_slider.get_value()
+        settings[Settings.number_threads] = self.num_threads_slider.get_value()
+        settings[Settings.number_simulations] = self.num_sims_silder.get_value()
 
         save_settings()
         self.hide()
@@ -618,7 +638,8 @@ class SBBTracker(QMainWindow):
         self.overlay.simulation_stats.reset_chances()
         if settings[Settings.enable_sim]:
             if self.board_queue.qsize() == 0:
-                self.board_queue.put((state, self.player_ids[0]))
+                self.board_queue.put((state, self.player_ids[0], settings.get(Settings.number_simulations, 1000),
+                                      settings.get(Settings.number_threads, 3)))
 
     def update_stats(self, starting_hero: str, player):
         if settings.get(Settings.save_stats, True) and (not settings[Settings.matchmaking_only] or self.in_matchmaking):
@@ -1101,6 +1122,7 @@ class OverlayWindow(QMainWindow):
         self.show_button.clicked.connect(self.show_hide_main_window)
         self.show_button.move(40, 40)
         self.show_button.resize(self.show_button.sizeHint().width(), self.show_button.sizeHint().height())
+        self.show_button.setVisible(settings.setdefault(Settings.show_tracker_button, True))
 
         self.disable_hovers()
 
