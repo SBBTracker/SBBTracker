@@ -314,7 +314,7 @@ class LogThread(QThread):
 
 
 class SliderCombo(QWidget):
-    def __init__(self, minimum, maximum, default):
+    def __init__(self, minimum, maximum, default, step=1):
         super().__init__()
         slider_editor = QHBoxLayout(self)
         self.slider = QSlider(Qt.Horizontal)
@@ -322,6 +322,8 @@ class SliderCombo(QWidget):
         self.slider.setMaximum(maximum)
         self.slider.setMinimum(minimum)
         self.slider.setValue(default)
+        self.slider.setSingleStep(step)
+        self.slider.setTickInterval(step)
         self.slider.valueChanged.connect(lambda val: self.editor.setText(str(val)))
         self.editor.setValidator(QIntValidator(0, maximum))
         self.editor.setText(str(default))
@@ -432,7 +434,7 @@ and Lunco
         self.comp_transparency_slider = SliderCombo(0, 100, settings.setdefault(Settings.boardcomp_transparency, 0))
         self.simulator_transparency_slider = SliderCombo(0, 100,  settings.setdefault(Settings.simulator_transparency, 0))
 
-        self.num_sims_silder = SliderCombo(100, 3000, settings.setdefault(Settings.number_simulations, 1000))
+        self.num_sims_silder = SliderCombo(100, 3000, settings.setdefault(Settings.number_simulations, 1000), 100)
         self.num_threads_slider = SliderCombo(1, 4, settings.setdefault(Settings.number_threads, 3))
 
         overlay_layout.addRow("Enable overlay (borderless window only)", enable_overlay_checkbox)
@@ -450,7 +452,7 @@ and Lunco
 
         advanced_layout = QFormLayout(advanced_tab)
         enable_export_comp_checkbox = QCheckBox()
-        enable_sim_checkbox.setChecked(settings.setdefault(Settings.export_comp_button, False))
+        enable_export_comp_checkbox.setChecked(settings.setdefault(Settings.export_comp_button, False))
         enable_export_comp_checkbox.stateChanged.connect(lambda: toggle_setting(Settings.export_comp_button))
         advanced_layout.addRow("Enable export last comp button", enable_export_comp_checkbox)
 
@@ -690,7 +692,8 @@ class SBBTracker(QMainWindow):
     def export_last_comp(self):
         if self.most_recent_combat:
             with open(stats.sbbtracker_folder.joinpath("last_combat.json"), "w") as file:
-                json.dump(from_state(self.most_recent_combat), file, default=lambda o: o.__dict__)
+                json.dump(from_state(asset_utils.replace_template_ids(self.most_recent_combat)),
+                          file, default=lambda o: o.__dict__)
 
     def open_url(self, url_string: str):
         url = QUrl(url_string)
@@ -1240,7 +1243,7 @@ class OverlayWindow(QMainWindow):
             widget.setStyleSheet(style)
 
         alpha = (100 - settings.get(Settings.simulator_transparency, 0)) / 100
-        style = f"background-color: rgba({default_bg_color_rgb}, {alpha});"
+        style = f"background-color: rgba({default_bg_color_rgb}, {alpha}); font-size: 17px"
         self.simulation_stats.setStyleSheet(style)
 
 
@@ -1259,6 +1262,11 @@ class SimulatorStats(QWidget):
         self.tie_label = QLabel("-")
         self.loss_label = QLabel("-")
         self.loss_dmg_label = QLabel("-")
+        self.win_dmg_label.setAttribute(Qt.WA_TranslucentBackground)
+        self.win_label.setAttribute(Qt.WA_TranslucentBackground)
+        self.tie_label.setAttribute(Qt.WA_TranslucentBackground)
+        self.loss_label.setAttribute(Qt.WA_TranslucentBackground)
+        self.loss_dmg_label.setAttribute(Qt.WA_TranslucentBackground)
 
         self.win_dmg = "-"
         self.win = "-"
