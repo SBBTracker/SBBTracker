@@ -85,6 +85,7 @@ display_font_family = "Impact" if log_parser.os_name == "Windows" else "Ubuntu B
 
 class Settings:
     boardcomp_transparency = "boardcomp-transparency"
+    simulator_transparency = "simulator-transparency"
     save_stats = "save-stats"
     monitor = "monitor"
     filter_ = "filter"
@@ -427,7 +428,8 @@ and Lunco
         choose_monitor.setCurrentIndex(settings.setdefault(Settings.monitor, 1))
         choose_monitor.currentIndexChanged.connect(self.main_window.overlay.select_monitor)
 
-        self.transparency_slider = SliderCombo(0, 100,  settings.setdefault(Settings.boardcomp_transparency, 0))
+        self.comp_transparency_slider = SliderCombo(0, 100, settings.setdefault(Settings.boardcomp_transparency, 0))
+        self.simulator_transparency_slider = SliderCombo(0, 100,  settings.setdefault(Settings.simulator_transparency, 0))
 
         self.num_sims_silder = SliderCombo(100, 3000, settings.setdefault(Settings.number_simulations, 1000))
         self.num_threads_slider = SliderCombo(1, 4, settings.setdefault(Settings.number_threads, 3))
@@ -442,7 +444,8 @@ and Lunco
         overlay_layout.addRow(QLabel(" "))
         overlay_layout.addRow("Enable \"Show Tracker\" button", show_tracker_button_checkbox)
         overlay_layout.addRow("Choose overlay monitor", choose_monitor)
-        overlay_layout.addRow("Adjust overlay transparency", self.transparency_slider)
+        overlay_layout.addRow("Adjust comps transparency", self.comp_transparency_slider)
+        overlay_layout.addRow("Adjust simulator transparency", self.simulator_transparency_slider)
 
         advanced_layout = QFormLayout(advanced_tab)
         enable_export_comp_checkbox = QCheckBox()
@@ -467,7 +470,8 @@ and Lunco
 
     def save(self):
         settings[Settings.live_palette] = self.graph_color_chooser.currentText()
-        settings[Settings.boardcomp_transparency] = self.transparency_slider.get_value()
+        settings[Settings.boardcomp_transparency] = self.comp_transparency_slider.get_value()
+        settings[Settings.simulator_transparency] = self.simulator_transparency_slider.get_value()
         settings[Settings.number_threads] = self.num_threads_slider.get_value()
         settings[Settings.number_simulations] = self.num_sims_silder.get_value()
 
@@ -1233,6 +1237,10 @@ class OverlayWindow(QMainWindow):
         style = f"background-color: rgba({default_bg_color_rgb}, {alpha});"
         for widget in self.comp_widgets:
             widget.setStyleSheet(style)
+
+        alpha = (100 - settings.get(Settings.simulator_transparency, 0)) / 100
+        style = f"background-color: rgba({default_bg_color_rgb}, {alpha});"
+        self.simulation_stats.setStyleSheet(style)
 
 
 class SimulatorStats(QWidget):
