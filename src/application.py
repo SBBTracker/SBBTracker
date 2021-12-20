@@ -55,6 +55,7 @@ import version
 
 from sbbbattlesim import from_state, simulate
 from sbbbattlesim.exceptions import SBBBSCrocException
+from sbb_window_utils import SBBWindowCheckThread
 
 if not stats.sbbtracker_folder.exists():
     stats.sbbtracker_folder.mkdir()
@@ -91,6 +92,7 @@ class Settings:
     filter_ = "filter"
     enable_overlay = "enable-overlay"
     enable_sim = "enable-sim"
+    hide_overlay_in_bg = "hide-overlay-in-bg"
     show_tracker_button = "show-tracker-button"
     live_palette = "live-palette"
     matchmaking_only = "matchmaking-only"
@@ -354,7 +356,7 @@ class SettingsWindow(QMainWindow):
         settings_tabs.addTab(about_tab, "About")
 
         self.setWindowIcon(QIcon(asset_utils.get_asset("icon.png")))
-        self.setWindowTitle("Settings")
+        self.setWindowTitle("SBBTracker Settings")
 
         about_layout = QVBoxLayout(about_tab)
         about_layout.addWidget(QLabel(f"""SBBTracker v{version.__version__}
@@ -411,6 +413,12 @@ and Lunco
         enable_overlay_checkbox.setChecked(settings.setdefault(Settings.enable_overlay, False))
         enable_overlay_checkbox.stateChanged.connect(lambda: toggle_setting(Settings.enable_overlay))
 
+        hide_overlay_in_bg_checkbox = QCheckBox()
+        hide_overlay_in_bg_checkbox.setChecked(settings.setdefault(Settings.hide_overlay_in_bg, True))
+        hide_overlay_in_bg_checkbox.stateChanged.connect(lambda: toggle_setting(Settings.hide_overlay_in_bg))
+
+        enable_overlay_checkbox.stateChanged.connect(lambda state: hide_overlay_in_bg_checkbox.setEnabled(bool(state)))
+
         enable_sim_checkbox = QCheckBox()
         enable_sim_checkbox.setEnabled(enable_overlay_checkbox.checkState())
         enable_sim_checkbox.setChecked(settings.setdefault(Settings.enable_sim, True))
@@ -438,6 +446,7 @@ and Lunco
         self.num_threads_slider = SliderCombo(1, 4, settings.setdefault(Settings.number_threads, 3))
 
         overlay_layout.addRow("Enable overlay (borderless window only)", enable_overlay_checkbox)
+        overlay_layout.addRow("Hide if SBB in background ", hide_overlay_in_bg_checkbox)
         overlay_layout.addRow(QLabel(" "))
         overlay_layout.addRow("Enable simulator *BETA*", enable_sim_checkbox)
         overlay_layout.addRow(QLabel("Beta version of the simulator may not show all results or be accurate"))
@@ -586,8 +595,12 @@ class SBBTracker(QMainWindow):
         self.simulation = SimulationThread(self.board_queue)
         self.simulation.end_simulation.connect(self.overlay.simulation_stats.update_chances)
 
+        self.sbb_watcher_thread = SBBWindowCheckThread()
+        self.sbb_watcher_thread.changed_foreground.connect(self.overlay.visible_in_bg)
+
         self.resize(1300, 800)
 
+        self.sbb_watcher_thread.start()
         self.log_updates.start()
         self.github_updates.start()
         self.simulation.start()
@@ -779,6 +792,7 @@ This will import all games played since SBB was last opened.
         self.github_updates.terminate()
         self.log_updates.terminate()
         self.simulation.terminate()
+        self.sbb_watcher_thread.terminate()
         self.player_stats.save()
         self.overlay.close()
         save_settings()
@@ -1122,6 +1136,7 @@ class OverlayWindow(QMainWindow):
         super().__init__()
         self.setAttribute(Qt.WA_TranslucentBackground, True)
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.SubWindow)
+        self.setWindowTitle("SBBTrackerOverlay")
 
         self.main_window = main_window
         self.monitor = None
@@ -1166,6 +1181,10 @@ class OverlayWindow(QMainWindow):
             self.main_window.showMinimized()
             self.show_button.setText("Show Tracker")
         self.show_hide = not self.show_hide
+
+    def visible_in_bg(self, visible):
+        if settings.get(Settings.hide_overlay_in_bg, True):
+            self.setVisible(visible)
 
     def disable_hovers(self):
         for hover in self.hover_regions:
@@ -1283,16 +1302,23 @@ class SimulatorStats(QWidget):
         win_dmg_title = QLabel("Dmg")
         win_percent_title = QLabel("Win")
         win_dmg_title.setStyleSheet("QLabel { color : #9FD4A3 }")
+        win_dmg_title.setAttribute(Qt.WA_TranslucentBackground)
         win_percent_title.setStyleSheet("QLabel { color : #9FD4A3 }")
+        win_percent_title.setAttribute(Qt.WA_TranslucentBackground)
 
         loss_dmg_title = QLabel("Dmg")
         loss_percent_title = QLabel("Loss")
         loss_dmg_title.setStyleSheet("QLabel { color : #e3365c }")
+        loss_dmg_title.setAttribute(Qt.WA_TranslucentBackground)
         loss_percent_title.setStyleSheet("QLabel { color : #e3365c }")
+        loss_percent_title.setAttribute(Qt.WA_TranslucentBackground)
+
+        tie_title = QLabel("Tie")
+        tie_title.setAttribute(Qt.WA_TranslucentBackground)
 
         label_layout.addWidget(win_dmg_title, 0, 0)
         label_layout.addWidget(win_percent_title, 0, 1)
-        label_layout.addWidget(QLabel("Tie"), 0, 2)
+        label_layout.addWidget(tie_title, 0, 2)
         label_layout.addWidget(loss_percent_title, 0, 3)
         label_layout.addWidget(loss_dmg_title, 0, 4)
         label_layout.addWidget(self.win_dmg_label, 1, 0)
