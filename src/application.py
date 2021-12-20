@@ -1184,7 +1184,7 @@ class OverlayWindow(QMainWindow):
         self.show_hide = not self.show_hide
 
     def visible_in_bg(self, visible):
-        if settings.get(Settings.hide_overlay_in_bg, True):
+        if settings.get(Settings.hide_overlay_in_bg, True) and settings[Settings.enable_overlay]:
             self.setVisible(visible)
 
     def disable_hovers(self):
