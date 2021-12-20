@@ -211,11 +211,12 @@ class SimulationThread(QThread):
                 simulation_stats = simulate(simulator_board, t=num_threads, k=int(num_simulations / num_threads),
                                             timeout=30)
             except SBBBSCrocException:
-                pass
+                self.end_simulation.emit("", "No", "Croc", "Support", "")
             except Exception:
                 logger.exception("Error in simulation!")
                 with open(stats.sbbtracker_folder.joinpath("error_board.json"), "w") as file:
                     json.dump(from_state(simulator_board), file, default=lambda o: o.__dict__)
+                self.end_simulation.emit("", "Err", "Err", "Err", "")
 
             logging.error(from_state(simulator_board))
 
