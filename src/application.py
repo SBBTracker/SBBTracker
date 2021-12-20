@@ -36,7 +36,8 @@ from PySide6.QtWidgets import (
     QHeaderView,
     QLabel,
     QLineEdit, QMainWindow,
-    QMenuBar, QMessageBox, QProgressBar, QPushButton, QSizePolicy, QSlider, QSpinBox, QStyle, QTabWidget, QTableWidget,
+    QMenuBar, QMessageBox, QProgressBar, QPushButton, QSizePolicy, QSlider, QSpinBox, QSplashScreen, QStyle, QTabWidget,
+    QTableWidget,
     QTableWidgetItem,
     QToolBar,
     QToolButton,
@@ -211,12 +212,12 @@ class SimulationThread(QThread):
                 simulation_stats = simulate(simulator_board, t=num_threads, k=int(num_simulations / num_threads),
                                             timeout=30)
             except SBBBSCrocException:
-                self.end_simulation.emit("", "No", "Croc", "Support", "")
+                self.end_simulation.emit("No", "Croc", "Support", "", "")
             except Exception:
                 logger.exception("Error in simulation!")
                 with open(stats.sbbtracker_folder.joinpath("error_board.json"), "w") as file:
                     json.dump(from_state(simulator_board), file, default=lambda o: o.__dict__)
-                self.end_simulation.emit("", "Err", "Err", "Err", "")
+                self.end_simulation.emit("Err", "Err", "Err", "Err", "Err")
 
             logging.error(from_state(simulator_board))
 
@@ -1406,6 +1407,9 @@ class HoverRegion(QWidget):
 def main():
     multiprocessing.freeze_support()
     app = QApplication(sys.argv)
+    pixmap = QPixmap(asset_utils.get_asset("icon.png"))
+    splash = QSplashScreen(pixmap)
+    splash.show()
     app.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.RoundPreferFloor)
     apply_stylesheet(app, theme='dark_teal.xml')
     stylesheet = app.styleSheet()
@@ -1418,6 +1422,7 @@ def main():
     app.setStyleSheet(stylesheet)
     main_window = SBBTracker()
     main_window.show()
+    splash.finish(main_window)
     sys.exit(app.exec())
 
 

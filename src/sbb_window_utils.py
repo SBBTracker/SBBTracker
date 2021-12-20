@@ -20,6 +20,13 @@ def get_settings_window():
     return FindWindow(None, "SBBTracker Settings")
 
 
+def sbb_is_visible():
+    current_window = GetForegroundWindow()
+    sbb_window = get_sbb_window()
+    return ((current_window == sbb_window) or (current_window == get_overlay_window()) or
+                       (current_window == get_tracker_window()) or (current_window == get_settings_window())) and sbb_window != 0
+
+
 class SBBWindowCheckThread(QThread):
     changed_foreground = Signal(bool)
 
@@ -28,12 +35,10 @@ class SBBWindowCheckThread(QThread):
 
     def run(self):
         prev_visible = False
+        self.changed_foreground.emit(sbb_is_visible()) #  find out on startup whether to show the overlay or not
         while True:
-            current_window = GetForegroundWindow()
-            visible = (current_window == get_sbb_window()) or (current_window == get_overlay_window()) or \
-                      (current_window == get_tracker_window()) or (current_window == get_settings_window())
+            visible = sbb_is_visible()
             if visible != prev_visible:
                 self.changed_foreground.emit(visible)
             prev_visible = visible
             time.sleep(0.5)
-
