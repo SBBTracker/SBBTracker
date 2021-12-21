@@ -4,7 +4,12 @@ import logging
 import os
 from pathlib import Path
 
-with open("../assets/template-ids.json", "r") as json_file:
+
+def get_asset(asset_name: str):
+    return str(Path(__file__).parent.joinpath(f"../assets/{asset_name}"))
+
+
+with open(get_asset("template-ids.json"), "r") as json_file:
     content_id_lookup = json.load(json_file)
 
 
@@ -31,10 +36,6 @@ def get_hero_name(template_id: str):
 
 def get_num_heroes():
     return len([v for v in content_id_lookup.values() if v['Id'].startswith("SBB_HERO")])
-
-
-def get_asset(asset_name: str):
-    return str(Path(__file__).parent.joinpath(f"../assets/{asset_name}"))
 
 
 def get_card_path(content_id: str, is_golden: bool):

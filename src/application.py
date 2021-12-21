@@ -293,7 +293,9 @@ class LogThread(QThread):
                 matchmaking = False
                 after_first_combat = False
             elif job == log_parser.JOB_INITCURRENTPLAYER:
-                current_player = state
+                if not after_first_combat:
+                    current_player = state
+                    # only save the first time
                 self.player_update.emit(state, round_number)
             elif job == log_parser.JOB_ROUNDINFO:
                 round_number = state.round_num
