@@ -55,7 +55,7 @@ import version
 if not stats.sbbtracker_folder.exists():
     stats.sbbtracker_folder.mkdir()
 logging.basicConfig(filename=stats.sbbtracker_folder.joinpath("sbbtracker.log"), filemode="w",
-                    format='%(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
+                    format='%(name)s - %(levelname)s - %(message)s', level=logging.WARNING)
 logging.getLogger().addHandler(logging.StreamHandler())
 
 from sbbbattlesim import from_state, simulate
@@ -213,7 +213,7 @@ class SimulationThread(QThread):
                 simulation_stats = simulate(simulator_board, t=num_threads, k=int(num_simulations / num_threads),
                                             timeout=30)
             except SBBBSCrocException:
-                self.end_simulation.emit("No", "Croc", "Support", "", "")
+                self.end_simulation.emit("No", "Croc", "Supp", "", "")
             except Exception:
                 logging.exception("Error in simulation!")
                 with open(stats.sbbtracker_folder.joinpath("error_board.json"), "w") as file:
