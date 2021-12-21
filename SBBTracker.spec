@@ -1,5 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
-
+from PyInstaller.utils.hooks import collect_submodules
 
 block_cipher = None
 
@@ -8,7 +8,7 @@ a = Analysis(['src/application.py'],
              pathex=[],
              binaries=[],
              datas=[],
-             hiddenimports=[],
+             hiddenimports=collect_submodules('sbbbattlesim'),
              hookspath=[],
              hooksconfig={},
              runtime_hooks=[],

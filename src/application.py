@@ -1,4 +1,3 @@
-import asyncio
 import calendar
 import datetime
 import json
@@ -7,7 +6,6 @@ import multiprocessing
 import operator
 import os
 import shutil
-import subprocess
 import sys
 import threading
 import time
@@ -54,17 +52,15 @@ import stats
 import updater
 import version
 
-from sbbbattlesim import from_state, simulate
-from sbbbattlesim.exceptions import SBBBSCrocException
-from sbb_window_utils import SBBWindowCheckThread
-
 if not stats.sbbtracker_folder.exists():
     stats.sbbtracker_folder.mkdir()
 logging.basicConfig(filename=stats.sbbtracker_folder.joinpath("sbbtracker.log"), filemode="w",
-                    format='%(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+                    format='%(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
+logging.getLogger().addHandler(logging.StreamHandler())
 
-logger = logging.getLogger("application")
-logger.addHandler(logging.StreamHandler())
+from sbbbattlesim import from_state, simulate
+from sbbbattlesim.exceptions import SBBBSCrocException
+from sbb_window_utils import SBBWindowCheckThread
 
 art_dim = (161, 204)
 att_loc = (26, 181)
@@ -155,8 +151,8 @@ def load_settings():
             with open(settings_file, "r") as json_file:
                 return json.load(json_file)
         except Exception as e:
-            logger.error("Couldn't load settings file!")
-            logger.error(str(e))
+            logging.error("Couldn't load settings file!")
+            logging.error(str(e))
     return {}
 
 
@@ -172,8 +168,8 @@ def save_settings():
             json.load(file)
         shutil.move(temp_name, settings_file)
     except Exception as e:
-        logger.error("Couldn't save settings correctly")
-        logger.error(str(e))
+        logging.error("Couldn't save settings correctly")
+        logging.error(str(e))
 
 
 def toggle_setting(setting: str):
@@ -219,12 +215,12 @@ class SimulationThread(QThread):
             except SBBBSCrocException:
                 self.end_simulation.emit("No", "Croc", "Support", "", "")
             except Exception:
-                logger.exception("Error in simulation!")
+                logging.exception("Error in simulation!")
                 with open(stats.sbbtracker_folder.joinpath("error_board.json"), "w") as file:
                     json.dump(from_state(simulator_board), file, default=lambda o: o.__dict__)
                 self.end_simulation.emit("Err", "Err", "Err", "Err", "Err")
 
-            logging.error(from_state(simulator_board))
+            logging.debug(from_state(simulator_board))
 
             if simulation_stats:
                 results = simulation_stats.results
@@ -772,7 +768,7 @@ class SBBTracker(QMainWindow):
             dialog_layout.addWidget(self.download_progress)
             dialog.show()
             dialog.update()
-            logger.info("Starting download...")
+            logging.info("Starting download...")
             updater.self_update(self.handle_progress)
             settings[Settings.show_patch_notes] = True
             self.close()
@@ -785,7 +781,7 @@ class SBBTracker(QMainWindow):
         read_data = blocknum * blocksize
         if totalsize > 0:
             download_percentage = read_data * 100 / totalsize
-            logger.info(f"Download at: {download_percentage}%")
+            logging.info(f"Download at: {download_percentage}%")
 
             self.download_progress.setValue(download_percentage)
 
@@ -812,7 +808,7 @@ This will import all games played since SBB was last opened.
             try:
                 os.remove(log_parser.offsetfile)
             except Exception as e:
-                logger.warning(str(e))
+                logging.warning(str(e))
         self.update()
 
     def closeEvent(self, *args, **kwargs):
