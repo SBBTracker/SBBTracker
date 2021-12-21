@@ -73,6 +73,7 @@ xp_loc = (137, 40)
 
 default_bg_color = "#31363b"
 default_bg_color_rgb = "49, 54, 59"
+primary_color = "#1de9b6"
 sns.set_style("darkgrid", {"axes.facecolor": default_bg_color})
 
 plt.rcParams.update({'text.color': "white",
@@ -83,6 +84,8 @@ plt.rcParams.update({'text.color': "white",
 
 round_font = QFont("Roboto", 18)
 display_font_family = "Impact" if log_parser.os_name == "Windows" else "Ubuntu Bold"
+
+patch_notes_file = stats.sbbtracker_folder.joinpath("patch_notes.txt")
 
 
 class Settings:
@@ -101,6 +104,8 @@ class Settings:
     number_simulations = "number-simulations"
     number_threads = "number-threads"
     export_comp_button = "export-comp-button"
+    # silent_updates = "silent_updates"
+    show_patch_notes = "show-patch-notes"
 
 
 def get_image_location(position: int):
@@ -544,7 +549,6 @@ class SBBTracker(QMainWindow):
         main_tabs.addTab(self.match_history, "Match History")
         main_tabs.addTab(self.stats_graph, "Stats Graphs")
 
-        # toolbar = self.titleBar
         toolbar = QToolBar(self)
         toolbar.setMinimumHeight(40)
         toolbar.setStyleSheet("QToolBar {border-bottom: none; border-top: none;}")
@@ -569,18 +573,34 @@ class SBBTracker(QMainWindow):
 
         main_tabs.setCornerWidget(toolbar)
 
+        self.update_banner = QToolBar(self)
+        self.update_banner.setMinimumHeight(40)
+        self.update_banner.setStyleSheet(f"QToolBar {{border-bottom: none; border-top: none; background: {primary_color};}}")
+        update_text = QLabel("    An update is available! Would you like to install?    ")
+        update_text.setStyleSheet(f"QLabel {{ color : {default_bg_color}; }}")
+        self.update_banner.addWidget(update_text)
+
+        yes_update = QAction("&Yes", self)
+        yes_update.triggered.connect(self.install_update)
+        no_update = QAction("&Remind me later", self)
+        no_update.triggered.connect(self.update_banner.hide)
+        self.update_banner.addAction(yes_update)
+        self.update_banner.addAction(no_update)
+        self.update_banner.hide()
+
         self.setWindowIcon(QIcon(asset_utils.get_asset("icon.png")))
 
         main_widget = QWidget()
         main_layout = QVBoxLayout(main_widget)
         main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.addWidget(self.update_banner)
         main_layout.addWidget(main_tabs)
 
         self.setCentralWidget(main_widget)
         self.setMinimumSize(QSize(1200, 800))
         self.setBaseSize(QSize(1400, 900))
         self.github_updates = updater.UpdateCheckThread()
-        self.github_updates.github_update.connect(self.github_update_popup)
+        self.github_updates.github_update.connect(self.handle_update)
 
         self.log_updates = LogThread()
         self.log_updates.comp_update.connect(self.update_comp)
@@ -607,7 +627,14 @@ class SBBTracker(QMainWindow):
         self.github_updates.start()
         self.simulation.start()
 
-        self.counter = 0
+        if settings.get(Settings.show_patch_notes, False):
+            try:
+                with open(patch_notes_file, "r") as file:
+                    patch_notes = file.read()
+                    QMessageBox.information(self, "Patch Notes", patch_notes)
+                    settings[Settings.show_patch_notes] = False
+            except Exception:
+                logging.exception("Couldn't read patch notes file!")
 
     def get_player_index(self, player_id: str):
         if player_id not in self.player_ids:
@@ -724,35 +751,32 @@ class SBBTracker(QMainWindow):
     def open_issues(self):
         self.open_url("https://github.com/SBBTracker/SBBTracker/issues")
 
-    def github_update_popup(self, update_notes: str):
-        update_msg = "Would you like to automatically download and install?" if log_parser.os_name == "Windows" else "Would you like to go to the download page?"
-        reply = QMessageBox.question(self, "New update available!",
-                                     f"""New version available!
- 
- Changes:
- 
- {update_notes}
- 
- {update_msg}""")
-        if reply == QMessageBox.Yes:
-            if log_parser.os_name == "Windows":
-                self.install_update()
-            else:
-                self.open_github_release()
+    def handle_update(self, update_avail, patch_notes):
+        if update_avail:
+            self.update_banner.show()
+            try:
+                with open(patch_notes_file, "w") as file:
+                    file.write(patch_notes)
+            except Exception:
+                logging.exception("Couldn't write patch notes!")
 
     def install_update(self):
-        dialog = QDialog(self)
-        dialog.setWindowTitle("Updater")
-        dialog_layout = QVBoxLayout(dialog)
-        self.download_progress = QProgressBar(dialog)
-        dialog_layout.addWidget(QLabel("Downloading update..."))
-        dialog_layout.addWidget(self.download_progress)
-        dialog.show()
-        dialog.update()
-        logger.info("Starting download...")
-        updater.self_update(self.handle_progress)
-        self.close()
-        sys.exit(0)
+        if log_parser.os_name == "Windows":
+            dialog = QDialog(self)
+            dialog.setWindowTitle("Updater")
+            dialog_layout = QVBoxLayout(dialog)
+            self.download_progress = QProgressBar(dialog)
+            dialog_layout.addWidget(QLabel("Downloading update..."))
+            dialog_layout.addWidget(self.download_progress)
+            dialog.show()
+            dialog.update()
+            logger.info("Starting download...")
+            updater.self_update(self.handle_progress)
+            settings[Settings.show_patch_notes] = True
+            self.close()
+            sys.exit(0)
+        else:
+            self.open_github_release()
 
     def handle_progress(self, blocknum, blocksize, totalsize):
 
@@ -1410,6 +1434,7 @@ def main():
     pixmap = QPixmap(asset_utils.get_asset("icon.png"))
     splash = QSplashScreen(pixmap)
     splash.show()
+
     app.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.RoundPreferFloor)
     apply_stylesheet(app, theme='dark_teal.xml')
     stylesheet = app.styleSheet()
@@ -1420,6 +1445,21 @@ def main():
       border: 0px;
     }""") + "QTabBar{ text-transform: none; }"
     app.setStyleSheet(stylesheet)
+
+# TODO: uncomment this when the updater doesn't require input
+
+#     if Settings.silent_updates not in settings:
+#         reply = QMessageBox.question(None, "Enable silent updates?",
+#                                      f"""Would you like to enable silent updates?
+# This will allow the application to update automatically
+# when you open it (if there's an update).
+#
+# You can change this setting at any time at:
+# Settings > Updates > Enable silent updates
+# """)
+#         settings[Settings.silent_updates] = reply == QMessageBox.Yes
+#         save_settings()
+
     main_window = SBBTracker()
     main_window.show()
     splash.finish(main_window)

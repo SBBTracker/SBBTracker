@@ -16,25 +16,23 @@ from version import __version__
 
 os_name = platform.system()
 
+latest_release_url = "https://api.github.com/repos/SBBTracker/SBBTracker/releases/latest"
 
 def check_updates():
-    update_available = False
-    while not update_available:
-        r = requests.get("https://api.github.com/repos/SBBTracker/SBBTracker/releases/latest")
-        try:
-            response = json.loads(r.text)
-            tag = response["tag_name"]
-            current_version = __version__.replace("v", "")
-            update_available = vs.parse(tag) > vs.parse(current_version)
-            if update_available:
-                return response["body"]
-        except:
-            logging.error("Couldn't parse github update")
-        time.sleep(3600)  # Check for updates every hour
+    r = requests.get(latest_release_url)
+    try:
+        response = json.loads(r.text)
+        tag = response["tag_name"]
+        current_version = __version__.replace("v", "")
+        update_available = vs.parse(tag) > vs.parse(current_version)
+        return update_available, response["body"]
+    except:
+        logging.error("Couldn't parse github update")
+        return False, "Couldn't get patch notes"
 
 
 def self_update(progress_handler):
-    release_request = requests.get("https://api.github.com/repos/SBBTracker/SBBTracker/releases/latest")
+    release_request = requests.get(latest_release_url)
     response = json.loads(release_request.text)
     download_url = None
     for asset in response["assets"]:
@@ -55,7 +53,7 @@ def self_update(progress_handler):
 
 
 class UpdateCheckThread(QThread):
-    github_update = Signal(str)
+    github_update = Signal(bool, str)
 
     def __init__(self, *args, **kwargs):
         super(UpdateCheckThread, self).__init__()
@@ -63,7 +61,13 @@ class UpdateCheckThread(QThread):
         self.kwargs = kwargs
 
     def run(self):
-        release_notes = check_updates()
+        update_available = False
+        release_notes = ""
+        while not update_available:
+            update_available, release_notes = check_updates()
+            if update_available:
+                break
+            time.sleep(3600)  # Check for updates every hour
         # wait for an update
-        self.github_update.emit(release_notes)
+        self.github_update.emit(update_available, release_notes)
 
