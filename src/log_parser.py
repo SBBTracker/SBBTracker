@@ -1,3 +1,4 @@
+import getpass
 import gzip
 import json
 import os
@@ -20,7 +21,7 @@ if os_name == 'Linux':
 elif os_name == "Windows":
     sbb_root = Path(os.environ["APPDATA"]).parent.joinpath("LocalLow/Good Luck Games/Storybook Brawl")
 elif os_name == "Darwin":
-    pass  # todo: implement Mac
+    sbb_root = Path("/System/Volumes/Data/Users/%s/library/Application Support/CrossOver/Bottles/Steam/drive_c/users/crossover/AppData/LocalLow/Good Luck Games/Storybook Brawl" % getpass.getuser())
 logfile = sbb_root.joinpath("Player.log")
 offsetfile = stats.sbbtracker_folder.joinpath("logfile.offset")
 if not stats.sbbtracker_folder.exists():
@@ -256,6 +257,7 @@ def parse(ifs):
 
     """
     for line in ifs:
+        line = str(line).replace("\\r\\n\'", "") # garbage is getting added to the lines?
         if 'NEW GAME STARTED' in line:
             yield Action(info=None, game_state=GameState.START)
         elif 'REQUEST MATCHMAKER FOR' in line:
@@ -375,9 +377,9 @@ class SBBPygtail(Pygtail):
         if not self._fh or self._is_closed():
             filename = self._rotated_logfile or self.filename
             if filename.endswith('.gz'):
-                self._fh = gzip.open(filename, 'r', encoding="utf-8")
+                self._fh = gzip.open(filename, 'rb')
             else:
-                self._fh = open(filename, "r", 1, encoding="utf-8")
+                self._fh = open(filename, "rb")
             if self.read_from_end and not exists(self._offset_file):
                 self._fh.seek(0, os.SEEK_END)
             else:
