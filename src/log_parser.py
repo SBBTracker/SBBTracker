@@ -399,7 +399,6 @@ def run(queue: Queue, log=logfile):
         for action in parse(ifs):
             if action.task == TASK_NEWGAME:
                 inbrawl = False
-                skip_extra_msgs = True
                 current_round = None
                 lastupdated = dict()
 
@@ -423,10 +422,9 @@ def run(queue: Queue, log=logfile):
             elif inbrawl and action.task == TASK_GETROUNDGATHER:
                 if action.zone in ['Spell', 'Treasure', 'Character']:
                     brawldt[action.playerid].append(action)
-            elif inbrawl and action.task == TASK_ENDROUNDGATHER:
+            elif inbrawl and action.task != TASK_GETROUNDGATHER:
                 queue.put(Update(JOB_BOARDINFO, brawldt))
                 inbrawl = False
-                skip_extra_msgs = True
             elif action.task == TASK_GETROUND:
                 queue.put(Update(JOB_ROUNDINFO, action))
             elif action.task == TASK_ENDGAME:
@@ -434,7 +432,6 @@ def run(queue: Queue, log=logfile):
                 current_player_stats = None
             elif action.task == TASK_ENDCOMBAT:
                 queue.put(Update(JOB_ENDCOMBAT, action))
-                skip_extra_msgs = False
             elif action.task == TASK_MATCHMAKING:
                 queue.put(Update(JOB_MATCHMAKING, action))
             else:

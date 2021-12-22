@@ -569,6 +569,10 @@ class SBBTracker(QMainWindow):
         self.export_comp_action.triggered.connect(self.export_last_comp)
         self.export_comp_action.setVisible(settings[Settings.export_comp_button])
 
+        patch_notes_action = QAction(QPixmap(asset_utils.get_asset("icons/information.png")), "&Patch Notes", self)
+        toolbar.insertAction(self.export_comp_action, patch_notes_action)
+        patch_notes_action.triggered.connect(self.show_patch_notes)
+
         main_tabs.setCornerWidget(toolbar)
 
         self.update_banner = QToolBar(self)
@@ -626,13 +630,7 @@ class SBBTracker(QMainWindow):
         self.simulation.start()
 
         if settings.get(Settings.show_patch_notes, False):
-            try:
-                with open(patch_notes_file, "r") as file:
-                    patch_notes = file.read()
-                    QMessageBox.information(self, "Patch Notes", patch_notes)
-                    settings[Settings.show_patch_notes] = False
-            except Exception:
-                logging.exception("Couldn't read patch notes file!")
+            self.show_patch_notes()
 
     def get_player_index(self, player_id: str):
         if player_id not in self.player_ids:
@@ -748,6 +746,15 @@ class SBBTracker(QMainWindow):
 
     def open_issues(self):
         self.open_url("https://github.com/SBBTracker/SBBTracker/issues")
+
+    def show_patch_notes(self):
+        try:
+            with open(patch_notes_file, "r") as file:
+                patch_notes = file.read()
+                QMessageBox.information(self, "Patch Notes", patch_notes)
+                settings[Settings.show_patch_notes] = False
+        except Exception:
+            logging.exception("Couldn't read patch notes file!")
 
     def handle_update(self, update_avail, patch_notes):
         if update_avail:
