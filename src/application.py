@@ -629,9 +629,6 @@ class SBBTracker(QMainWindow):
         self.github_updates.start()
         self.simulation.start()
 
-        if settings.get(Settings.show_patch_notes, False):
-            self.show_patch_notes()
-
     def get_player_index(self, player_id: str):
         if player_id not in self.player_ids:
             self.player_ids.append(player_id)
@@ -1468,6 +1465,8 @@ def main():
     main_window = SBBTracker()
     main_window.show()
     splash.finish(main_window)
+    if settings.get(Settings.show_patch_notes, False):
+        main_window.show_patch_notes()
     sys.exit(app.exec())
 
 
