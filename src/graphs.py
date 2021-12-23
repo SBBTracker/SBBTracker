@@ -110,12 +110,14 @@ def hero_freq_graph(df: pd.DataFrame, ax):
         matches = sorted_df.groupby("StartingHero").count()["Placement"].values
         sort_by_wins = matches.argsort()[::-1]
         heroes = heroes[sort_by_wins]
-        ax.barh(heroes, matches[sort_by_wins], .8, color='tab:red')
-        ind = range(max(matches) + 1)
-        ax.invert_yaxis()
-        ax.grid(axis='y')
-        ax.set_xticks(ind)
-        ax.set_title("Matches per Hero")
+        if len(matches) > 0:
+            # catches old data
+            ax.barh(heroes, matches[sort_by_wins], .8, color='tab:red')
+            ind = range(max(matches) + 1)
+            ax.invert_yaxis()
+            ax.grid(axis='y')
+            ax.set_xticks(ind)
+            ax.set_title("Matches per Hero")
 
     return plt.gcf()
 
