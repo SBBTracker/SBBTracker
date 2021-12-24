@@ -236,14 +236,18 @@ class SimulationThread(QThread):
                 win_percent = round(len(win_damages) / len(results) * 100, 2)
                 tie_percent = round(len(tie_damages) / len(results) * 100, 2)
                 loss_percent = round(len(loss_damages) / len(results) * 100, 2)
-                win_10th_percentile, win_90th_percentile = (0, 0) if (len(win_damages) == 0) \
-                    else np.percentile(win_damages, [10, 90])
-                loss_10th_percentile, loss_90th_percentile = (0, 0) if (len(loss_damages) == 0) \
-                    else np.percentile(loss_damages, [10, 90])
+                # win_10th_percentile, win_90th_percentile = (0, 0) if (len(win_damages) == 0) \
+                #     else np.percentile(win_damages, [10, 90])
+                # loss_10th_percentile, loss_90th_percentile = (0, 0) if (len(loss_damages) == 0) \
+                #     else np.percentile(loss_damages, [10, 90])
 
-                self.end_simulation.emit(str(win_percent), str(tie_percent), str(loss_percent),
-                                         f"{int(win_10th_percentile)} - {int(win_90th_percentile)}",
-                                         f"{int(loss_10th_percentile)} - {int(loss_90th_percentile)}")
+                win_string = str(win_percent) + "%"
+                tie_string = str(tie_percent) + "%"
+                loss_string = str(loss_percent) + "%"
+                win_dmg_string = str(round(np.mean(win_damages), 1) if win_percent > 0 else 0)
+                loss_dmg_string = str(round(np.mean(loss_damages), 1) if loss_percent > 0 else 0)
+
+                self.end_simulation.emit(win_string, tie_string, loss_string, win_dmg_string, loss_dmg_string)
             time.sleep(1)
 
 
@@ -1294,6 +1298,18 @@ class OverlayWindow(QMainWindow):
         self.simulation_stats.setStyleSheet(style)
 
 
+class SimStatWidget(QFrame):
+    def __init__(self, parent, title, value):
+        super().__init__(parent)
+        self.title = title
+        self.value = value
+
+        layout = QVBoxLayout(self)
+        layout.addWidget(title, alignment=Qt.AlignVCenter)
+        layout.addWidget(value, alignment=Qt.AlignVCenter)
+        self.setFixedWidth(80)
+
+
 class SimulatorStats(QWidget):
     def __init__(self, parent):
         super().__init__(parent)
@@ -1323,9 +1339,8 @@ class SimulatorStats(QWidget):
         self.displayable = False
 
         background = QFrame(self)
-        layout = QVBoxLayout(background)
 
-        label_layout = QGridLayout()
+        label_layout = QGridLayout(background)
 
         win_dmg_title = QLabel("Dmg")
         win_percent_title = QLabel("Win")
@@ -1344,27 +1359,15 @@ class SimulatorStats(QWidget):
         tie_title = QLabel("Tie")
         tie_title.setAttribute(Qt.WA_TranslucentBackground)
 
-        label_layout.addWidget(win_dmg_title, 0, 0)
-        label_layout.addWidget(win_percent_title, 0, 1)
-        label_layout.addWidget(tie_title, 0, 2)
-        label_layout.addWidget(loss_percent_title, 0, 3)
-        label_layout.addWidget(loss_dmg_title, 0, 4)
-        label_layout.addWidget(self.win_dmg_label, 1, 0)
-        label_layout.addWidget(self.win_label, 1, 1)
-        label_layout.addWidget(self.tie_label, 1, 2)
-        label_layout.addWidget(self.loss_label, 1, 3)
-        label_layout.addWidget(self.loss_dmg_label, 1, 4)
-        label_layout.setSpacing(20)
-        label_layout.setColumnMinimumWidth(0, 60)
-        label_layout.setColumnMinimumWidth(1, 40)
-        label_layout.setColumnMinimumWidth(2, 30)
-        label_layout.setColumnMinimumWidth(3, 40)
-        label_layout.setColumnMinimumWidth(4, 60)
+        label_layout.addWidget(SimStatWidget(self, win_dmg_title, self.win_dmg_label), 0, 0)
+        label_layout.addWidget(SimStatWidget(self, win_percent_title, self.win_label), 0, 1)
+        label_layout.addWidget(SimStatWidget(self, tie_title, self.tie_label), 0, 2)
+        label_layout.addWidget(SimStatWidget(self, loss_percent_title, self.loss_label), 0, 3)
+        label_layout.addWidget(SimStatWidget(self, loss_dmg_title, self.loss_dmg_label), 0, 4)
+        label_layout.setSpacing(0)
+        label_layout.setContentsMargins(0, 0, 0, 0)
 
-        layout.addLayout(label_layout)
-        layout.addStretch()
-
-        self.setMinimumSize(1100, 400)
+        self.setMinimumSize(5 * 80 + 100, 100)
 
     def reset_chances(self):
         self.win_dmg = "-"
