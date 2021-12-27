@@ -19,8 +19,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 import seaborn as sns
-from PySide6.QtCore import QObject, QPoint, QRect, QSettings, QSize, QThread, QUrl, Qt, Signal
-from PySide6.QtGui import QAction, QBrush, QColor, QCursor, QDesktopServices, QFont, QFontMetrics, QGuiApplication, \
+from PySide6.QtCore import QPoint, QRect, QSize, QThread, QUrl, Qt, Signal
+from PySide6.QtGui import QAction, QBrush, QColor, QDesktopServices, QFont, QFontMetrics, QGuiApplication, \
     QIcon, \
     QIntValidator, \
     QPainter, QPainterPath, \
@@ -28,17 +28,15 @@ from PySide6.QtGui import QAction, QBrush, QColor, QCursor, QDesktopServices, QF
     QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView, QApplication,
-    QCheckBox, QComboBox, QDialog, QDoubleSpinBox, QErrorMessage, QFileDialog, QFormLayout, QFrame,
-    QGraphicsDropShadowEffect,
+    QCheckBox, QComboBox, QDialog, QFileDialog, QFormLayout, QFrame,
     QGridLayout, QHBoxLayout,
     QHeaderView,
     QLabel,
     QLineEdit, QMainWindow,
-    QMenuBar, QMessageBox, QProgressBar, QPushButton, QSizePolicy, QSlider, QSpinBox, QSplashScreen, QStyle, QTabWidget,
+    QMessageBox, QProgressBar, QPushButton, QSizePolicy, QSlider ,QSplashScreen, QTabWidget,
     QTableWidget,
     QTableWidgetItem,
     QToolBar,
-    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -51,6 +49,7 @@ import log_parser
 import stats
 import updater
 import version
+import settings
 
 if not stats.sbbtracker_folder.exists():
     stats.sbbtracker_folder.mkdir()
@@ -82,26 +81,6 @@ round_font = QFont("Roboto", 18)
 display_font_family = "Impact" if log_parser.os_name == "Windows" else "Ubuntu Bold"
 
 patch_notes_file = stats.sbbtracker_folder.joinpath("patch_notes.txt")
-
-
-class Settings:
-    boardcomp_transparency = "boardcomp-transparency"
-    simulator_transparency = "simulator-transparency"
-    save_stats = "save-stats"
-    monitor = "monitor"
-    filter_ = "filter"
-    enable_overlay = "enable-overlay"
-    enable_sim = "enable-sim"
-    hide_overlay_in_bg = "hide-overlay-in-bg"
-    show_tracker_button = "show-tracker-button"
-    live_palette = "live-palette"
-    matchmaking_only = "matchmaking-only"
-    simulator_position = "simulator-position"
-    number_simulations = "number-simulations"
-    number_threads = "number-threads"
-    export_comp_button = "export-comp-button"
-    # silent_updates = "silent_updates"
-    show_patch_notes = "show-patch-notes"
 
 
 def get_image_location(position: int):
@@ -140,40 +119,6 @@ def update_table(table: QTableWidget, data: list[list]):
         for column in range(len(data[0])):
             datum = (data[row][column])
             table.setItem(row, column, QTableWidgetItem(str(datum)))
-
-
-settings_file = stats.sbbtracker_folder.joinpath("settings.json")
-
-
-def load_settings():
-    if settings_file.exists():
-        try:
-            with open(settings_file, "r") as json_file:
-                return json.load(json_file)
-        except Exception as e:
-            logging.error("Couldn't load settings file!")
-            logging.error(str(e))
-    return {}
-
-
-settings = load_settings()
-
-
-def save_settings():
-    with NamedTemporaryFile(delete=False, mode='w', newline='') as temp_file:
-        json.dump(settings, temp_file)
-        temp_name = temp_file.name
-    try:
-        with open(temp_name) as file:
-            json.load(file)
-        shutil.move(temp_name, settings_file)
-    except Exception as e:
-        logging.error("Couldn't save settings correctly")
-        logging.error(str(e))
-
-
-def toggle_setting(setting: str):
-    settings[setting] = not settings[setting]
 
 
 today = date.today()
@@ -347,7 +292,7 @@ class SliderCombo(QWidget):
         return int(self.editor.text()) if self.editor.text() else 0
 
 
-class SettingsWindow(QMainWindow):
+class settingsWindow(QMainWindow):
     def __init__(self, main_window):
         super().__init__()
         self.hide()
@@ -365,7 +310,7 @@ class SettingsWindow(QMainWindow):
         settings_tabs.addTab(about_tab, "About")
 
         self.setWindowIcon(QIcon(asset_utils.get_asset("icon.png")))
-        self.setWindowTitle("SBBTracker Settings")
+        self.setWindowTitle("SBBTracker settings")
 
         about_layout = QVBoxLayout(about_tab)
         about_layout.addWidget(QLabel(f"""SBBTracker v{version.__version__}
@@ -395,19 +340,19 @@ and Lunco
         delete_button.clicked.connect(lambda: main_window.delete_stats(self))
 
         save_stats_checkbox = QCheckBox()
-        save_stats_checkbox.setChecked(settings.setdefault(Settings.save_stats, True))
-        save_stats_checkbox.stateChanged.connect(lambda: toggle_setting(Settings.save_stats))
+        save_stats_checkbox.setChecked(settings.get(settings.save_stats))
+        save_stats_checkbox.stateChanged.connect(lambda: settings.toggle(settings.save_stats))
 
         self.graph_color_chooser = QComboBox()
         palettes = list(graphs.color_palettes.keys())
         self.graph_color_chooser.addItems(palettes)
-        self.graph_color_chooser.setCurrentIndex(palettes.index(settings.get(Settings.live_palette, "vibrant")))
+        self.graph_color_chooser.setCurrentIndex(palettes.index(settings.get(settings.live_palette)))
         self.graph_color_chooser.currentTextChanged.connect(main_window.live_graphs.set_color_palette)
 
         matchmaking_only_checkbox = QCheckBox()
-        matchmaking_only_checkbox.setChecked(settings.setdefault(Settings.matchmaking_only, False))
+        matchmaking_only_checkbox.setChecked(settings.get(settings.matchmaking_only))
         matchmaking_only_checkbox.setEnabled(save_stats_checkbox.checkState())
-        matchmaking_only_checkbox.stateChanged.connect(lambda: toggle_setting(Settings.matchmaking_only))
+        matchmaking_only_checkbox.stateChanged.connect(lambda: settings.toggle(settings.matchmaking_only))
 
         save_stats_checkbox.stateChanged.connect(lambda state: matchmaking_only_checkbox.setEnabled(bool(state)))
 
@@ -419,40 +364,40 @@ and Lunco
 
         overlay_layout = QFormLayout(overlay_settings)
         enable_overlay_checkbox = QCheckBox()
-        enable_overlay_checkbox.setChecked(settings.setdefault(Settings.enable_overlay, False))
-        enable_overlay_checkbox.stateChanged.connect(lambda: toggle_setting(Settings.enable_overlay))
+        enable_overlay_checkbox.setChecked(settings.get(settings.enable_overlay))
+        enable_overlay_checkbox.stateChanged.connect(lambda: settings.toggle(settings.enable_overlay))
 
         hide_overlay_in_bg_checkbox = QCheckBox()
-        hide_overlay_in_bg_checkbox.setChecked(settings.setdefault(Settings.hide_overlay_in_bg, True))
-        hide_overlay_in_bg_checkbox.stateChanged.connect(lambda: toggle_setting(Settings.hide_overlay_in_bg))
+        hide_overlay_in_bg_checkbox.setChecked(settings.get(settings.hide_overlay_in_bg))
+        hide_overlay_in_bg_checkbox.stateChanged.connect(lambda: settings.toggle(settings.hide_overlay_in_bg))
 
         enable_overlay_checkbox.stateChanged.connect(lambda state: hide_overlay_in_bg_checkbox.setEnabled(bool(state)))
 
         enable_sim_checkbox = QCheckBox()
         enable_sim_checkbox.setEnabled(enable_overlay_checkbox.checkState())
-        enable_sim_checkbox.setChecked(settings.setdefault(Settings.enable_sim, True))
-        enable_sim_checkbox.stateChanged.connect(lambda: toggle_setting(Settings.enable_sim))
+        enable_sim_checkbox.setChecked(settings.get(settings.enable_sim))
+        enable_sim_checkbox.stateChanged.connect(lambda: settings.toggle(settings.enable_sim))
 
         enable_overlay_checkbox.stateChanged.connect(lambda state: enable_sim_checkbox.setEnabled(bool(state)))
 
         show_tracker_button_checkbox = QCheckBox()
         show_tracker_button_checkbox.setEnabled(enable_overlay_checkbox.checkState())
-        show_tracker_button_checkbox.setChecked(settings.setdefault(Settings.show_tracker_button, True))
-        show_tracker_button_checkbox.stateChanged.connect(lambda: toggle_setting(Settings.show_tracker_button))
+        show_tracker_button_checkbox.setChecked(settings.get(settings.show_tracker_button))
+        show_tracker_button_checkbox.stateChanged.connect(lambda: settings.toggle(settings.show_tracker_button))
 
         enable_overlay_checkbox.stateChanged.connect(lambda state: show_tracker_button_checkbox.setEnabled(bool(state)))
 
         choose_monitor = QComboBox()
         monitors = QGuiApplication.screens()
         choose_monitor.addItems([f"Monitor {i + 1}" for i in range(0, len(monitors))])
-        choose_monitor.setCurrentIndex(settings.setdefault(Settings.monitor, 1))
+        choose_monitor.setCurrentIndex(settings.get(settings.monitor))
         choose_monitor.currentIndexChanged.connect(self.main_window.overlay.select_monitor)
 
-        self.comp_transparency_slider = SliderCombo(0, 100, settings.setdefault(Settings.boardcomp_transparency, 0))
-        self.simulator_transparency_slider = SliderCombo(0, 100,  settings.setdefault(Settings.simulator_transparency, 0))
+        self.comp_transparency_slider = SliderCombo(0, 100, settings.get(settings.boardcomp_transparency))
+        self.simulator_transparency_slider = SliderCombo(0, 100,  settings.get(settings.simulator_transparency))
 
-        self.num_sims_silder = SliderCombo(100, 3000, settings.setdefault(Settings.number_simulations, 1000), 100)
-        self.num_threads_slider = SliderCombo(1, 4, settings.setdefault(Settings.number_threads, 3))
+        self.num_sims_silder = SliderCombo(100, 3000, settings.get(settings.number_simulations, 1000))
+        self.num_threads_slider = SliderCombo(1, 4, settings.get(settings.number_threads))
 
         overlay_layout.addRow("Enable overlay (borderless window only)", enable_overlay_checkbox)
         overlay_layout.addRow("Hide if SBB in background ", hide_overlay_in_bg_checkbox)
@@ -470,8 +415,8 @@ and Lunco
 
         advanced_layout = QFormLayout(advanced_tab)
         enable_export_comp_checkbox = QCheckBox()
-        enable_export_comp_checkbox.setChecked(settings.setdefault(Settings.export_comp_button, False))
-        enable_export_comp_checkbox.stateChanged.connect(lambda: toggle_setting(Settings.export_comp_button))
+        enable_export_comp_checkbox.setChecked(settings.get(settings.export_comp_button))
+        enable_export_comp_checkbox.stateChanged.connect(lambda: settings.toggle(settings.export_comp_button))
         advanced_layout.addRow("Enable export last comp button", enable_export_comp_checkbox)
 
         save_close_layout = QHBoxLayout()
@@ -490,20 +435,20 @@ and Lunco
         self.setFixedSize(600, 600)
 
     def save(self):
-        settings[Settings.live_palette] = self.graph_color_chooser.currentText()
-        settings[Settings.boardcomp_transparency] = self.comp_transparency_slider.get_value()
-        settings[Settings.simulator_transparency] = self.simulator_transparency_slider.get_value()
-        settings[Settings.number_threads] = self.num_threads_slider.get_value()
-        settings[Settings.number_simulations] = self.num_sims_silder.get_value()
+        settings.set_(settings.live_palette, self.graph_color_chooser.currentText())
+        settings.set_(settings.boardcomp_transparency, self.comp_transparency_slider.get_value())
+        settings.set_(settings.simulator_transparency, self.simulator_transparency_slider.get_value())
+        settings.set_(settings.number_threads, self.num_threads_slider.get_value())
+        settings.set_(settings.number_simulations, self.num_sims_silder.get_value())
 
-        save_settings()
+        settings.save()
         self.hide()
         self.main_window.overlay.update_monitor()
         self.main_window.overlay.set_transparency()
         self.main_window.show_overlay()
-        self.main_window.overlay.simulation_stats.setVisible(settings[Settings.enable_sim])
-        self.main_window.overlay.show_button.setVisible(settings[Settings.show_tracker_button])
-        self.main_window.export_comp_action.setVisible(settings[Settings.export_comp_button])
+        self.main_window.overlay.simulation_stats.setVisible(settings.get(settings.enable_sim))
+        self.main_window.overlay.show_button.setVisible(settings.get(settings.show_tracker_button))
+        self.main_window.export_comp_action.setVisible(settings.get(settings.export_comp_button))
 
 
 class SBBTracker(QMainWindow):
@@ -519,7 +464,7 @@ class SBBTracker(QMainWindow):
         self.most_recent_combat = None
 
         self.overlay = OverlayWindow(self)
-        settings.setdefault(Settings.enable_overlay, False)
+        settings.get(settings.enable_overlay)
         self.show_overlay()
         self.in_matchmaking = False
 
@@ -563,15 +508,15 @@ class SBBTracker(QMainWindow):
         toolbar.insertAction(discord_action, bug_action)
         bug_action.triggered.connect(self.open_issues)
 
-        self.settings_window = SettingsWindow(self)
-        settings_action = QAction(QPixmap(asset_utils.get_asset("icons/settings.png")), "&Settings", self)
+        self.settings_window = settingsWindow(self)
+        settings_action = QAction(QPixmap(asset_utils.get_asset("icons/settings.png")), "&settings", self)
         toolbar.insertAction(bug_action, settings_action)
         settings_action.triggered.connect(self.settings_window.show)
 
         self.export_comp_action = QAction(QPixmap(asset_utils.get_asset("icons/file-export.png")), "&Export last combat", self)
         toolbar.insertAction(bug_action, self.export_comp_action)
         self.export_comp_action.triggered.connect(self.export_last_comp)
-        self.export_comp_action.setVisible(settings[Settings.export_comp_button])
+        self.export_comp_action.setVisible(settings.get(settings.export_comp_button))
 
         patch_notes_action = QAction(QPixmap(asset_utils.get_asset("icons/information.png")), "&Patch Notes", self)
         toolbar.insertAction(self.export_comp_action, patch_notes_action)
@@ -701,13 +646,13 @@ class SBBTracker(QMainWindow):
 
         self.overlay.simulation_stats.reset_chances()
         self.most_recent_combat = state
-        if settings[Settings.enable_sim]:
+        if settings.get(settings.enable_sim):
             if self.board_queue.qsize() == 0:
-                self.board_queue.put((state, self.player_ids[0], settings.get(Settings.number_simulations, 1000),
-                                      settings.get(Settings.number_threads, 3)))
+                self.board_queue.put((state, self.player_ids[0], settings.get(settings.number_simulations, 1000),
+                                      settings.get(settings.number_threads, 3)))
 
     def update_stats(self, starting_hero: str, player):
-        if settings.get(Settings.save_stats, True) and (not settings[Settings.matchmaking_only] or self.in_matchmaking):
+        if settings.get(settings.save_stats, True) and (not settings.get(settings.matchmaking_only) or self.in_matchmaking):
             place = player.place if int(player.health) <= 0 else "1"
             self.player_stats.update_stats(starting_hero, asset_utils.get_hero_name(player.heroid),
                                            place, player.mmr)
@@ -723,7 +668,7 @@ class SBBTracker(QMainWindow):
         places.insert(new_place - 1, index)
 
     def show_overlay(self):
-        if settings[Settings.enable_overlay]:
+        if settings.get(settings.enable_overlay):
             self.overlay.show()
         else:
             self.overlay.hide()
@@ -753,7 +698,7 @@ class SBBTracker(QMainWindow):
             with open(patch_notes_file, "r") as file:
                 patch_notes = file.read()
                 QMessageBox.information(self, "Patch Notes", patch_notes)
-                settings[Settings.show_patch_notes] = False
+                settings.set_(settings.show_patch_notes, False)
         except Exception:
             logging.exception("Couldn't read patch notes file!")
 
@@ -778,7 +723,7 @@ class SBBTracker(QMainWindow):
             dialog.update()
             logging.info("Starting download...")
             updater.self_update(self.handle_progress)
-            settings[Settings.show_patch_notes] = True
+            settings.set_(settings.show_patch_notes, True)
             self.close()
             sys.exit(0)
         else:
@@ -827,7 +772,7 @@ This will import all games played since SBB was last opened.
         self.sbb_watcher_thread.terminate()
         self.player_stats.save()
         self.overlay.close()
-        save_settings()
+        settings.save()
 
 
 class BoardComp(QWidget):
@@ -940,10 +885,10 @@ class MatchHistory(QWidget):
         self.match_history_table = QTableWidget(stats.stats_per_page, 4)
         self.page = 1
         self.display_starting_hero = 0
-        self.filter_ = settings.setdefault(Settings.filter_, "All Matches")
+        self.filter_ = settings.get(settings.filter_)
         if self.filter_ not in default_dates:
             self.filter_ = "All Matches"
-            settings[Settings.filter_] = self.filter_
+            settings.set_(settings.filter_, self.filter_)
         self.match_history_table.setHorizontalHeaderLabels(["Starting Hero", "Ending Hero", "Place", "+/- MMR"])
         self.match_history_table.setColumnWidth(0, 140)
         self.match_history_table.setColumnWidth(1, 140)
@@ -1068,7 +1013,7 @@ QTabBar::tab:right{
 
     def filter_stats(self):
         self.filter_ = self.filter_combo.currentText()
-        settings[Settings.filter_] = self.filter_
+        settings.set_(settings.filter_, self.filter_)
         self.update_stats_table()
 
     def sort_stats(self, index: int):
@@ -1085,7 +1030,7 @@ class LiveGraphs(QWidget):
     def __init__(self):
         super().__init__()
         self.layout = QVBoxLayout(self)
-        self.user_palette = settings.setdefault(Settings.live_palette, "paired")
+        self.user_palette = settings.get(settings.live_palette)
         self.states = None
 
         self.health_canvas = FigureCanvasQTAgg(plt.Figure(figsize=(13.5, 18)))
@@ -1174,10 +1119,10 @@ class OverlayWindow(QMainWindow):
         self.monitor = None
         self.scale_factor = (1, 1)
         self.dpi_scale = 1
-        self.select_monitor(settings.get("monitor", 0))
+        self.select_monitor(settings.get(settings.monitor))
         self.hover_regions = [HoverRegion(self, *map(operator.mul, hover_size, self.scale_factor)) for _ in range(0, 8)]
         self.simulation_stats = SimulatorStats(self)
-        self.simulation_stats.setVisible(settings.get(Settings.enable_sim, True))
+        self.simulation_stats.setVisible(settings.get(settings.enable_sim, True))
         self.update_monitor()
 
         self.show_hide = True
@@ -1201,7 +1146,7 @@ class OverlayWindow(QMainWindow):
         self.show_button.clicked.connect(self.show_hide_main_window)
         self.show_button.move(40, 40)
         self.show_button.resize(self.show_button.sizeHint().width(), self.show_button.sizeHint().height())
-        self.show_button.setVisible(settings.setdefault(Settings.show_tracker_button, True))
+        self.show_button.setVisible(settings.get(settings.show_tracker_button))
 
         self.disable_hovers()
 
@@ -1215,7 +1160,7 @@ class OverlayWindow(QMainWindow):
         self.show_hide = not self.show_hide
 
     def visible_in_bg(self, visible):
-        if settings.get(Settings.hide_overlay_in_bg, True) and settings[Settings.enable_overlay]:
+        if settings.get(settings.hide_overlay_in_bg) and settings.get(settings.enable_overlay):
             self.setVisible(visible)
 
     def disable_hovers(self):
@@ -1252,7 +1197,7 @@ class OverlayWindow(QMainWindow):
         # if the number of monitors is reduced, just pick the first monitor by default
         adjusted_index = index if index < len(screens) else 0
         self.monitor = QGuiApplication.screens()[adjusted_index]
-        settings[Settings.monitor] = adjusted_index
+        settings.set_(settings.monitor, adjusted_index)
 
     def update_monitor(self):
         self.dpi_scale = (self.monitor.logicalDotsPerInch() / 96)
@@ -1262,10 +1207,10 @@ class OverlayWindow(QMainWindow):
         self.scale_factor = tuple(map(operator.truediv, self.monitor.size().toTuple(), base_size))
         self.update_hovers()
 
-        simulator_position = settings.setdefault(Settings.simulator_position, (self.real_size[0] / 2 - 100, 0))
+        simulator_position = settings.get(settings.simulator_position, (self.real_size[0] / 2 - 100, 0))
         if simulator_position[0] > self.real_size[0] or simulator_position[1] > self.real_size[1]:
             simulator_position = (self.real_size[0] / 2 - 100, 0)
-            settings[Settings.simulator_position] = simulator_position
+            settings.set_(settings.simulator_position, simulator_position)
         self.simulation_stats.move(*simulator_position)
 
     def update_hovers(self):
@@ -1288,14 +1233,20 @@ class OverlayWindow(QMainWindow):
         self.update()
 
     def set_transparency(self):
-        alpha = (100 - settings.get(Settings.boardcomp_transparency, 0)) / 100
+        alpha = (100 - settings.get(settings.boardcomp_transparency, 0)) / 100
         style = f"background-color: rgba({default_bg_color_rgb}, {alpha});"
         for widget in self.comp_widgets:
             widget.setStyleSheet(style)
 
-        alpha = (100 - settings.get(Settings.simulator_transparency, 0)) / 100
+        alpha = (100 - settings.get(settings.simulator_transparency, 0)) / 100
         style = f"background-color: rgba({default_bg_color_rgb}, {alpha}); font-size: 17px"
         self.simulation_stats.setStyleSheet(style)
+
+    def toggle_transparency(self):
+        if settings.get(settings.streaming_mode):
+            self.setWindowFlags(self.windowFlags() | Qt.SubWindow)
+        else:
+            self.setWindowFlags(Qt.SubWindow)
 
 
 class SimStatWidget(QFrame):
@@ -1411,7 +1362,7 @@ class SimulatorStats(QWidget):
                       (event.globalPosition().toPoint() - self._mousePos))
 
     def mouseReleaseEvent(self, event):
-        settings[Settings.simulator_position] = self.pos().toTuple()
+        settings.set_(settings.simulator_position, self.pos().toTuple())
 
 
 class HoverRegion(QWidget):
@@ -1453,22 +1404,22 @@ def main():
 
 # TODO: uncomment this when the updater doesn't require input
 
-#     if Settings.silent_updates not in settings:
+#     if settings.silent_updates not in settings:
 #         reply = QMessageBox.question(None, "Enable silent updates?",
 #                                      f"""Would you like to enable silent updates?
 # This will allow the application to update automatically
 # when you open it (if there's an update).
 #
 # You can change this setting at any time at:
-# Settings > Updates > Enable silent updates
+# settings > Updates > Enable silent updates
 # """)
-#         settings[Settings.silent_updates] = reply == QMessageBox.Yes
-#         save_settings()
+#         settings.set(settings.silent_updates, reply == QMessageBox.Yes)
+#         settings.save()
 
     main_window = SBBTracker()
     main_window.show()
     splash.finish(main_window)
-    if settings.get(Settings.show_patch_notes, False):
+    if settings.get(settings.show_patch_notes, False):
         main_window.show_patch_notes()
     sys.exit(app.exec())
 
