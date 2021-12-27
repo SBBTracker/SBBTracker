@@ -2,13 +2,12 @@ name: Release messages to discord announcement channel
 
 on: 
   release:
-    types:
-      - created
+    types: [published]
 
 jobs:
   run_main:
-    runs-on: ubuntu-18.04
-    name: Sends custom message
+    runs-on: ubuntu-latest
+    name: Sends release details to discord
     steps:
       - name: Sending message
         uses: nhevia/discord-styled-releases@main
