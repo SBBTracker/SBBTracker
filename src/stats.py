@@ -13,6 +13,7 @@ import asset_utils
 
 sbbtracker_folder = Path(expanduser('~/Documents')).joinpath("SBBTracker")
 statsfile = Path(expanduser('~/Documents')).joinpath("SBBTracker/stats.csv")
+backup_statsfile = Path(str(statsfile) + "_backup")
 if not sbbtracker_folder.exists():
     sbbtracker_folder.mkdir()
 
@@ -20,6 +21,8 @@ headings = ["Hero", "# Matches", "Avg Place", "Top 4", "Wins", "Net MMR"]
 stats_per_page = 20
 
 pd.options.mode.chained_assignment = None
+
+stats_columns = ['StartingHero', 'EndingHero', 'Placement', 'Timestamp', '+/-MMR']
 
 
 def sorting_key(sort_col: int):
@@ -43,9 +46,15 @@ class PlayerStats:
         if os.path.exists(statsfile):
             try:
                 self.df = pd.read_csv(str(statsfile))
-            except Exception as e:
-                logging.error(e)
-                self.df = pd.DataFrame(columns=['StartingHero', 'EndingHero', 'Placement', 'Timestamp', '+/-MMR'])
+                if not set(stats_columns).issubset(self.df.columns):
+                    self.df = pd.read_csv(backup_statsfile)
+            except:
+                logging.exception("Error loading stats file. Attempting to load backup.")
+                try:
+                    self.df = pd.read_csv(backup_statsfile)
+                except:
+                    logging.exception("Couldn't load backup. Starting a new stats file")
+                    self.df = pd.DataFrame(columns=stats_columns)
             if 'Timestamp' not in self.df.columns:
                 #  Pre-timestamp data gets an empty-timestamp column
                 self.df["Timestamp"] = "1973-01-01"
@@ -56,32 +65,30 @@ class PlayerStats:
                 #  Legacy data
                 self.df = self.df.rename({'Hero': "EndingHero"}, axis='columns')
                 self.df["StartingHero"] = " "
-                self.df = self.df[["StartingHero", "EndingHero", "Placement", "Timestamp", "+/-MMR"]]
+                self.df = self.df[stats_columns]
             #  clean up empty timestamps into some old time (that I thought was unix epoch but was off by 3 years lol)
             self.df['Timestamp'] = self.df['Timestamp'].replace(r'^\s*$', "1973-01-01", regex=True)
         else:
-            self.df = pd.DataFrame(columns=['StartingHero', 'EndingHero', 'Placement', 'Timestamp', '+/-MMR'])
+            self.df = pd.DataFrame(columns=stats_columns)
 
     def export(self, filepath: Path):
+        os.replace(statsfile, str(backup_statsfile))
         with NamedTemporaryFile(delete=False, mode='w', newline='') as temp_file:
             self.df.to_csv(temp_file, index=False)
             temp_name = temp_file.name
         try:
             with open(temp_name) as file:
-                pd.read_csv(file)
-            shutil.move(temp_name, filepath)
+                df = pd.read_csv(file)
+            if set(stats_columns).issubset(df.columns):
+                shutil.move(temp_name, filepath)
         except:
-            logging.error("Couldn't save settings correctly")
+            logging.exception("Couldn't save settings correctly")
 
     def save(self):
         self.export(statsfile)
 
     def delete(self):
         self.df = pd.DataFrame(columns=['StartingHero', 'EndingHero', 'Placement', 'Timestamp'])
-        try:
-            os.rename(statsfile, str(statsfile) + "_backup")
-        except:
-            logging.warning("Unable to move old stats file!")
 
     def get_num_pages(self):
         return math.ceil(len(self.df.index) / stats_per_page)
