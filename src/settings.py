@@ -45,6 +45,8 @@ number_threads = Setting("number-threads", 3)
 export_comp_button = Setting("export-comp-button", False)
 show_patch_notes = Setting("show-patch-notes", False)
 streaming_mode = Setting("streaming-mode", False)
+stream_overlay_color = Setting("stream-overlay-color", "#FF00FF")
+enable_comps = Setting("enable-comps", True)
 
 
 def get(setting: Setting, default=None):

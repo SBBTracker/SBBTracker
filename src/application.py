@@ -5,6 +5,7 @@ import logging
 import multiprocessing
 import operator
 import os
+import re
 import shutil
 import sys
 import threading
@@ -33,7 +34,7 @@ from PySide6.QtWidgets import (
     QHeaderView,
     QLabel,
     QLineEdit, QMainWindow,
-    QMessageBox, QProgressBar, QPushButton, QSizePolicy, QSlider ,QSplashScreen, QTabWidget,
+    QMessageBox, QProgressBar, QPushButton, QScrollArea, QSizePolicy, QSlider, QSplashScreen, QTabWidget,
     QTableWidget,
     QTableWidgetItem,
     QToolBar,
@@ -292,7 +293,27 @@ class SliderCombo(QWidget):
         return int(self.editor.text()) if self.editor.text() else 0
 
 
-class settingsWindow(QMainWindow):
+class HexColorEdit(QWidget):
+    def __init__(self, default):
+        super().__init__()
+        layout = QHBoxLayout(self)
+        self.editor = QLineEdit()
+        color_box = QWidget()
+        color_box.setMinimumSize(40, 40)
+        layout.addWidget(self.editor)
+        layout.addWidget(color_box)
+
+        self.editor.textEdited.connect(lambda text: self.update_color(text, color_box))
+        self.editor.setText(default)
+
+    def update_color(self, text: str, widget: QWidget):
+        valid_hex_color = re.search(r'^#(?:[0-9a-fA-F]{3}){1,2}$', text)
+
+        if valid_hex_color:
+            widget.setStyleSheet(f"background-color: {text} ;")
+
+
+class SettingsWindow(QMainWindow):
     def __init__(self, main_window):
         super().__init__()
         self.hide()
@@ -301,12 +322,16 @@ class settingsWindow(QMainWindow):
         main_layout = QVBoxLayout(main_widget)
         general_settings = QWidget()
         overlay_settings = QWidget()
+        overlay_settings_scroll = QScrollArea(widgetResizable=True)
+        overlay_settings_scroll.setWidget(overlay_settings)
         about_tab = QWidget()
         advanced_tab = QWidget()
+        streaming_tab = QWidget()
         settings_tabs = QTabWidget()
         settings_tabs.addTab(general_settings, "General")
-        settings_tabs.addTab(overlay_settings, "Overlay")
+        settings_tabs.addTab(overlay_settings_scroll, "Overlay")
         settings_tabs.addTab(advanced_tab, "Advanced")
+        settings_tabs.addTab(streaming_tab, "Streaming")
         settings_tabs.addTab(about_tab, "About")
 
         self.setWindowIcon(QIcon(asset_utils.get_asset("icon.png")))
@@ -387,11 +412,19 @@ and Lunco
 
         enable_overlay_checkbox.stateChanged.connect(lambda state: show_tracker_button_checkbox.setEnabled(bool(state)))
 
+        enable_comps = QCheckBox()
+        enable_comps.setEnabled(enable_overlay_checkbox.checkState())
+        enable_comps.setChecked(settings.get(settings.enable_comps))
+        enable_comps.stateChanged.connect(lambda: settings.toggle(settings.enable_comps))
+
+        enable_overlay_checkbox.stateChanged.connect(lambda state: enable_comps.setEnabled(bool(state)))
+
         choose_monitor = QComboBox()
         monitors = QGuiApplication.screens()
         choose_monitor.addItems([f"Monitor {i + 1}" for i in range(0, len(monitors))])
         choose_monitor.setCurrentIndex(settings.get(settings.monitor))
         choose_monitor.currentIndexChanged.connect(self.main_window.overlay.select_monitor)
+        choose_monitor.currentIndexChanged.connect(self.main_window.streamer_overlay.select_monitor)
 
         self.comp_transparency_slider = SliderCombo(0, 100, settings.get(settings.boardcomp_transparency))
         self.simulator_transparency_slider = SliderCombo(0, 100,  settings.get(settings.simulator_transparency))
@@ -400,7 +433,7 @@ and Lunco
         self.num_threads_slider = SliderCombo(1, 4, settings.get(settings.number_threads))
 
         overlay_layout.addRow("Enable overlay (borderless window only)", enable_overlay_checkbox)
-        overlay_layout.addRow("Hide if SBB in background ", hide_overlay_in_bg_checkbox)
+        overlay_layout.addRow("Hide if SBB in background (restart to take effect)", hide_overlay_in_bg_checkbox)
         overlay_layout.addRow(QLabel(" "))
         overlay_layout.addRow("Enable simulator *BETA*", enable_sim_checkbox)
         overlay_layout.addRow(QLabel("Beta version of the simulator may not show all results or be accurate"))
@@ -409,6 +442,7 @@ and Lunco
         overlay_layout.addRow(QLabel("More threads = faster simulation but takes more computing power"))
         overlay_layout.addRow(QLabel(" "))
         overlay_layout.addRow("Enable \"Show Tracker\" button", show_tracker_button_checkbox)
+        overlay_layout.addRow("Enable board comps", enable_comps)
         overlay_layout.addRow("Choose overlay monitor", choose_monitor)
         overlay_layout.addRow("Adjust comps transparency", self.comp_transparency_slider)
         overlay_layout.addRow("Adjust simulator transparency", self.simulator_transparency_slider)
@@ -418,6 +452,17 @@ and Lunco
         enable_export_comp_checkbox.setChecked(settings.get(settings.export_comp_button))
         enable_export_comp_checkbox.stateChanged.connect(lambda: settings.toggle(settings.export_comp_button))
         advanced_layout.addRow("Enable export last comp button", enable_export_comp_checkbox)
+
+        streaming_layout = QFormLayout(streaming_tab)
+        enable_stream_overlay = QCheckBox()
+        enable_stream_overlay.setChecked(settings.get(settings.streaming_mode))
+        enable_stream_overlay.stateChanged.connect(lambda: settings.toggle(settings.streaming_mode))
+
+        self.stream_overlay_color = HexColorEdit(settings.get(settings.stream_overlay_color))
+        streaming_layout.addRow("Show capturable overlay window", enable_stream_overlay)
+        streaming_layout.addRow("Background color", self.stream_overlay_color)
+        streaming_layout.addRow(QLabel("Enabling this will add a copy of the overlay behind your other windows."))
+        streaming_layout.addRow(QLabel("You can select capture this window in OBS and chroma-key filter the chosen background color"))
 
         save_close_layout = QHBoxLayout()
         self.save_button = QPushButton("Save")
@@ -440,12 +485,22 @@ and Lunco
         settings.set_(settings.simulator_transparency, self.simulator_transparency_slider.get_value())
         settings.set_(settings.number_threads, self.num_threads_slider.get_value())
         settings.set_(settings.number_simulations, self.num_sims_silder.get_value())
+        settings.set_(settings.stream_overlay_color, self.stream_overlay_color.editor.text())
 
         settings.save()
         self.hide()
         self.main_window.overlay.update_monitor()
         self.main_window.overlay.set_transparency()
-        self.main_window.show_overlay()
+        if not settings.get(settings.hide_overlay_in_bg) or self.main_window.overlay.visible:
+            self.main_window.show_overlay()
+        if settings.get(settings.streaming_mode):
+            self.main_window.streamer_overlay.show()
+            self.main_window.streamer_overlay.centralWidget().setStyleSheet(
+                f"QWidget#overlay {{background-color: { settings.get(settings.stream_overlay_color)}}}")
+        else:
+            self.main_window.streamer_overlay.hide()
+        self.main_window.overlay.set_comps_enabled(settings.get(settings.enable_comps))
+        self.main_window.streamer_overlay.set_comps_enabled(settings.get(settings.enable_comps))
         self.main_window.overlay.simulation_stats.setVisible(settings.get(settings.enable_sim))
         self.main_window.overlay.show_button.setVisible(settings.get(settings.show_tracker_button))
         self.main_window.export_comp_action.setVisible(settings.get(settings.export_comp_button))
@@ -464,8 +519,12 @@ class SBBTracker(QMainWindow):
         self.most_recent_combat = None
 
         self.overlay = OverlayWindow(self)
+        self.streamer_overlay = StreamerOverlayWindow(self)
+        self.overlay.stream_overlay = self.streamer_overlay
         settings.get(settings.enable_overlay)
         self.show_overlay()
+        if settings.get(settings.streaming_mode):
+            self.streamer_overlay.show()
         self.in_matchmaking = False
 
         self.comp_tabs = QTabWidget()
@@ -508,7 +567,7 @@ class SBBTracker(QMainWindow):
         toolbar.insertAction(discord_action, bug_action)
         bug_action.triggered.connect(self.open_issues)
 
-        self.settings_window = settingsWindow(self)
+        self.settings_window = SettingsWindow(self)
         settings_action = QAction(QPixmap(asset_utils.get_asset("icons/settings.png")), "&settings", self)
         toolbar.insertAction(bug_action, settings_action)
         settings_action.triggered.connect(self.settings_window.show)
@@ -560,6 +619,7 @@ class SBBTracker(QMainWindow):
         self.log_updates.stats_update.connect(self.update_stats)
         self.log_updates.player_info_update.connect(self.live_graphs.update_graph)
         self.log_updates.player_info_update.connect(self.overlay.update_placements)
+        self.log_updates.player_info_update.connect(self.streamer_overlay.update_placements)
         self.log_updates.new_game.connect(self.new_game)
         self.log_updates.health_update.connect(self.update_health)
         self.log_updates.end_combat.connect(self.end_combat)
@@ -567,6 +627,7 @@ class SBBTracker(QMainWindow):
         self.board_queue = Queue()
         self.simulation = SimulationThread(self.board_queue)
         self.simulation.end_simulation.connect(self.overlay.simulation_stats.update_chances)
+        self.simulation.end_simulation.connect(self.streamer_overlay.simulation_stats.update_chances)
 
         self.sbb_watcher_thread = SBBWindowCheckThread()
         self.sbb_watcher_thread.changed_foreground.connect(self.overlay.visible_in_bg)
@@ -595,15 +656,17 @@ class SBBTracker(QMainWindow):
             comp.current_round = 0
             comp.last_seen = None
 
-            overlay_comp = self.overlay.comps[index]
-            overlay_comp.composition = None
-            overlay_comp.player = None
-            overlay_comp.current_round = 0
-            overlay_comp.last_seen = None
-        self.overlay.simulation_stats.reset_chances()
+            for overlay in [self.overlay, self.streamer_overlay]:
+                overlay_comp = overlay.comps[index]
+                overlay_comp.composition = None
+                overlay_comp.player = None
+                overlay_comp.current_round = 0
+                overlay_comp.last_seen = None
+                overlay.simulation_stats.reset_chances()
 
     def end_combat(self):
         self.overlay.simulation_stats.update_labels()
+        self.streamer_overlay.simulation_stats.update_labels()
 
     def get_comp(self, index: int):
         return self.comps[index]
@@ -625,6 +688,8 @@ class SBBTracker(QMainWindow):
         comp.current_round = round_number
         self.overlay.comps[index].current_round = round_number
         self.overlay.new_places[int(player.place) - 1] = index
+        self.streamer_overlay.comps[index].current_round = round_number
+        self.streamer_overlay.new_places[int(player.place) - 1] = index
 
         self.update()
 
@@ -642,9 +707,11 @@ class SBBTracker(QMainWindow):
             comp.composition = board
             comp.last_seen = round_number
             self.overlay.update_comp(index, board, round_number)
+            self.streamer_overlay.update_comp(index, board, round_number)
             self.update()
 
         self.overlay.simulation_stats.reset_chances()
+        self.streamer_overlay.simulation_stats.reset_chances()
         self.most_recent_combat = state
         if settings.get(settings.enable_sim):
             if self.board_queue.qsize() == 0:
@@ -1115,20 +1182,27 @@ class OverlayWindow(QMainWindow):
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.SubWindow)
         self.setWindowTitle("SBBTrackerOverlay")
 
+        main_widget = QWidget()
+        main_widget.setObjectName("overlay")
+        main_widget.setStyleSheet("QWidget#overlay {background-color: rgba(0, 0, 0, 0);}")
+
+        self.show_comps = settings.get(settings.enable_comps)
         self.main_window = main_window
+        self.stream_overlay = None
         self.monitor = None
+        self.visible = True
         self.scale_factor = (1, 1)
         self.dpi_scale = 1
         self.select_monitor(settings.get(settings.monitor))
-        self.hover_regions = [HoverRegion(self, *map(operator.mul, hover_size, self.scale_factor)) for _ in range(0, 8)]
-        self.simulation_stats = SimulatorStats(self)
+        self.hover_regions = [HoverRegion(main_widget, *map(operator.mul, hover_size, self.scale_factor)) for _ in range(0, 8)]
+        self.simulation_stats = SimulatorStats(main_widget)
         self.simulation_stats.setVisible(settings.get(settings.enable_sim, True))
         self.update_monitor()
 
         self.show_hide = True
 
         self.comps = [BoardComp() for _ in range(0, 8)]
-        self.comp_widgets = [QFrame(self) for _ in range(0, 8)]
+        self.comp_widgets = [QFrame(main_widget) for _ in range(0, 8)]
         self.places = list(range(0, 8))
         self.new_places = list(range(0, 8))
         for index in range(len(self.comps)):
@@ -1142,11 +1216,13 @@ class OverlayWindow(QMainWindow):
             widget.move(round(self.size().width() / 2 - 100), 0)
         self.set_transparency()
 
-        self.show_button = QPushButton("Show Tracker", self)
+        self.show_button = QPushButton("Show Tracker", main_widget)
         self.show_button.clicked.connect(self.show_hide_main_window)
         self.show_button.move(40, 40)
         self.show_button.resize(self.show_button.sizeHint().width(), self.show_button.sizeHint().height())
         self.show_button.setVisible(settings.get(settings.show_tracker_button))
+
+        self.setCentralWidget(main_widget)
 
         self.disable_hovers()
 
@@ -1161,23 +1237,31 @@ class OverlayWindow(QMainWindow):
 
     def visible_in_bg(self, visible):
         if settings.get(settings.hide_overlay_in_bg) and settings.get(settings.enable_overlay):
+            self.visible = visible
             self.setVisible(visible)
+
+    def set_comps_enabled(self, state: bool):
+        self.show_comps = state
+        if state:
+            self.enable_hovers()
+        else:
+            self.disable_hovers()
 
     def disable_hovers(self):
         for hover in self.hover_regions:
             hover.setVisible(False)
 
     def enable_hovers(self):
-        for hover in self.hover_regions:
-            hover.setVisible(True)
+        if self.show_comps:
+            for hover in self.hover_regions:
+                hover.setVisible(True)
 
-    def show_comp(self, index):
+    def show_hide_comp(self, index, show_or_hide: bool):
         widget = self.comp_widgets[self.places[index]]
-        widget.setVisible(True)
-
-    def hide_comp(self, index):
-        widget = self.comp_widgets[self.places[index]]
-        widget.setVisible(False)
+        widget.setVisible(show_or_hide)
+        if self.stream_overlay:
+            streamer_widget = self.stream_overlay.comp_widgets[self.places[index]]
+            streamer_widget.setVisible(show_or_hide)
 
     def update_comp(self, index, player, round_number):
         comp = self.comps[index]
@@ -1212,11 +1296,11 @@ class OverlayWindow(QMainWindow):
             simulator_position = (self.real_size[0] / 2 - 100, 0)
             settings.set_(settings.simulator_position, simulator_position)
         self.simulation_stats.move(*simulator_position)
+        if self.stream_overlay:
+            self.stream_overlay.update_monitor()
 
     def update_hovers(self):
-        size = self.monitor.size()
-
-        true_scale = (self.scale_factor[0] * self.dpi_scale, self.scale_factor[1] * self.dpi_scale,)
+        true_scale = (self.scale_factor[0] * self.dpi_scale, self.scale_factor[1] * self.dpi_scale)
 
         for i in range(len(self.hover_regions)):
             hover = self.hover_regions[i]
@@ -1228,8 +1312,8 @@ class OverlayWindow(QMainWindow):
             new_size = tuple(map(operator.mul, hover_size, true_scale))
             hover.resize(*new_size)
             hover.background.setMinimumSize(*new_size)
-            hover.enter_hover.connect(lambda y=i: self.show_comp(y))
-            hover.leave_hover.connect(lambda y=i: self.hide_comp(y))
+            hover.enter_hover.connect(lambda y=i: self.show_hide_comp(y, True))
+            hover.leave_hover.connect(lambda y=i: self.show_hide_comp(y, False))
         self.update()
 
     def set_transparency(self):
@@ -1247,6 +1331,28 @@ class OverlayWindow(QMainWindow):
             self.setWindowFlags(self.windowFlags() | Qt.SubWindow)
         else:
             self.setWindowFlags(Qt.SubWindow)
+
+
+class StreamerOverlayWindow(OverlayWindow):
+    def __init__(self, main_window):
+        super().__init__(main_window)
+        self.setAttribute(Qt.WA_TranslucentBackground, False)
+        self.setWindowFlags(self.windowFlags() &
+                            ~Qt.WindowStaysOnTopHint & ~Qt.SubWindow
+                            | Qt.WindowStaysOnBottomHint)
+        self.centralWidget().setStyleSheet(f"QWidget#overlay {{background-color: { settings.get(settings.stream_overlay_color)} ;}}")
+        self.show_button.hide()
+        self.disable_hovers()
+
+    def set_transparency(self):
+        alpha = 1
+        style = f"background-color: rgba({default_bg_color_rgb}, {alpha});"
+        for widget in self.comp_widgets:
+            widget.setStyleSheet(style)
+
+        alpha = 1
+        style = f"background-color: rgba({default_bg_color_rgb}, {alpha}); font-size: 17px"
+        self.simulation_stats.setStyleSheet(style)
 
 
 class SimStatWidget(QFrame):
