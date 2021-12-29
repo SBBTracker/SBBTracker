@@ -725,6 +725,7 @@ class SBBTracker(QMainWindow):
                                            place, player.mmr)
             self.match_history.update_history_table()
             self.match_history.update_stats_table()
+            self.player_stats.save()
         self.overlay.disable_hovers()
 
     def update_health(self, player):
