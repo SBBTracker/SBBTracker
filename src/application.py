@@ -281,11 +281,13 @@ class SliderCombo(QWidget):
         self.slider.setValue(default)
         self.slider.setSingleStep(step)
         self.slider.setTickInterval(step)
+        self.slider.setMinimumWidth(100)
         self.slider.valueChanged.connect(lambda val: self.editor.setText(str(val)))
         self.editor.setValidator(QIntValidator(0, maximum))
         self.editor.setText(str(default))
         self.editor.textEdited.connect(
             lambda text: self.slider.setValue(int(text)) if text != '' else None)
+        self.editor.setMinimumWidth(100)
         slider_editor.addWidget(self.slider)
         slider_editor.addWidget(self.editor)
 
