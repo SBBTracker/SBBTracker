@@ -704,10 +704,15 @@ class SBBTracker(QMainWindow):
             comp = self.get_comp(index)
 
             player = comp.player
-            if player:
-                board.append(comp.player)
-                player.zone = "Hero"
-                player.content_id = player.heroid
+            board_player = None
+            for char in board:
+                if char.zone == "Hero":
+                    board_player = char
+                    break
+            if player and board_player:
+                board_player.level = player.level
+            else:
+                board_player.level = 0
             comp.composition = board
             comp.last_seen = round_number
             self.overlay.update_comp(index, board, round_number)

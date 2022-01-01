@@ -421,7 +421,7 @@ def run(queue: Queue, log=logfile):
                 lastupdated[action.player1] = current_round
                 lastupdated[action.player2] = current_round
             elif inbrawl and action.task == TASK_GETROUNDGATHER:
-                if action.zone in ['Spell', 'Treasure', 'Character']:
+                if action.zone in ['Spell', 'Treasure', 'Character', 'Hero']:
                     brawldt[action.playerid].append(action)
             elif inbrawl and action.task != TASK_GETROUNDGATHER:
                 queue.put(Update(JOB_BOARDINFO, brawldt))
