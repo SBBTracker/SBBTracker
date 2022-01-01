@@ -54,7 +54,7 @@ import settings
 
 if not stats.sbbtracker_folder.exists():
     stats.sbbtracker_folder.mkdir()
-logging.basicConfig(filename=stats.sbbtracker_folder.joinpath("sbbtracker.log"), filemode="w",
+logging.basicConfig(filename=stats.sbbtracker_folder.joinpath("sbbtracker.log"), filemode="a",
                     format='%(name)s - %(levelname)s - %(message)s', level=logging.WARNING)
 logging.getLogger().addHandler(logging.StreamHandler())
 
@@ -160,6 +160,8 @@ class SimulationThread(QThread):
                                             timeout=30)
             except SBBBSCrocException:
                 self.end_simulation.emit("No", "Croc", "Supp", "", "")
+            except TimeoutError:
+                self.end_simulation.emit("Time", "Out", "Err", "", "")
             except Exception:
                 logging.exception("Error in simulation!")
                 with open(stats.sbbtracker_folder.joinpath("error_board.json"), "w") as file:
@@ -570,7 +572,7 @@ class SBBTracker(QMainWindow):
         bug_action.triggered.connect(self.open_issues)
 
         self.settings_window = SettingsWindow(self)
-        settings_action = QAction(QPixmap(asset_utils.get_asset("icons/settings.png")), "&settings", self)
+        settings_action = QAction(QPixmap(asset_utils.get_asset("icons/settings.png")), "&Settings", self)
         toolbar.insertAction(bug_action, settings_action)
         settings_action.triggered.connect(self.settings_window.show)
 
