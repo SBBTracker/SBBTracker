@@ -49,3 +49,18 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\bin\{#MyAppExeName}"; Tasks
 [Run]
 Filename: "{app}\bin\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall
 
+[Code]
+procedure CurUninstallStepChanged (CurUninstallStep: TUninstallStep);
+var
+   mres : integer;
+begin
+  case CurUninstallStep of                   
+    usPostUninstall:
+      begin
+        mres := MsgBox('Do you want delete ALL saved data (settings and match history)?', mbConfirmation, MB_YESNO or MB_DEFBUTTON2)
+        if mres = IDYES then
+          DelTree(ExpandConstant('{%USERPROFILE}\Documents\SBBTracker'), True, True, True);
+     end;
+ end;
+end;
+
