@@ -40,6 +40,7 @@ show_tracker_button = Setting("show-tracker-button", True)
 live_palette = Setting("live-palette", "paired")
 matchmaking_only = Setting("matchmaking-only", False)
 simulator_position = Setting("simulator-position", (0, 0))
+turn_indicator_position = Setting("turn-indicator-position", (0, 0))
 number_simulations = Setting("number-simulations", 1000)
 number_threads = Setting("number-threads", 3)
 export_comp_button = Setting("export-comp-button", False)
@@ -47,6 +48,7 @@ show_patch_notes = Setting("show-patch-notes", False)
 streaming_mode = Setting("streaming-mode", False)
 stream_overlay_color = Setting("stream-overlay-color", "#FF00FF")
 enable_comps = Setting("enable-comps", True)
+enable_turn_display = Setting("enable-turn-display", True)
 
 
 def get(setting: Setting, default=None):
@@ -66,7 +68,7 @@ def toggle(setting: Setting):
 
 def save():
     with NamedTemporaryFile(delete=False, mode='w', newline='') as temp_file:
-        json.dump(settings_dict, temp_file)
+        json.dump(settings_dict, temp_file, indent=2)
         temp_name = temp_file.name
     try:
         with open(temp_name) as file:

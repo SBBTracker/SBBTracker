@@ -426,6 +426,13 @@ and Lunco
 
         enable_overlay_checkbox.stateChanged.connect(lambda state: enable_comps.setEnabled(bool(state)))
 
+        enable_turn_display = QCheckBox()
+        enable_turn_display.setEnabled(enable_overlay_checkbox.checkState())
+        enable_turn_display.setChecked(settings.get(settings.enable_turn_display))
+        enable_turn_display.stateChanged.connect(lambda: settings.toggle(settings.enable_turn_display))
+
+        enable_overlay_checkbox.stateChanged.connect(lambda state: enable_turn_display.setEnabled(bool(state)))
+
         choose_monitor = QComboBox()
         monitors = QGuiApplication.screens()
         choose_monitor.addItems([f"Monitor {i + 1}" for i in range(0, len(monitors))])
@@ -450,6 +457,7 @@ and Lunco
         overlay_layout.addRow(QLabel(" "))
         overlay_layout.addRow("Enable \"Show Tracker\" button", show_tracker_button_checkbox)
         overlay_layout.addRow("Enable board comps", enable_comps)
+        overlay_layout.addRow("Enable turn display", enable_turn_display)
         overlay_layout.addRow("Choose overlay monitor", choose_monitor)
         overlay_layout.addRow("Adjust comps transparency", self.comp_transparency_slider)
         overlay_layout.addRow("Adjust simulator transparency", self.simulator_transparency_slider)
@@ -510,6 +518,7 @@ and Lunco
         self.main_window.streamer_overlay.set_comps_enabled(settings.get(settings.enable_comps))
         self.main_window.overlay.simulation_stats.setVisible(settings.get(settings.enable_sim))
         self.main_window.overlay.show_button.setVisible(settings.get(settings.show_tracker_button))
+        self.main_window.overlay.turn_display.setVisible(settings.get(settings.enable_turn_display))
         self.main_window.export_comp_action.setVisible(settings.get(settings.export_comp_button))
 
 
@@ -654,6 +663,7 @@ class SBBTracker(QMainWindow):
     def new_game(self, matchmaking):
         self.player_ids.clear()
         self.overlay.enable_hovers()
+        self.overlay.turn_display.setVisible(settings.get(settings.enable_turn_display))
         self.in_matchmaking = matchmaking
         for index in range(0, 8):
             self.comp_tabs.tabBar().setTabTextColor(index, "white")
@@ -681,6 +691,7 @@ class SBBTracker(QMainWindow):
     def update_round_num(self, round_number):
         self.round_indicator.setText(f"Turn {round_number} ({round_to_xp(round_number)})")
         self.round_indicator.update()
+        self.overlay.update_round(round_number)
 
     def update_player(self, player, round_number):
         index = self.get_player_index(player.playerid)
@@ -739,6 +750,7 @@ class SBBTracker(QMainWindow):
             self.match_history.update_stats_table()
             self.player_stats.save()
         self.overlay.disable_hovers()
+        self.overlay.turn_display.setVisible(False)
 
     def update_health(self, player):
         index = self.get_player_index(player.playerid)
@@ -1203,7 +1215,9 @@ class OverlayWindow(QMainWindow):
         self.select_monitor(settings.get(settings.monitor))
         self.hover_regions = [HoverRegion(main_widget, *map(operator.mul, hover_size, self.scale_factor)) for _ in range(0, 8)]
         self.simulation_stats = SimulatorStats(main_widget)
-        self.simulation_stats.setVisible(settings.get(settings.enable_sim, True))
+        self.simulation_stats.setVisible(settings.get(settings.enable_sim))
+        self.turn_display = TurnDisplay(main_widget)
+        self.turn_display.setVisible(False)
         self.update_monitor()
 
         self.show_hide = True
@@ -1270,6 +1284,11 @@ class OverlayWindow(QMainWindow):
             streamer_widget = self.stream_overlay.comp_widgets[self.places[index]]
             streamer_widget.setVisible(show_or_hide)
 
+    def update_round(self, round_num):
+        self.turn_display.update_label(f"Turn {round_num} ({round_to_xp(round_num)})")
+        if self.stream_overlay:
+            self.stream_overlay.update_round(round_num)
+
     def update_comp(self, index, player, round_number):
         comp = self.comps[index]
         comp.composition = player
@@ -1298,11 +1317,16 @@ class OverlayWindow(QMainWindow):
         self.scale_factor = tuple(map(operator.truediv, self.monitor.size().toTuple(), base_size))
         self.update_hovers()
 
-        simulator_position = settings.get(settings.simulator_position, (self.real_size[0] / 2 - 100, 0))
-        if simulator_position[0] > self.real_size[0] or simulator_position[1] > self.real_size[1]:
-            simulator_position = (self.real_size[0] / 2 - 100, 0)
-            settings.set_(settings.simulator_position, simulator_position)
-        self.simulation_stats.move(*simulator_position)
+        sim_pos = settings.get(settings.simulator_position, (self.real_size[0] / 2 - 100, 0))
+        if sim_pos[0] > self.real_size[0] or sim_pos[1] > self.real_size[1]:
+            sim_pos = (self.real_size[0] / 2 - 100, 0)
+            settings.set_(settings.simulator_position, sim_pos)
+        self.simulation_stats.move(*sim_pos)
+        turn_pos = settings.get(settings.turn_indicator_position, (self.real_size[0] - 100, 0))
+        if turn_pos[0] > self.real_size[0] or turn_pos[1] > self.real_size[1]:
+            turn_pos = (self.real_size[0] - 100, 0)
+            settings.set_(settings.turn_indicator_position, turn_pos)
+        self.turn_display.move(*turn_pos)
         if self.stream_overlay:
             self.stream_overlay.update_monitor()
 
@@ -1374,9 +1398,32 @@ class SimStatWidget(QFrame):
         self.setFixedWidth(80)
 
 
-class SimulatorStats(QWidget):
-    def __init__(self, parent):
+class MovableWidget(QWidget):
+    def __init__(self, parent, setting: settings.Setting):
         super().__init__(parent)
+        self.setting = setting
+
+    def set_setting(self, setting):
+        self.setting = setting
+
+    def mousePressEvent(self, event):
+        self._mousePressed = True
+        self._mousePos = event.globalPosition().toPoint()
+        self._windowPos = self.pos()
+
+    def mouseMoveEvent(self, event):
+        if self._mousePressed and (Qt.LeftButton & event.buttons()):
+            self.move(self._windowPos +
+                      (event.globalPosition().toPoint() - self._mousePos))
+
+    def mouseReleaseEvent(self, event):
+        if self.setting:
+            settings.set_(self.setting, self.pos().toTuple())
+
+
+class SimulatorStats(MovableWidget):
+    def __init__(self, parent):
+        super().__init__(parent, settings.simulator_position)
         self.parent = parent
         self.setStyleSheet(f"background-color: {default_bg_color}; font-size: 17px")
 
@@ -1464,18 +1511,19 @@ class SimulatorStats(QWidget):
         self.loss_dmg_label.setText(self.loss_dmg)
         self.displayable = True
 
-    def mousePressEvent(self, event):
-        self._mousePressed = True
-        self._mousePos = event.globalPosition().toPoint()
-        self._windowPos = self.pos()
 
-    def mouseMoveEvent(self, event):
-        if self._mousePressed and (Qt.LeftButton & event.buttons()):
-            self.move(self._windowPos +
-                      (event.globalPosition().toPoint() - self._mousePos))
+class TurnDisplay(MovableWidget):
+    def __init__(self, parent):
+        super().__init__(parent, settings.turn_indicator_position)
+        layout = QVBoxLayout(self)
+        self.label = QLabel("Turn 0 (0.0)")
+        self.label.setStyleSheet(f"QWidget {{ background-color: {default_bg_color}}};")
+        self.label.setFont(QFont("Roboto", 30))
+        layout.addWidget(self.label)
+        self.label.setMinimumSize(200, 50)
 
-    def mouseReleaseEvent(self, event):
-        settings.set_(settings.simulator_position, self.pos().toTuple())
+    def update_label(self, text):
+        self.label.setText(text)
 
 
 class HoverRegion(QWidget):
