@@ -203,7 +203,7 @@ class LogThread(QThread):
     round_update = Signal(int)
     player_update = Signal(object, int)
     comp_update = Signal(object, int)
-    stats_update = Signal(str, object)
+    stats_update = Signal(str, object, str)
     player_info_update = Signal(graphs.LivePlayerStates)
     health_update = Signal(object)
     new_game = Signal(bool)
@@ -226,6 +226,7 @@ class LogThread(QThread):
         states = graphs.LivePlayerStates()
         matchmaking = False
         after_first_combat = False
+        session_id = None
         while True:
             update = queue.get()
             job = update.job
@@ -240,6 +241,7 @@ class LogThread(QThread):
                 self.round_update.emit(0)
                 matchmaking = False
                 after_first_combat = False
+                session_id = state.session_id
             elif job == log_parser.JOB_INITCURRENTPLAYER:
                 if not after_first_combat:
                     current_player = state
@@ -266,8 +268,9 @@ class LogThread(QThread):
                 counter = 0
             elif job == log_parser.JOB_ENDGAME:
                 self.end_combat.emit()
-                if state and current_player:
-                    self.stats_update.emit(asset_utils.get_hero_name(current_player.heroid), state)
+                if state and current_player and session_id:
+                    self.stats_update.emit(asset_utils.get_hero_name(current_player.heroid), state, session_id)
+                session_id = None
             elif job == log_parser.JOB_HEALTHUPDATE:
                 self.health_update.emit(state)
 
@@ -727,11 +730,11 @@ class SBBTracker(QMainWindow):
                 self.board_queue.put((state, self.player_ids[0], settings.get(settings.number_simulations, 1000),
                                       settings.get(settings.number_threads, 3)))
 
-    def update_stats(self, starting_hero: str, player):
+    def update_stats(self, starting_hero: str, player, session_id: str):
         if settings.get(settings.save_stats, True) and (not settings.get(settings.matchmaking_only) or self.in_matchmaking):
             place = player.place if int(player.health) <= 0 else "1"
             self.player_stats.update_stats(starting_hero, asset_utils.get_hero_name(player.heroid),
-                                           place, player.mmr)
+                                           place, player.mmr, session_id)
             self.match_history.update_history_table()
             self.match_history.update_stats_table()
             self.player_stats.save()
@@ -829,16 +832,10 @@ class SBBTracker(QMainWindow):
             self.player_stats.delete()
 
     def reattatch_to_log(self):
-        reply = QMessageBox.question(self, "Reattach?",
-                                     """Would you like to reattach to the Storybook Brawl log?
-This can fix the tracker not connecting to the game.
-This will import all games played since SBB was last opened.
-(you can restart the game to avoid this)""")
-        if reply == QMessageBox.Yes:
-            try:
-                os.remove(log_parser.offsetfile)
-            except Exception as e:
-                logging.warning(str(e))
+        try:
+            os.remove(log_parser.offsetfile)
+        except Exception as e:
+            logging.warning(str(e))
         self.update()
 
     def closeEvent(self, *args, **kwargs):

@@ -1,5 +1,6 @@
 import gzip
 import json
+import logging
 import os
 import platform
 import time
@@ -256,9 +257,7 @@ def parse(ifs):
 
     """
     for line in ifs:
-        if 'NEW GAME STARTED' in line:
-            yield Action(info=None, game_state=GameState.START)
-        elif 'REQUEST MATCHMAKER FOR' in line:
+        if 'REQUEST MATCHMAKER FOR' in line:
             yield Action(info=None, game_state=GameState.MATCHMAKING)
         elif 'Writing binary data to recorder for action:' in line:
             chop_idx = line.find('-') + 1
@@ -278,14 +277,6 @@ class GameState(Enum):
 
 class Action:
     def __init__(self, info, game_state=GameState.UNKNOWN):
-        if game_state == GameState.START:
-            self.task = TASK_NEWGAME
-            return
-
-        if game_state == GameState.REAL_SHOP_PHASE:
-            self.task = TASK_ENDCOMBAT
-            return
-
         if game_state == GameState.MATCHMAKING:
             self.task = TASK_MATCHMAKING
             return
@@ -346,6 +337,11 @@ class Action:
                 self.task = TASK_ENDCOMBAT
                 self.attrs = []
 
+            elif self.action_type == EVENT_CONNINFO:
+                self.task = TASK_NEWGAME
+                self.session_id = info['SessionId']
+                self.attrs = ['session_id']
+
             else:
                 self.task = None
                 self.attrs = []
@@ -402,8 +398,7 @@ def run(queue: Queue, log=logfile):
                 inbrawl = False
                 current_round = None
                 lastupdated = dict()
-
-                queue.put(Update(JOB_NEWGAME, None))
+                queue.put(Update(JOB_NEWGAME, action))
             elif not inbrawl and not current_player_stats and action.task == TASK_ADDPLAYER \
                     and prev_action is not None and prev_action.action_type == EVENT_UPDATEEMOTES:
                 current_player_stats = action

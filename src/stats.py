@@ -22,7 +22,7 @@ stats_per_page = 20
 
 pd.options.mode.chained_assignment = None
 
-stats_columns = ['StartingHero', 'EndingHero', 'Placement', 'Timestamp', '+/-MMR']
+stats_columns = ['StartingHero', 'EndingHero', 'Placement', 'Timestamp', '+/-MMR', 'SessionId']
 
 
 def sorting_key(sort_col: int):
@@ -36,6 +36,25 @@ def sorting_key(sort_col: int):
         return lambda x: float(x) if float(x) > 0 else float("inf")
     else:
         return float
+
+
+def adjust_legacy_df(df: pd.DataFrame):
+    if 'SessionId' not in df.columns:
+        df['SessionId'] = ' '
+    if 'Timestamp' not in df.columns:
+        #  Pre-timestamp data gets an empty-timestamp column
+        df["Timestamp"] = "1973-01-01"
+    if '+/-MMR' not in df.columns:
+        #  Pre-MMR data gets 0 MMR for each game
+        df["+/-MMR"] = "0"
+    if 'Hero' in df.columns:
+        #  Legacy data
+        df = df.rename({'Hero': "EndingHero"}, axis='columns')
+        df["StartingHero"] = " "
+        df = df[stats_columns]
+    #  clean up empty timestamps into some old time (that I thought was unix epoch but was off by 3 years lol)
+    df['Timestamp'] = df['Timestamp'].replace(r'^\s*$', "1973-01-01", regex=True)
+    return df
 
 
 class PlayerStats:
@@ -55,19 +74,7 @@ class PlayerStats:
                 except:
                     logging.exception("Couldn't load backup. Starting a new stats file")
                     self.df = pd.DataFrame(columns=stats_columns)
-            if 'Timestamp' not in self.df.columns:
-                #  Pre-timestamp data gets an empty-timestamp column
-                self.df["Timestamp"] = "1973-01-01"
-            if '+/-MMR' not in self.df.columns:
-                #  Pre-MMR data gets 0 MMR for each game
-                self.df["+/-MMR"] = "0"
-            if 'Hero' in self.df.columns:
-                #  Legacy data
-                self.df = self.df.rename({'Hero': "EndingHero"}, axis='columns')
-                self.df["StartingHero"] = " "
-                self.df = self.df[stats_columns]
-            #  clean up empty timestamps into some old time (that I thought was unix epoch but was off by 3 years lol)
-            self.df['Timestamp'] = self.df['Timestamp'].replace(r'^\s*$', "1973-01-01", regex=True)
+            self.df = adjust_legacy_df(self.df)
         else:
             self.df = pd.DataFrame(columns=stats_columns)
 
@@ -102,11 +109,14 @@ class PlayerStats:
         match_stats += padding
         return match_stats
 
-    def update_stats(self, starting_hero: str, ending_hero: str, placement: str, mmr_change: str):
-        self.df = self.df.append(
-            {"StartingHero": starting_hero, "EndingHero": ending_hero, "Placement": placement,
-             "Timestamp": datetime.now().strftime("%Y-%m-%d"), "+/-MMR": str(mmr_change)},
-            ignore_index=True)
+    def update_stats(self, starting_hero: str, ending_hero: str, placement: str, mmr_change: str, session_id: str):
+        if session_id not in self.df['SessionId'].values:
+            self.df = self.df.append(
+                {"StartingHero": starting_hero, "EndingHero": ending_hero, "Placement": placement,
+                 "Timestamp": datetime.now().strftime("%Y-%m-%d"), "+/-MMR": str(mmr_change), "SessionId": session_id},
+                ignore_index=True)
+        else:
+            logging.warning("Not adding existing match!")
 
     def generate_stats(self, sort_col: int, sort_asc: bool, df=None):
         if df is None:
