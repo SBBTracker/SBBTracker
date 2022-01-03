@@ -1322,9 +1322,9 @@ class OverlayWindow(QMainWindow):
             sim_pos = (self.real_size[0] / 2 - 100, 0)
             settings.set_(settings.simulator_position, sim_pos)
         self.simulation_stats.move(*sim_pos)
-        turn_pos = settings.get(settings.turn_indicator_position, (self.real_size[0] - 100, 0))
+        turn_pos = settings.get(settings.turn_indicator_position, (self.real_size[0] - 300, 0))
         if turn_pos[0] > self.real_size[0] or turn_pos[1] > self.real_size[1]:
-            turn_pos = (self.real_size[0] - 100, 0)
+            turn_pos = (self.real_size[0] - 300, 0)
             settings.set_(settings.turn_indicator_position, turn_pos)
         self.turn_display.move(*turn_pos)
         if self.stream_overlay:

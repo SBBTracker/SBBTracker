@@ -79,7 +79,8 @@ class PlayerStats:
             self.df = pd.DataFrame(columns=stats_columns)
 
     def export(self, filepath: Path):
-        os.replace(statsfile, str(backup_statsfile))
+        if statsfile.exists():
+            os.replace(statsfile, str(backup_statsfile))
         with NamedTemporaryFile(delete=False, mode='w', newline='') as temp_file:
             self.df.to_csv(temp_file, index=False)
             temp_name = temp_file.name
