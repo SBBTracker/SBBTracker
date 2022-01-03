@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 import seaborn as sns
-from PySide6.QtCore import QPoint, QRect, QSize, QThread, QUrl, Qt, Signal
+from PySide6.QtCore import QCoreApplication, QPoint, QRect, QSize, QThread, QUrl, Qt, Signal
 from PySide6.QtGui import QAction, QBrush, QColor, QDesktopServices, QFont, QFontMetrics, QGuiApplication, \
     QIcon, \
     QIntValidator, \
@@ -33,7 +33,7 @@ from PySide6.QtWidgets import (
     QGridLayout, QHBoxLayout,
     QHeaderView,
     QLabel,
-    QLineEdit, QMainWindow,
+    QLayout, QLineEdit, QMainWindow,
     QMessageBox, QProgressBar, QPushButton, QScrollArea, QSizePolicy, QSlider, QSplashScreen, QTabWidget,
     QTableWidget,
     QTableWidgetItem,
@@ -1515,19 +1515,20 @@ class SimulatorStats(MovableWidget):
 class TurnDisplay(MovableWidget):
     def __init__(self, parent):
         super().__init__(parent, settings.turn_indicator_position)
-        layout = QVBoxLayout(self)
+        layout = QHBoxLayout(self)
         frame = QFrame(self)
-        frame_layout = QVBoxLayout(frame)
+        frame_layout = QHBoxLayout(frame)
         self.label = QLabel("Turn 0 (0.0)", frame)
         frame.setStyleSheet(f"QFrame {{ background-color: {default_bg_color}}};")
         self.label.setFont(QFont("Roboto", 30))
         layout.addWidget(frame)
-        frame_layout.addWidget(self.label)
-        self.label.setBaseSize(200, 50)
+        frame_layout.addWidget(self.label, Qt.AlignVCenter)
+
+        layout.setSizeConstraint(QLayout.SetMinimumSize)
+        frame_layout.setSizeConstraint(QLayout.SetMinimumSize)
 
     def update_label(self, text):
         self.label.setText(text)
-        self.update()
 
 
 class HoverRegion(QWidget):
