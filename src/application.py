@@ -1523,10 +1523,11 @@ class TurnDisplay(MovableWidget):
         self.label.setFont(QFont("Roboto", 30))
         layout.addWidget(frame)
         frame_layout.addWidget(self.label)
-        self.label.setMinimumSize(200, 50)
+        self.label.setBaseSize(200, 50)
 
     def update_label(self, text):
         self.label.setText(text)
+        self.update()
 
 
 class HoverRegion(QWidget):
