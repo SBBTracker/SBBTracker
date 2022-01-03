@@ -38,6 +38,7 @@ class SBBWindowCheckThread(QThread):
         self.changed_foreground.emit(sbb_is_visible()) #  find out on startup whether to show the overlay or not
         while True:
             visible = sbb_is_visible()
+
             if visible != prev_visible:
                 self.changed_foreground.emit(visible)
             prev_visible = visible

@@ -17,6 +17,7 @@ color_palettes = {
     'scarbo':  ['#000000', '#990000', '#0000CC', '#FF0000', '#4747eb', '#e08585', '#bdbddb', '#FFFFFF'],
 }
 
+
 class LivePlayerStates:
     def __init__(self):
         self.ids_to_health = defaultdict(dict)

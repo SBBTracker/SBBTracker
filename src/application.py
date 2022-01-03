@@ -54,7 +54,7 @@ import settings
 
 if not stats.sbbtracker_folder.exists():
     stats.sbbtracker_folder.mkdir()
-logging.basicConfig(filename=stats.sbbtracker_folder.joinpath("sbbtracker.log"), filemode="a",
+logging.basicConfig(filename=stats.sbbtracker_folder.joinpath("sbbtracker.log"), filemode="w",
                     format='%(name)s - %(levelname)s - %(message)s', level=logging.WARNING)
 logging.getLogger().addHandler(logging.StreamHandler())
 
