@@ -28,27 +28,32 @@ class Setting:
         self.default = default
 
 
-boardcomp_transparency = Setting("boardcomp-transparency", 0)
-simulator_transparency = Setting("simulator-transparency", 0)
-save_stats = Setting("save-stats", True)
-monitor = Setting("monitor", 0)
+# hidden
 filter_ = Setting("filter", "All Matches")
-enable_overlay = Setting("enable-overlay", False)
-enable_sim = Setting("enable-sim", False)
-hide_overlay_in_bg = Setting("hide-overlay-in-bg", False)
-show_tracker_button = Setting("show-tracker-button", True)
+show_patch_notes = Setting("show-patch-notes", False)
+# general
 live_palette = Setting("live-palette", "paired")
 matchmaking_only = Setting("matchmaking-only", False)
+save_stats = Setting("save-stats", True)
+# overlay
+boardcomp_transparency = Setting("boardcomp-transparency", 0)
+simulator_transparency = Setting("simulator-transparency", 0)
+monitor = Setting("monitor", 0)
+enable_overlay = Setting("enable-overlay", False)
+enable_sim = Setting("enable-sim", False)
+enable_comps = Setting("enable-comps", True)
+enable_turn_display = Setting("enable-turn-display", True)
+hide_overlay_in_bg = Setting("hide-overlay-in-bg", False)
+show_tracker_button = Setting("show-tracker-button", True)
 simulator_position = Setting("simulator-position", (0, 0))
 turn_indicator_position = Setting("turn-indicator-position", (0, 0))
 number_simulations = Setting("number-simulations", 1000)
 number_threads = Setting("number-threads", 3)
 export_comp_button = Setting("export-comp-button", False)
-show_patch_notes = Setting("show-patch-notes", False)
+turn_display_font_size = Setting("turn-display-font-size", 25)
+# streaming
 streaming_mode = Setting("streaming-mode", False)
 stream_overlay_color = Setting("stream-overlay-color", "#FF00FF")
-enable_comps = Setting("enable-comps", True)
-enable_turn_display = Setting("enable-turn-display", True)
 
 
 def get(setting: Setting, default=None):

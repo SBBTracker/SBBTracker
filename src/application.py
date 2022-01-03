@@ -433,6 +433,11 @@ and Lunco
 
         enable_overlay_checkbox.stateChanged.connect(lambda state: enable_turn_display.setEnabled(bool(state)))
 
+        turn_display_font = QLineEdit()
+        turn_display_font.setValidator(QIntValidator(1, 100))
+        turn_display_font.setText(str(settings.get(settings.turn_display_font_size)))
+        turn_display_font.textChanged.connect(lambda text: settings.set_(settings.turn_display_font_size, text) if text != '' else None)
+
         choose_monitor = QComboBox()
         monitors = QGuiApplication.screens()
         choose_monitor.addItems([f"Monitor {i + 1}" for i in range(0, len(monitors))])
@@ -458,6 +463,7 @@ and Lunco
         overlay_layout.addRow("Enable \"Show Tracker\" button", show_tracker_button_checkbox)
         overlay_layout.addRow("Enable board comps", enable_comps)
         overlay_layout.addRow("Enable turn display", enable_turn_display)
+        overlay_layout.addRow("Turn font size (restart to resize)", turn_display_font)
         overlay_layout.addRow("Choose overlay monitor", choose_monitor)
         overlay_layout.addRow("Adjust comps transparency", self.comp_transparency_slider)
         overlay_layout.addRow("Adjust simulator transparency", self.simulator_transparency_slider)
@@ -1327,6 +1333,8 @@ class OverlayWindow(QMainWindow):
             turn_pos = (self.real_size[0] - 300, 0)
             settings.set_(settings.turn_indicator_position, turn_pos)
         self.turn_display.move(*turn_pos)
+        self.turn_display.label.setFont(QFont("Roboto", int(settings.get(settings.turn_display_font_size))))
+        self.turn_display.update()
         if self.stream_overlay:
             self.stream_overlay.update_monitor()
 
@@ -1520,7 +1528,7 @@ class TurnDisplay(MovableWidget):
         frame_layout = QHBoxLayout(frame)
         self.label = QLabel("Turn 0 (0.0)", frame)
         frame.setStyleSheet(f"QFrame {{ background-color: {default_bg_color}}};")
-        self.label.setFont(QFont("Roboto", 30))
+        self.label.setFont(QFont("Roboto", int(settings.get(settings.turn_display_font_size))))
         layout.addWidget(frame)
         frame_layout.addWidget(self.label, Qt.AlignVCenter)
 
