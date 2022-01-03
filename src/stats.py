@@ -65,8 +65,10 @@ class PlayerStats:
         if os.path.exists(statsfile):
             try:
                 self.df = pd.read_csv(str(statsfile))
+                self.df = adjust_legacy_df(self.df)
                 if not set(stats_columns).issubset(self.df.columns):
                     self.df = pd.read_csv(backup_statsfile)
+                    self.df = adjust_legacy_df(self.df)
             except:
                 logging.exception("Error loading stats file. Attempting to load backup.")
                 try:
@@ -74,7 +76,6 @@ class PlayerStats:
                 except:
                     logging.exception("Couldn't load backup. Starting a new stats file")
                     self.df = pd.DataFrame(columns=stats_columns)
-            self.df = adjust_legacy_df(self.df)
         else:
             self.df = pd.DataFrame(columns=stats_columns)
 
