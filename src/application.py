@@ -725,7 +725,7 @@ class SBBTracker(QMainWindow):
                     break
             if player and board_player:
                 board_player.level = player.level
-            else:
+            elif board_player:
                 board_player.level = 0
             comp.composition = board
             comp.last_seen = round_number
@@ -1516,10 +1516,13 @@ class TurnDisplay(MovableWidget):
     def __init__(self, parent):
         super().__init__(parent, settings.turn_indicator_position)
         layout = QVBoxLayout(self)
-        self.label = QLabel("Turn 0 (0.0)")
-        self.label.setStyleSheet(f"QWidget {{ background-color: {default_bg_color}}};")
+        frame = QFrame(self)
+        frame_layout = QVBoxLayout(frame)
+        self.label = QLabel("Turn 0 (0.0)", frame)
+        frame.setStyleSheet(f"QFrame {{ background-color: {default_bg_color}}};")
         self.label.setFont(QFont("Roboto", 30))
-        layout.addWidget(self.label)
+        layout.addWidget(frame)
+        frame_layout.addWidget(self.label)
         self.label.setMinimumSize(200, 50)
 
     def update_label(self, text):
