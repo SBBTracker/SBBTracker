@@ -279,6 +279,10 @@
     "Id": "SBB_SPELL_EENIEMEENIEMINEYMO",
     "Name": "Eenie Meenie Miney Mo"
   },
+  "139": {
+    "Id": "SBB_SPELL_WITCH'SBREW",
+    "Name": "Witch's Brew"
+  },
   "142": {
     "Id": "SBB_TREASURE_RUSTYDAGGERS",
     "Name": "Needle Nose Daggers"
@@ -803,6 +807,10 @@
     "Id": "SBB_SPELL_POISONAPPLE",
     "Name": "Poison Apple"
   },
+  "339": {
+    "Id": "SBB_SPELL_LUCKYCOIN",
+    "Name": "Lucky Coin"
+  },
   "340": {
     "Id": "SBB_TREASURE_TREASURECHEST",
     "Name": "Mimic"
@@ -1010,9 +1018,5 @@
   "412": {
     "Id": "SBB_TREASURE_MAGICSWORD+100",
     "Name": "Magic Sword +100"
-  },
-  "-1": {
-    "Id": "SBB_SPELL_WITCH'SBREW",
-    "Name": "Witch's Brew"
   }
 }
