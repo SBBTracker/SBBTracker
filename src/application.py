@@ -1324,7 +1324,7 @@ class OverlayWindow(QMainWindow):
         self.update_hovers()
 
         sim_pos = settings.get(settings.simulator_position, (self.real_size[0] / 2 - 100, 0))
-        if sim_pos[0] > self.real_size[0] or sim_pos[1] > self.real_size[1]:
+        if 0 < sim_pos[0] > self.real_size[0] or 0 < sim_pos[1] > self.real_size[1]:
             sim_pos = (self.real_size[0] / 2 - 100, 0)
             settings.set_(settings.simulator_position, sim_pos)
         self.simulation_stats.move(*sim_pos)
