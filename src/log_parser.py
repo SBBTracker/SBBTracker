@@ -19,7 +19,7 @@ if os_name == 'Linux':
     sbb_root = Path(expanduser("~/.steam/steam/steamapps/compatdata/1367020/pfx/drive_c/users/steamuser"
                                "/AppData/LocalLow/Good Luck Games/Storybook Brawl"))
 elif os_name == "Windows":
-    sbb_root = Path(os.environ["APPDATA"]).parent.joinpath("LocalLow/Good Luck Games/Storybook Brawl")
+    sbb_root = Path(os.environ["LOCALAPPDATA"]).parent.joinpath("LocalLow/Good Luck Games/Storybook Brawl")
 elif os_name == "Darwin":
     pass  # todo: implement Mac
 logfile = sbb_root.joinpath("Player.log")
