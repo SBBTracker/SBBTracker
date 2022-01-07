@@ -1628,10 +1628,6 @@ class StreamableMatchDisplay(QMainWindow):
             self.move(self._windowPos +
                       (event.globalPosition().toPoint() - self._mousePos))
 
-    def mouseReleaseEvent(self, event):
-        if self.setting:
-            settings.set_(self.setting, self.pos().toTuple())
-
 
 
 
