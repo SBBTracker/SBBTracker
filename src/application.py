@@ -6,7 +6,6 @@ import multiprocessing
 import operator
 import os
 import re
-import shutil
 import sys
 import threading
 import time
@@ -14,13 +13,12 @@ from collections import defaultdict
 from datetime import date
 from pathlib import Path
 from queue import Queue
-from tempfile import NamedTemporaryFile
 
 import matplotlib.pyplot as plt
 import numpy as np
 
 import seaborn as sns
-from PySide6.QtCore import QCoreApplication, QPoint, QRect, QSize, QThread, QUrl, Qt, Signal
+from PySide6.QtCore import QPoint, QRect, QSize, QThread, QUrl, Qt, Signal
 from PySide6.QtGui import QAction, QBrush, QColor, QDesktopServices, QFont, QFontMetrics, QGuiApplication, \
     QIcon, \
     QIntValidator, \
@@ -480,6 +478,23 @@ and Lunco
         enable_stream_overlay.stateChanged.connect(lambda: settings.toggle(settings.streaming_mode))
 
         self.stream_overlay_color = HexColorEdit(settings.get(settings.stream_overlay_color))
+
+        streamable_score = QCheckBox()
+        streamable_score.setChecked(settings.get(settings.streamable_score_list))
+        streamable_score.stateChanged.connect(lambda: settings.toggle(settings.streamable_score_list))
+
+        self.max_scores = QLineEdit()
+        self.max_scores.setText(str(settings.get(settings.streamable_score_max_len)))
+        self.max_scores.setValidator(QIntValidator(1, 50))
+
+        reset_scores = QPushButton("Reset")
+        reset_scores.clicked.connect(main_window.streamable_scores.reset)
+
+        streaming_layout.addRow("Show capturable score window", streamable_score)
+        streaming_layout.addRow("Number of scores per line", self.max_scores)
+        streaming_layout.addRow("Reset scores", reset_scores)
+        streaming_layout.addRow(QLabel("Chroma-key filter #00FFFF to hide the scores background"))
+        streaming_layout.addRow(QLabel(""))
         streaming_layout.addRow("Show capturable overlay window", enable_stream_overlay)
         streaming_layout.addRow("Background color", self.stream_overlay_color)
         streaming_layout.addRow(QLabel("Enabling this will add a copy of the overlay behind your other windows."))
@@ -508,10 +523,15 @@ and Lunco
         settings.set_(settings.number_simulations, self.num_sims_silder.get_value())
         settings.set_(settings.stream_overlay_color, self.stream_overlay_color.editor.text())
 
+        max_scores_val = self.max_scores.text()
+        if max_scores_val and int(max_scores_val) > 0:
+            settings.set_(settings.streamable_score_max_len, int(max_scores_val))
+
         settings.save()
         self.hide()
         self.main_window.overlay.update_monitor()
         self.main_window.overlay.set_transparency()
+        self.main_window.show_scores()
         if not settings.get(settings.hide_overlay_in_bg) or self.main_window.overlay.visible:
             self.main_window.show_overlay()
         if settings.get(settings.streaming_mode):
@@ -539,6 +559,7 @@ class SBBTracker(QMainWindow):
         self.player_stats = stats.PlayerStats()
         self.player_ids = []
         self.most_recent_combat = None
+        self.in_matchmaking = False
 
         self.overlay = OverlayWindow(self)
         self.streamer_overlay = StreamerOverlayWindow(self)
@@ -547,7 +568,8 @@ class SBBTracker(QMainWindow):
         self.show_overlay()
         if settings.get(settings.streaming_mode):
             self.streamer_overlay.show()
-        self.in_matchmaking = False
+        self.streamable_scores = StreamableMatchDisplay()
+        self.show_scores()
 
         self.comp_tabs = QTabWidget()
         for index in range(len(self.comps)):
@@ -754,6 +776,7 @@ class SBBTracker(QMainWindow):
                                            place, player.mmr, session_id)
             self.match_history.update_history_table()
             self.match_history.update_stats_table()
+            self.streamable_scores.add_score(place)
             self.player_stats.save()
         self.overlay.disable_hovers()
         self.overlay.turn_display.setVisible(False)
@@ -770,6 +793,12 @@ class SBBTracker(QMainWindow):
             self.overlay.show()
         else:
             self.overlay.hide()
+
+    def show_scores(self):
+        if settings.get(settings.streamable_score_list):
+            self.streamable_scores.show()
+        else:
+            self.streamable_scores.hide()
 
     def export_last_comp(self):
         if self.most_recent_combat:
@@ -864,6 +893,8 @@ class SBBTracker(QMainWindow):
         self.sbb_watcher_thread.terminate()
         self.player_stats.save()
         self.overlay.close()
+        self.streamer_overlay.close()
+        self.streamable_scores.close()
         settings.save()
 
 
@@ -937,7 +968,7 @@ class BoardComp(QWidget):
         painter = QPainter(self)
         if self.composition is not None:
             for action in self.composition:
-                if action.zone != "Hero" and action.zone != 'Spell':
+                if action.zone != "Hero":
                     #  skip hero because we handle it elsewhere
                     #  spells broke
                     slot = action.slot
@@ -1068,9 +1099,6 @@ QTabBar::tab:right{
 
         table_font = QFont("Roboto")
         table_font.setPixelSize(14)
-
-        # self.match_history_table.setFont(table_font)
-        # self.stats_table.setFont(table_font)
 
         self.update_history_table()
         self.update_stats_table()
@@ -1556,6 +1584,40 @@ class HoverRegion(QWidget):
 
     def leaveEvent(self, event):
         self.leave_hover.emit()
+
+
+class StreamableMatchDisplay(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnBottomHint)
+        self.setWindowTitle("SBBTracker Scores")
+        self.scores = settings.get(settings.streamable_scores)
+        self.label = QLabel("Scores:")
+        self.label.setStyleSheet("QLabel { font-size: 50px; background-color: #00FFFF;}")
+        self.setCentralWidget(self.label)
+        self.update_label()
+
+    def add_score(self, score):
+        self.scores.append(score)
+        settings.set_(settings.streamable_scores, self.scores)
+        self.update_label()
+
+    def update_label(self):
+        display_text = "Scores: "
+        max_scores = settings.get(settings.streamable_score_max_len)
+        for i in range(0, len(self.scores)):
+            score = self.scores[i]
+            display_text += f"{score} "
+            if (i + 1) % max_scores == 0 and i != 0:
+                display_text += '\n               '
+
+        self.label.setText(display_text)
+
+    def reset(self):
+        self.scores = []
+        settings.set_(settings.streamable_scores, [])
+        self.update_label()
+
 
 
 def main():
