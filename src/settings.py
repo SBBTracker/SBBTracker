@@ -54,7 +54,7 @@ turn_display_font_size = Setting("turn-display-font-size", 25)
 # streaming
 streaming_mode = Setting("streaming-mode", False)
 stream_overlay_color = Setting("stream-overlay-color", "#FF00FF")
-streamable_score_list = Setting("streamable-score-list", True)
+streamable_score_list = Setting("streamable-score-list", False)
 streamable_score_max_len = Setting("streamable-score-max-len", 20)
 streamable_scores = Setting("streamable-scores", [])
 
