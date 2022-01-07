@@ -1618,6 +1618,21 @@ class StreamableMatchDisplay(QMainWindow):
         settings.set_(settings.streamable_scores, [])
         self.update_label()
 
+    def mousePressEvent(self, event):
+        self._mousePressed = True
+        self._mousePos = event.globalPosition().toPoint()
+        self._windowPos = self.pos()
+
+    def mouseMoveEvent(self, event):
+        if self._mousePressed and (Qt.LeftButton & event.buttons()):
+            self.move(self._windowPos +
+                      (event.globalPosition().toPoint() - self._mousePos))
+
+    def mouseReleaseEvent(self, event):
+        if self.setting:
+            settings.set_(self.setting, self.pos().toTuple())
+
+
 
 
 def main():
