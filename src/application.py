@@ -776,8 +776,8 @@ class SBBTracker(QMainWindow):
                                            place, player.mmr, session_id)
             self.match_history.update_history_table()
             self.match_history.update_stats_table()
-            self.streamable_scores.add_score(place)
-            self.player_stats.save()
+            if settings.get(settings.streamable_score_list):
+                self.streamable_scores.add_score(place)
         self.overlay.disable_hovers()
         self.overlay.turn_display.setVisible(False)
 
