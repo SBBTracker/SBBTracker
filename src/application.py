@@ -20,7 +20,8 @@ import numpy as np
 
 import seaborn as sns
 from PySide6.QtCore import QPoint, QRect, QSize, QThread, QUrl, Qt, Signal
-from PySide6.QtGui import QAction, QBrush, QColor, QDesktopServices, QFont, QFontMetrics, QGuiApplication, \
+from PySide6.QtGui import QAction, QBrush, QColor, QDesktopServices, QDoubleValidator, QFont, QFontMetrics, \
+    QGuiApplication, \
     QIcon, \
     QIntValidator, \
     QPainter, QPainterPath, \
@@ -453,9 +454,9 @@ and Lunco
 
         self.comp_transparency_slider = SliderCombo(0, 100, settings.get(settings.boardcomp_transparency))
         self.simulator_transparency_slider = SliderCombo(0, 100,  settings.get(settings.simulator_transparency))
-
         self.num_sims_silder = SliderCombo(100, 50000, settings.get(settings.number_simulations, 1000))
         self.num_threads_slider = SliderCombo(1, 4, settings.get(settings.number_threads))
+        self.overlay_comps_scaling = SliderCombo(50, 200, settings.get(settings.overlay_comps_scaling))
 
         overlay_layout.addRow("Enable overlay (borderless window only)", enable_overlay_checkbox)
         overlay_layout.addRow("Hide if SBB in background (restart to take effect)", hide_overlay_in_bg_checkbox)
@@ -468,6 +469,7 @@ and Lunco
         overlay_layout.addRow(QLabel(" "))
         overlay_layout.addRow("Enable \"Show Tracker\" button", show_tracker_button_checkbox)
         overlay_layout.addRow("Enable board comps", enable_comps)
+        overlay_layout.addRow("Board comps scaling", self.overlay_comps_scaling)
         overlay_layout.addRow("Enable turn display", enable_turn_display)
         overlay_layout.addRow("Turn font size (restart to resize)", turn_display_font)
         overlay_layout.addRow("Choose overlay monitor", choose_monitor)
@@ -521,7 +523,7 @@ and Lunco
         main_layout.addLayout(save_close_layout)
 
         self.setCentralWidget(main_widget)
-        self.setFixedSize(600, 600)
+        self.setMinimumSize(600, 600)
 
     def save(self):
         settings.set_(settings.live_palette, self.graph_color_chooser.currentText())
@@ -530,6 +532,7 @@ and Lunco
         settings.set_(settings.number_threads, self.num_threads_slider.get_value())
         settings.set_(settings.number_simulations, self.num_sims_silder.get_value())
         settings.set_(settings.stream_overlay_color, self.stream_overlay_color.editor.text())
+        settings.set_(settings.overlay_comps_scaling, self.overlay_comps_scaling.get_value())
 
         max_scores_val = self.max_scores.text()
         if max_scores_val and int(max_scores_val) > 0:
@@ -537,7 +540,9 @@ and Lunco
 
         settings.save()
         self.hide()
+
         self.main_window.overlay.update_monitor()
+        self.main_window.overlay.update_comp_scaling()
         self.main_window.overlay.set_transparency()
         self.main_window.show_scores()
         if not settings.get(settings.hide_overlay_in_bg) or self.main_window.overlay.visible:
@@ -917,6 +922,7 @@ class BoardComp(QWidget):
         self.last_seen = None
         self.current_round = 0
         self.player = None
+        self.scale = 1
 
         self.number_display_font = QFont(display_font_family, 25, weight=QFont.ExtraBold)
 
@@ -976,6 +982,7 @@ class BoardComp(QWidget):
 
     def paintEvent(self, event):
         painter = QPainter(self)
+        painter.scale(self.scale, self.scale)
         if self.composition is not None:
             for action in self.composition:
                 if action.zone != "Hero":
@@ -1270,16 +1277,16 @@ class OverlayWindow(QMainWindow):
         self.comp_widgets = [QFrame(main_widget) for _ in range(0, 8)]
         self.places = list(range(0, 8))
         self.new_places = list(range(0, 8))
+        self.base_comp_size = QSize(1100, 650)
         for index in range(len(self.comps)):
             comp = self.comps[index]
             widget = self.comp_widgets[index]
 
             comp.setParent(widget)
             widget.setVisible(False)
-            widget.setMinimumSize(1100, 650)
-            comp.setMinimumSize(1100, 650)
             widget.move(round(self.size().width() / 2 - 100), 0)
         self.set_transparency()
+        self.update_comp_scaling()
 
         self.show_button = QPushButton("Show Tracker", main_widget)
         self.show_button.clicked.connect(self.show_hide_main_window)
@@ -1338,6 +1345,15 @@ class OverlayWindow(QMainWindow):
         comp.composition = player
         comp.last_seen = round_number
         self.update()
+
+    def update_comp_scaling(self):
+        for i in range(len(self.comps)):
+            comp = self.comps[i]
+            widget = self.comp_widgets[i]
+            comp.scale = settings.get(settings.overlay_comps_scaling) / 100
+            comp.setFixedSize(self.base_comp_size * comp.scale)
+            widget.setFixedSize(self.base_comp_size * comp.scale)
+            widget.updateGeometry()
 
     def update_placements(self):
         self.places = self.new_places.copy()
