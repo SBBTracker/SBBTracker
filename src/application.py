@@ -158,7 +158,7 @@ class SimulationThread(QThread):
             simulator_board = asset_utils.replace_template_ids(board)
             from_stated = from_state(simulator_board)
 
-            if all([from_stated[playerid]['level'] != 0 for playerid in from_stated]):
+            if all([from_stated[player_id]['level'] != 0 for player_id in from_stated]):
                 try:
                     simulation_stats = simulate(simulator_board, t=num_threads, k=int(num_simulations / num_threads),
                                                 timeout=30)
