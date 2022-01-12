@@ -1,4 +1,5 @@
 import calendar
+import concurrent.futures
 import datetime
 import json
 import logging
@@ -19,7 +20,8 @@ import numpy as np
 
 import seaborn as sns
 from PySide6.QtCore import QPoint, QRect, QSize, QThread, QUrl, Qt, Signal
-from PySide6.QtGui import QAction, QBrush, QColor, QDesktopServices, QFont, QFontMetrics, QGuiApplication, \
+from PySide6.QtGui import QAction, QBrush, QColor, QDesktopServices, QDoubleValidator, QFont, QFontMetrics, \
+    QGuiApplication, \
     QIcon, \
     QIntValidator, \
     QPainter, QPainterPath, \
@@ -32,7 +34,8 @@ from PySide6.QtWidgets import (
     QHeaderView,
     QLabel,
     QLayout, QLineEdit, QMainWindow,
-    QMessageBox, QProgressBar, QPushButton, QScrollArea, QSizePolicy, QSlider, QSplashScreen, QTabWidget,
+    QMessageBox, QProgressBar, QPushButton, QScrollArea, QSizePolicy, QSlider, QSplashScreen, QStackedLayout,
+    QTabWidget,
     QTableWidget,
     QTableWidgetItem,
     QToolBar,
@@ -141,6 +144,7 @@ default_dates = {
 
 class SimulationThread(QThread):
     end_simulation = Signal(str, str, str, str, str)
+    error_simulation = Signal(str)
 
     def __init__(self, comp_queue):
         super(SimulationThread, self).__init__()
@@ -152,48 +156,53 @@ class SimulationThread(QThread):
             simulation_stats = None
 
             simulator_board = asset_utils.replace_template_ids(board)
+            from_stated = from_state(simulator_board)
 
-            try:
-                simulation_stats = simulate(simulator_board, t=num_threads, k=int(num_simulations / num_threads),
-                                            timeout=30)
-            except SBBBSCrocException:
-                self.end_simulation.emit("No", "Croc", "Supp", "", "")
-            except TimeoutError:
-                self.end_simulation.emit("Time", "Out", "Err", "", "")
-            except Exception:
-                logging.exception("Error in simulation!")
-                with open(stats.sbbtracker_folder.joinpath("error_board.json"), "w") as file:
-                    json.dump(from_state(simulator_board), file, default=lambda o: o.__dict__)
-                self.end_simulation.emit("Err", "Err", "Err", "Err", "Err")
+            if all([from_stated[player_id]['level'] != 0 for player_id in from_stated]):
+                try:
+                    simulation_stats = simulate(simulator_board, t=num_threads, k=int(num_simulations / num_threads),
+                                                timeout=30)
+                except SBBBSCrocException:
+                    self.error_simulation.emit("Captain Croc not supported")
+                except concurrent.futures.TimeoutError:
+                    self.error_simulation.emit("Simulation timed out!")
+                except Exception:
+                    logging.exception("Error in simulation!")
+                    with open(stats.sbbtracker_folder.joinpath("error_board.json"), "w") as file:
+                        json.dump(from_stated, file, default=lambda o: o.__dict__)
+                    self.error_simulation.emit("Error in simulation!")
 
-            logging.debug(from_state(simulator_board))
+                logging.debug(from_stated)
 
-            if simulation_stats:
-                results = simulation_stats.results
-                aggregated_results = defaultdict(list)
-                for result in results:
-                    aggregated_results[result.win_id].append(result.damage)
+                # TODO: do math on changes in XP
+                if simulation_stats:
+                    results = simulation_stats.results
+                    aggregated_results = defaultdict(list)
+                    for result in results:
+                        aggregated_results[result.win_id].append(result.damage)
 
-                keys = set(aggregated_results.keys()) - {playerid, None}
-                win_damages = aggregated_results.get(playerid, [])
-                tie_damages = aggregated_results.get(None, [])
-                loss_damages = [] if not keys else aggregated_results[keys.pop()]
+                    keys = set(aggregated_results.keys()) - {playerid, None}
+                    win_damages = aggregated_results.get(playerid, [])
+                    tie_damages = aggregated_results.get(None, [])
+                    loss_damages = [] if not keys else aggregated_results[keys.pop()]
 
-                win_percent = round(len(win_damages) / len(results) * 100, 2)
-                tie_percent = round(len(tie_damages) / len(results) * 100, 2)
-                loss_percent = round(len(loss_damages) / len(results) * 100, 2)
-                # win_10th_percentile, win_90th_percentile = (0, 0) if (len(win_damages) == 0) \
-                #     else np.percentile(win_damages, [10, 90])
-                # loss_10th_percentile, loss_90th_percentile = (0, 0) if (len(loss_damages) == 0) \
-                #     else np.percentile(loss_damages, [10, 90])
+                    win_percent = round(len(win_damages) / len(results) * 100, 2)
+                    tie_percent = round(len(tie_damages) / len(results) * 100, 2)
+                    loss_percent = round(len(loss_damages) / len(results) * 100, 2)
+                    # win_10th_percentile, win_90th_percentile = (0, 0) if (len(win_damages) == 0) \
+                    #     else np.percentile(win_damages, [10, 90])
+                    # loss_10th_percentile, loss_90th_percentile = (0, 0) if (len(loss_damages) == 0) \
+                    #     else np.percentile(loss_damages, [10, 90])
 
-                win_string = str(win_percent) + "%"
-                tie_string = str(tie_percent) + "%"
-                loss_string = str(loss_percent) + "%"
-                win_dmg_string = str(round(np.mean(win_damages), 1) if win_percent > 0 else 0)
-                loss_dmg_string = str(round(np.mean(loss_damages), 1) if loss_percent > 0 else 0)
+                    win_string = str(win_percent) + "%"
+                    tie_string = str(tie_percent) + "%"
+                    loss_string = str(loss_percent) + "%"
+                    win_dmg_string = str(round(np.mean(win_damages), 1) if win_percent > 0 else 0)
+                    loss_dmg_string = str(round(np.mean(loss_damages), 1) if loss_percent > 0 else 0)
 
-                self.end_simulation.emit(win_string, tie_string, loss_string, win_dmg_string, loss_dmg_string)
+                    self.end_simulation.emit(win_string, tie_string, loss_string, win_dmg_string, loss_dmg_string)
+            else:
+                self.error_simulation.emit("Couldn't get player id (try reattaching)")
             time.sleep(1)
 
 
@@ -445,9 +454,9 @@ and Lunco
 
         self.comp_transparency_slider = SliderCombo(0, 100, settings.get(settings.boardcomp_transparency))
         self.simulator_transparency_slider = SliderCombo(0, 100,  settings.get(settings.simulator_transparency))
-
-        self.num_sims_silder = SliderCombo(100, 3000, settings.get(settings.number_simulations, 1000))
+        self.num_sims_silder = SliderCombo(100, 10000, settings.get(settings.number_simulations, 1000))
         self.num_threads_slider = SliderCombo(1, 4, settings.get(settings.number_threads))
+        self.overlay_comps_scaling = SliderCombo(50, 200, settings.get(settings.overlay_comps_scaling))
 
         overlay_layout.addRow("Enable overlay (borderless window only)", enable_overlay_checkbox)
         overlay_layout.addRow("Hide if SBB in background (restart to take effect)", hide_overlay_in_bg_checkbox)
@@ -460,6 +469,7 @@ and Lunco
         overlay_layout.addRow(QLabel(" "))
         overlay_layout.addRow("Enable \"Show Tracker\" button", show_tracker_button_checkbox)
         overlay_layout.addRow("Enable board comps", enable_comps)
+        overlay_layout.addRow("Board comps scaling", self.overlay_comps_scaling)
         overlay_layout.addRow("Enable turn display", enable_turn_display)
         overlay_layout.addRow("Turn font size (restart to resize)", turn_display_font)
         overlay_layout.addRow("Choose overlay monitor", choose_monitor)
@@ -498,7 +508,13 @@ and Lunco
         streaming_layout.addRow("Show capturable overlay window", enable_stream_overlay)
         streaming_layout.addRow("Background color", self.stream_overlay_color)
         streaming_layout.addRow(QLabel("Enabling this will add a copy of the overlay behind your other windows."))
-        streaming_layout.addRow(QLabel("You can select capture this window in OBS and chroma-key filter the chosen background color"))
+        streaming_wiki_link = QLabel(
+            "<a href=\"https://github.com/SBBTracker/SBBTracker/wiki/Streaming-Settings-Guide\" style=\"color: "
+            f"{primary_color};\">Wiki guide here</a>")
+        streaming_wiki_link.setTextFormat(Qt.RichText)
+        streaming_wiki_link.setTextInteractionFlags(Qt.TextBrowserInteraction)
+        streaming_wiki_link.setOpenExternalLinks(True)
+        streaming_layout.addRow(streaming_wiki_link)
 
         save_close_layout = QHBoxLayout()
         self.save_button = QPushButton("Save")
@@ -513,7 +529,7 @@ and Lunco
         main_layout.addLayout(save_close_layout)
 
         self.setCentralWidget(main_widget)
-        self.setFixedSize(600, 600)
+        self.setMinimumSize(600, 600)
 
     def save(self):
         settings.set_(settings.live_palette, self.graph_color_chooser.currentText())
@@ -522,6 +538,7 @@ and Lunco
         settings.set_(settings.number_threads, self.num_threads_slider.get_value())
         settings.set_(settings.number_simulations, self.num_sims_silder.get_value())
         settings.set_(settings.stream_overlay_color, self.stream_overlay_color.editor.text())
+        settings.set_(settings.overlay_comps_scaling, self.overlay_comps_scaling.get_value())
 
         max_scores_val = self.max_scores.text()
         if max_scores_val and int(max_scores_val) > 0:
@@ -529,7 +546,9 @@ and Lunco
 
         settings.save()
         self.hide()
+
         self.main_window.overlay.update_monitor()
+        self.main_window.overlay.update_comp_scaling()
         self.main_window.overlay.set_transparency()
         self.main_window.show_scores()
         if not settings.get(settings.hide_overlay_in_bg) or self.main_window.overlay.visible:
@@ -672,6 +691,8 @@ class SBBTracker(QMainWindow):
         self.simulation = SimulationThread(self.board_queue)
         self.simulation.end_simulation.connect(self.overlay.simulation_stats.update_chances)
         self.simulation.end_simulation.connect(self.streamer_overlay.simulation_stats.update_chances)
+        self.simulation.error_simulation.connect(self.overlay.simulation_stats.show_error)
+        self.simulation.error_simulation.connect(self.streamer_overlay.simulation_stats.show_error)
 
         self.sbb_watcher_thread = SBBWindowCheckThread()
         self.sbb_watcher_thread.changed_foreground.connect(self.overlay.visible_in_bg)
@@ -907,6 +928,7 @@ class BoardComp(QWidget):
         self.last_seen = None
         self.current_round = 0
         self.player = None
+        self.scale = 1
 
         self.number_display_font = QFont(display_font_family, 25, weight=QFont.ExtraBold)
 
@@ -966,6 +988,7 @@ class BoardComp(QWidget):
 
     def paintEvent(self, event):
         painter = QPainter(self)
+        painter.scale(self.scale, self.scale)
         if self.composition is not None:
             for action in self.composition:
                 if action.zone != "Hero":
@@ -1260,16 +1283,16 @@ class OverlayWindow(QMainWindow):
         self.comp_widgets = [QFrame(main_widget) for _ in range(0, 8)]
         self.places = list(range(0, 8))
         self.new_places = list(range(0, 8))
+        self.base_comp_size = QSize(1100, 650)
         for index in range(len(self.comps)):
             comp = self.comps[index]
             widget = self.comp_widgets[index]
 
             comp.setParent(widget)
             widget.setVisible(False)
-            widget.setMinimumSize(1100, 650)
-            comp.setMinimumSize(1100, 650)
             widget.move(round(self.size().width() / 2 - 100), 0)
         self.set_transparency()
+        self.update_comp_scaling()
 
         self.show_button = QPushButton("Show Tracker", main_widget)
         self.show_button.clicked.connect(self.show_hide_main_window)
@@ -1328,6 +1351,15 @@ class OverlayWindow(QMainWindow):
         comp.composition = player
         comp.last_seen = round_number
         self.update()
+
+    def update_comp_scaling(self):
+        for i in range(len(self.comps)):
+            comp = self.comps[i]
+            widget = self.comp_widgets[i]
+            comp.scale = settings.get(settings.overlay_comps_scaling) / 100
+            comp.setFixedSize(self.base_comp_size * comp.scale)
+            widget.setFixedSize(self.base_comp_size * comp.scale)
+            widget.updateGeometry()
 
     def update_placements(self):
         self.places = self.new_places.copy()
@@ -1423,15 +1455,20 @@ class StreamerOverlayWindow(OverlayWindow):
 
 
 class SimStatWidget(QFrame):
-    def __init__(self, parent, title, value):
+    def __init__(self, parent, title: QLabel, value: QLabel):
         super().__init__(parent)
         self.title = title
         self.value = value
 
         layout = QVBoxLayout(self)
-        layout.addWidget(title, alignment=Qt.AlignVCenter)
-        layout.addWidget(value, alignment=Qt.AlignVCenter)
+        layout.addWidget(title, alignment=Qt.AlignHCenter)
+        layout.addWidget(value, alignment=Qt.AlignHCenter)
+        layout.setSpacing(20)
+        title.setAttribute(Qt.WA_TranslucentBackground)
+        title.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
+        value.setAttribute(Qt.WA_TranslucentBackground)
         self.setFixedWidth(80)
+        self.setStyleSheet("background-color: rgba(0,0,0,0%);")
 
 
 class MovableWidget(QWidget):
@@ -1461,22 +1498,18 @@ class SimulatorStats(MovableWidget):
     def __init__(self, parent):
         super().__init__(parent, settings.simulator_position)
         self.parent = parent
-        self.setStyleSheet(f"background-color: {default_bg_color}; font-size: 17px")
 
-        self._mousePressed = False
-        self._mousePos = None
-        self._windowPos = self.pos()
+        self.layout = QStackedLayout(self)
+        background = QFrame(self)
+        # background.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
+        # self.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
+        self.layout.addWidget(background)
 
-        self.win_dmg_label = QLabel("-")
-        self.win_label = QLabel("-")
-        self.tie_label = QLabel("-")
-        self.loss_label = QLabel("-")
-        self.loss_dmg_label = QLabel("-")
-        self.win_dmg_label.setAttribute(Qt.WA_TranslucentBackground)
-        self.win_label.setAttribute(Qt.WA_TranslucentBackground)
-        self.tie_label.setAttribute(Qt.WA_TranslucentBackground)
-        self.loss_label.setAttribute(Qt.WA_TranslucentBackground)
-        self.loss_dmg_label.setAttribute(Qt.WA_TranslucentBackground)
+        self.win_dmg_label = QLabel("-", background)
+        self.win_label = QLabel("-", background)
+        self.tie_label = QLabel("-", background)
+        self.loss_label = QLabel("-", background)
+        self.loss_dmg_label = QLabel("-", background)
 
         self.win_dmg = "-"
         self.win = "-"
@@ -1485,36 +1518,44 @@ class SimulatorStats(MovableWidget):
         self.loss_dmg = "-"
         self.displayable = False
 
-        background = QFrame(self)
-
         label_layout = QGridLayout(background)
 
-        win_dmg_title = QLabel("Dmg")
-        win_percent_title = QLabel("Win")
+        win_dmg_title = QLabel("DMG")
+        win_percent_title = QLabel("WIN")
         win_dmg_title.setStyleSheet("QLabel { color : #9FD4A3 }")
-        win_dmg_title.setAttribute(Qt.WA_TranslucentBackground)
         win_percent_title.setStyleSheet("QLabel { color : #9FD4A3 }")
-        win_percent_title.setAttribute(Qt.WA_TranslucentBackground)
 
-        loss_dmg_title = QLabel("Dmg")
-        loss_percent_title = QLabel("Loss")
+        loss_dmg_title = QLabel("DMG")
+        loss_percent_title = QLabel("LOSS")
         loss_dmg_title.setStyleSheet("QLabel { color : #e3365c }")
-        loss_dmg_title.setAttribute(Qt.WA_TranslucentBackground)
         loss_percent_title.setStyleSheet("QLabel { color : #e3365c }")
-        loss_percent_title.setAttribute(Qt.WA_TranslucentBackground)
 
-        tie_title = QLabel("Tie")
-        tie_title.setAttribute(Qt.WA_TranslucentBackground)
+        tie_title = QLabel("TIE")
+
+        self.error_widget = QFrame(self)
+        error_layout = QVBoxLayout(self.error_widget)
+        self.error_msg = QLabel("Error in simulation!")
+        error_layout.addWidget(self.error_msg, alignment=Qt.AlignCenter)
+        error_layout.setContentsMargins(0, 0, 0, 0)
+        self.error_msg.setStyleSheet("QLabel#sim-error { text-align: center; font-size: 20px; background-color: rgba(0,0,0,0%); }")
+        self.error_msg.setObjectName("sim-error")
+        self.error_msg.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         label_layout.addWidget(SimStatWidget(self, win_dmg_title, self.win_dmg_label), 0, 0)
         label_layout.addWidget(SimStatWidget(self, win_percent_title, self.win_label), 0, 1)
         label_layout.addWidget(SimStatWidget(self, tie_title, self.tie_label), 0, 2)
         label_layout.addWidget(SimStatWidget(self, loss_percent_title, self.loss_label), 0, 3)
         label_layout.addWidget(SimStatWidget(self, loss_dmg_title, self.loss_dmg_label), 0, 4)
-        label_layout.setSpacing(0)
-        label_layout.setContentsMargins(0, 0, 0, 0)
 
-        self.setMinimumSize(5 * 80 + 100, 100)
+        self.layout.addWidget(self.error_widget)
+        self.error_widget.setMinimumSize(background.minimumSize())
+
+        # self.layout.setCurrentIndex(1)
+
+        label_layout.setSpacing(0)
+        label_layout.setRowStretch(0, 1)
+        label_layout.setRowStretch(1, 1)
+        label_layout.setContentsMargins(0, 0, 0, 0)
 
     def reset_chances(self):
         self.win_dmg = "-"
@@ -1528,6 +1569,7 @@ class SimulatorStats(MovableWidget):
         self.tie_label.setText(self.tie)
         self.loss_dmg_label.setText(self.loss_dmg)
         self.displayable = False
+        self.layout.setCurrentIndex(0)
 
     def update_chances(self, win, tie, loss, win_dmg, loss_dmg):
         self.win_dmg = win_dmg
@@ -1538,6 +1580,10 @@ class SimulatorStats(MovableWidget):
         if self.displayable:
             self.update_labels()
         self.displayable = False
+
+    def show_error(self, msg: str):
+        self.error_msg.setText(msg)
+        self.layout.setCurrentIndex(1)
 
     def update_labels(self):
         self.win_dmg_label.setText(self.win_dmg)
@@ -1627,8 +1673,6 @@ class StreamableMatchDisplay(QMainWindow):
         if self._mousePressed and (Qt.LeftButton & event.buttons()):
             self.move(self._windowPos +
                       (event.globalPosition().toPoint() - self._mousePos))
-
-
 
 
 def main():

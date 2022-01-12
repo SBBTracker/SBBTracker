@@ -80,6 +80,9 @@ class PlayerStats:
             self.df = pd.DataFrame(columns=stats_columns)
 
     def export(self, filepath: Path):
+        self.df.to_csv(filepath, index=False)
+
+    def save(self):
         if statsfile.exists():
             os.replace(statsfile, str(backup_statsfile))
         with NamedTemporaryFile(delete=False, mode='w', newline='') as temp_file:
@@ -89,12 +92,9 @@ class PlayerStats:
             with open(temp_name) as file:
                 df = pd.read_csv(file)
             if set(stats_columns).issubset(df.columns):
-                shutil.move(temp_name, filepath)
+                shutil.move(temp_name, statsfile)
         except:
             logging.exception("Couldn't save settings correctly")
-
-    def save(self):
-        self.export(statsfile)
 
     def delete(self):
         self.df = pd.DataFrame(columns=['StartingHero', 'EndingHero', 'Placement', 'Timestamp'])
