@@ -454,7 +454,7 @@ and Lunco
 
         self.comp_transparency_slider = SliderCombo(0, 100, settings.get(settings.boardcomp_transparency))
         self.simulator_transparency_slider = SliderCombo(0, 100,  settings.get(settings.simulator_transparency))
-        self.num_sims_silder = SliderCombo(100, 50000, settings.get(settings.number_simulations, 1000))
+        self.num_sims_silder = SliderCombo(100, 10000, settings.get(settings.number_simulations, 1000))
         self.num_threads_slider = SliderCombo(1, 4, settings.get(settings.number_threads))
         self.overlay_comps_scaling = SliderCombo(50, 200, settings.get(settings.overlay_comps_scaling))
 
@@ -508,7 +508,13 @@ and Lunco
         streaming_layout.addRow("Show capturable overlay window", enable_stream_overlay)
         streaming_layout.addRow("Background color", self.stream_overlay_color)
         streaming_layout.addRow(QLabel("Enabling this will add a copy of the overlay behind your other windows."))
-        streaming_layout.addRow(QLabel("You can select capture this window in OBS and chroma-key filter the chosen background color"))
+        streaming_wiki_link = QLabel(
+            "<a href=\"https://github.com/SBBTracker/SBBTracker/wiki/Streaming-Settings-Guide\" style=\"color: "
+            f"{primary_color};\">Wiki guide here</a>")
+        streaming_wiki_link.setTextFormat(Qt.RichText)
+        streaming_wiki_link.setTextInteractionFlags(Qt.TextBrowserInteraction)
+        streaming_wiki_link.setOpenExternalLinks(True)
+        streaming_layout.addRow(streaming_wiki_link)
 
         save_close_layout = QHBoxLayout()
         self.save_button = QPushButton("Save")
