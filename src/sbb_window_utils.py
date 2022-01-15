@@ -1,8 +1,11 @@
 import time
 
 from PySide6.QtCore import QThread, Signal
-from win32gui import GetWindowText, GetForegroundWindow, IsWindowVisible, FindWindow
-
+try:
+    from win32gui import GetWindowText, GetForegroundWindow, IsWindowVisible, FindWindow
+except:
+    pass
+from log_parser import os_name
 
 def get_sbb_window():
     return FindWindow(None, "Storybook Brawl")
@@ -35,11 +38,12 @@ class SBBWindowCheckThread(QThread):
 
     def run(self):
         prev_visible = False
-        self.changed_foreground.emit(sbb_is_visible()) #  find out on startup whether to show the overlay or not
-        while True:
-            visible = sbb_is_visible()
+        if "Windows" in os_name :
+            self.changed_foreground.emit(sbb_is_visible()) #  find out on startup whether to show the overlay or not
+            while True:
+                visible = sbb_is_visible()
 
-            if visible != prev_visible:
-                self.changed_foreground.emit(visible)
-            prev_visible = visible
-            time.sleep(0.5)
+                if visible != prev_visible:
+                    self.changed_foreground.emit(visible)
+                prev_visible = visible
+                time.sleep(0.5)
