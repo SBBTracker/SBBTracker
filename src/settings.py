@@ -31,6 +31,7 @@ class Setting:
 # hidden
 filter_ = Setting("filter", "All Matches")
 show_patch_notes = Setting("show-patch-notes", False)
+player_id = Setting("player-id", False)
 # general
 live_palette = Setting("live-palette", "paired")
 matchmaking_only = Setting("matchmaking-only", False)

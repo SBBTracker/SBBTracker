@@ -155,6 +155,8 @@ class SimulationThread(QThread):
             board, playerid, num_simulations, num_threads = self.comp_queue.get()
             simulation_stats = None
 
+            if playerid is None:
+                playerid = settings.get(settings.player_id)
             simulator_board = asset_utils.replace_template_ids(board)
             from_stated = from_state(simulator_board)
 
@@ -252,6 +254,7 @@ class LogThread(QThread):
             elif job == log_parser.JOB_INITCURRENTPLAYER:
                 if not after_first_combat:
                     current_player = state
+                    settings.get(settings.player_id, state.playerid)
                     # only save the first time
                 self.player_update.emit(state, round_number)
             elif job == log_parser.JOB_ROUNDINFO:
@@ -331,6 +334,7 @@ class SettingsWindow(QMainWindow):
     def __init__(self, main_window):
         super().__init__()
         self.hide()
+        self.setWindowModality(Qt.ApplicationModal)
         self.main_window = main_window
         main_widget = QFrame()
         main_layout = QVBoxLayout(main_widget)
@@ -547,7 +551,7 @@ and Lunco
         settings.save()
         self.hide()
 
-        self.main_window.overlay.update_monitor()
+        # self.main_window.overlay.update_monitor()
         self.main_window.overlay.update_comp_scaling()
         self.main_window.overlay.set_transparency()
         self.main_window.show_scores()
@@ -597,7 +601,7 @@ class SBBTracker(QMainWindow):
         self.reset_button = QPushButton("Reattach to Storybook Brawl")
         self.reset_button.setMaximumWidth(self.reset_button.fontMetrics().boundingRect("Reattach to Storybook Brawl")
                                           .width() * 2)
-        self.reset_button.clicked.connect(self.reattatch_to_log)
+        self.reset_button.clicked.connect(self.reattach_to_log)
         round_widget = QWidget()
         round_layout = QHBoxLayout(round_widget)
         round_layout.addWidget(self.round_indicator)
@@ -696,6 +700,7 @@ class SBBTracker(QMainWindow):
 
         self.sbb_watcher_thread = SBBWindowCheckThread()
         self.sbb_watcher_thread.changed_foreground.connect(self.overlay.visible_in_bg)
+        self.sbb_watcher_thread.changed_rect.connect(self.overlay.set_rect)
 
         self.resize(1300, 800)
 
@@ -899,7 +904,7 @@ class SBBTracker(QMainWindow):
         if reply == QMessageBox.Yes:
             self.player_stats.delete()
 
-    def reattatch_to_log(self):
+    def reattach_to_log(self):
         try:
             os.remove(log_parser.offsetfile)
         except Exception as e:
@@ -1232,15 +1237,15 @@ class StatsGraph(QWidget):
         self.canvas.draw()
 
 
-def resoultion_offset(resolution: (int, int)):
-    if resolution == (1920, 1080):
-        return 0
-    if resolution == (2560, 1440):
-        return 43
-    if resolution == (3840, 2160):
-        return 63
-    else:
-        return 0
+def portrait_location(resolution: (int, int)):
+    x, y = resolution
+    return 0.346 * y - 126
+
+
+def get_hover_size(resolution: (int, int)):
+    x, y = resolution
+    width = 0.0773 * y + 0.687
+    return width, width * 17/21
 
 
 hover_size = (84, 68)
@@ -1265,17 +1270,15 @@ class OverlayWindow(QMainWindow):
         self.show_comps = settings.get(settings.enable_comps)
         self.main_window = main_window
         self.stream_overlay = None
-        self.monitor = None
         self.visible = True
-        self.scale_factor = (1, 1)
+        self.scale_factor = 1
+        self.sbb_rect = QRect(0, 0, 1920, 1080)
         self.dpi_scale = 1
-        self.select_monitor(settings.get(settings.monitor))
-        self.hover_regions = [HoverRegion(main_widget, *map(operator.mul, hover_size, self.scale_factor)) for _ in range(0, 8)]
+        self.hover_regions = [HoverRegion(main_widget, *map(operator.mul, hover_size, (self.scale_factor, self.scale_factor))) for _ in range(0, 8)]
         self.simulation_stats = SimulatorStats(main_widget)
         self.simulation_stats.setVisible(settings.get(settings.enable_sim))
         self.turn_display = TurnDisplay(main_widget)
         self.turn_display.setVisible(False)
-        self.update_monitor()
 
         self.show_hide = True
 
@@ -1368,49 +1371,39 @@ class OverlayWindow(QMainWindow):
             #  fixes bug where hovering over the hero at the end of combat gets the overlay stuck
             widget.setVisible(False)
 
-    def select_monitor(self, index):
-        screens = QGuiApplication.screens()
-        # if the number of monitors is reduced, just pick the first monitor by default
-        adjusted_index = index if index < len(screens) else 0
-        self.monitor = QGuiApplication.screens()[adjusted_index]
-        settings.set_(settings.monitor, adjusted_index)
-
-    def update_monitor(self):
-        self.dpi_scale = (self.monitor.logicalDotsPerInch() / 96)
-        self.real_size = tuple(map(operator.mul, (self.dpi_scale, self.dpi_scale), self.monitor.size().toTuple()))
-        self.setMinimumSize(*self.real_size)
-        self.setGeometry(self.monitor.geometry())
-        self.scale_factor = tuple(map(operator.truediv, self.monitor.size().toTuple(), base_size))
+    def set_rect(self, left, top, right, bottom):
+        self.sbb_rect = QRect(left, top, right-left, bottom-top)
+        self.setFixedSize(self.sbb_rect.size())
+        self.setGeometry(QGuiApplication.screens()[0].geometry())
+        self.move(left, top)
+        self.scale_factor = self.sbb_rect.size().height() / base_size[1]
         self.update_hovers()
+        for widget in self.comp_widgets:
+            widget.move(round(self.size().width() / 2 - 100), 0)
 
-        sim_pos = settings.get(settings.simulator_position, (self.real_size[0] / 2 - 100, 0))
-        if 0 < sim_pos[0] > self.real_size[0] or 0 < sim_pos[1] > self.real_size[1]:
-            sim_pos = (self.real_size[0] / 2 - 100, 0)
-            settings.set_(settings.simulator_position, sim_pos)
-        self.simulation_stats.move(*sim_pos)
-        turn_pos = settings.get(settings.turn_indicator_position, (self.real_size[0] - 300, 0))
-        if turn_pos[0] > self.real_size[0] or turn_pos[1] > self.real_size[1]:
-            turn_pos = (self.real_size[0] - 300, 0)
-            settings.set_(settings.turn_indicator_position, turn_pos)
-        self.turn_display.move(*turn_pos)
+        sim_pos = QPoint(*settings.get(settings.simulator_position, (self.sbb_rect.top() / 2 - 100, 0)))
+        if not self.centralWidget().geometry().contains(sim_pos):
+            sim_pos = QPoint(0, 0)
+        self.simulation_stats.move(sim_pos)
+        turn_pos = QPoint(*settings.get(settings.turn_indicator_position, (self.sbb_rect.top() - 300, 0)))
+        if not self.centralWidget().geometry().contains(turn_pos):
+            turn_pos = QPoint(0, 0)
+        self.turn_display.move(turn_pos)
         self.turn_display.label.setFont(QFont("Roboto", int(settings.get(settings.turn_display_font_size))))
         self.turn_display.update()
-        if self.stream_overlay:
-            self.stream_overlay.update_monitor()
 
     def update_hovers(self):
-        true_scale = (self.scale_factor[0] * self.dpi_scale, self.scale_factor[1] * self.dpi_scale)
-
+        true_scale = self.scale_factor
         for i in range(len(self.hover_regions)):
             hover = self.hover_regions[i]
-            loc = (p1_loc[0] * true_scale[0], (p1_loc[1] * true_scale[1]) +
-                   (hover_distance * (true_scale[1]) * i) +
-                   (hover_size[1] * true_scale[1] * i) +
-                   resoultion_offset(tuple(size * self.monitor.devicePixelRatio() for size in self.real_size)))
+            loc = (38 * true_scale,
+                   portrait_location(self.sbb_rect.size().toTuple()) +
+                   hover_distance * i * true_scale +
+                   hover_size[1] * true_scale * i)
             hover.move(*loc)
-            new_size = tuple(map(operator.mul, hover_size, true_scale))
-            hover.resize(*new_size)
-            hover.background.setMinimumSize(*new_size)
+            new_size = QSize(*get_hover_size(self.sbb_rect.size().toTuple()))
+            hover.resize(new_size)
+            hover.background.setFixedSize(new_size)
             hover.enter_hover.connect(lambda y=i: self.show_hide_comp(y, True))
             hover.leave_hover.connect(lambda y=i: self.show_hide_comp(y, False))
         self.update()
@@ -1550,8 +1543,6 @@ class SimulatorStats(MovableWidget):
         self.layout.addWidget(self.error_widget)
         self.error_widget.setMinimumSize(background.minimumSize())
 
-        # self.layout.setCurrentIndex(1)
-
         label_layout.setSpacing(0)
         label_layout.setRowStretch(0, 1)
         label_layout.setRowStretch(1, 1)
@@ -1622,7 +1613,7 @@ class HoverRegion(QWidget):
         self.background = QWidget(self)
         self.background.setMinimumSize(width, height)
         self.setStyleSheet("background-color: rgba(0, 0, 0, 0.01);")
-        # self.setStyleSheet("background-color: rgba(255, 255, 255, 1);")
+        # self.setStyleSheet("background-color: rgba(255, 255, 255, 0.5);")
         self.setMinimumSize(width, height)
 
     def enterEvent(self, event):
