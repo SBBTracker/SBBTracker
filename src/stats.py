@@ -112,7 +112,8 @@ class PlayerStats:
         return match_stats
 
     def update_stats(self, starting_hero: str, ending_hero: str, placement: str, mmr_change: str, session_id: str):
-        if session_id not in self.df['SessionId'].values:
+        if session_id not in self.df['SessionId'].values and starting_hero and ending_hero and placement \
+                and mmr_change and session_id:
             self.df = self.df.append(
                 {"StartingHero": starting_hero, "EndingHero": ending_hero, "Placement": placement,
                  "Timestamp": datetime.now().strftime("%Y-%m-%d"), "+/-MMR": str(mmr_change), "SessionId": session_id},
