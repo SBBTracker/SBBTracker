@@ -455,8 +455,6 @@ and Lunco
         monitors = QGuiApplication.screens()
         choose_monitor.addItems([f"Monitor {i + 1}" for i in range(0, len(monitors))])
         choose_monitor.setCurrentIndex(settings.get(settings.monitor))
-        choose_monitor.currentIndexChanged.connect(self.main_window.overlay.select_monitor)
-        choose_monitor.currentIndexChanged.connect(self.main_window.streamer_overlay.select_monitor)
 
         self.comp_transparency_slider = SliderCombo(0, 100, settings.get(settings.boardcomp_transparency))
         self.simulator_transparency_slider = SliderCombo(0, 100,  settings.get(settings.simulator_transparency))
