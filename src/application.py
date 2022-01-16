@@ -462,7 +462,7 @@ and Lunco
         self.num_threads_slider = SliderCombo(1, 4, settings.get(settings.number_threads))
         self.overlay_comps_scaling = SliderCombo(50, 200, settings.get(settings.overlay_comps_scaling))
 
-        overlay_layout.addRow("Enable overlay (borderless window only)", enable_overlay_checkbox)
+        overlay_layout.addRow("Enable overlay (does not work in fullscreen)", enable_overlay_checkbox)
         overlay_layout.addRow("Hide if SBB in background (restart to take effect)", hide_overlay_in_bg_checkbox)
         overlay_layout.addRow(QLabel(" "))
         overlay_layout.addRow("Enable simulator *BETA*", enable_sim_checkbox)
