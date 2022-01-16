@@ -15,6 +15,8 @@ from datetime import date
 from pathlib import Path
 from queue import Queue
 
+import matplotlib
+matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 

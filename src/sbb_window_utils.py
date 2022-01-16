@@ -1,7 +1,12 @@
 import time
 
 from PySide6.QtCore import QThread, Signal
-from win32gui import GetForegroundWindow, GetClientRect, FindWindow, ClientToScreen
+
+try:
+    from win32gui import GetForegroundWindow, GetClientRect, FindWindow, ClientToScreen
+except:
+    pass
+from log_parser import os_name
 
 
 def get_sbb_window():
@@ -46,19 +51,21 @@ class SBBWindowCheckThread(QThread):
         super(SBBWindowCheckThread, self).__init__()
 
     def run(self):
-        prev_visible = sbb_is_visible
-        prev_rect = get_sbb_rect()
-        self.changed_rect.emit(*prev_rect)
-        self.changed_foreground.emit(prev_visible)  # find out on startup whether to show the overlay or not
-        while True:
-            visible = sbb_is_visible()
-            current_rect = get_sbb_rect()
+        if "Windows" == os_name:
+            prev_visible = sbb_is_visible
+            prev_rect = get_sbb_rect()
+            self.changed_rect.emit(*prev_rect)
+            self.changed_foreground.emit(prev_visible)  # find out on startup whether to show the overlay or not
+            while True:
+                visible = sbb_is_visible()
+                current_rect = get_sbb_rect()
 
-            if visible != prev_visible:
-                self.changed_foreground.emit(visible)
+                if visible != prev_visible:
+                    self.changed_foreground.emit(visible)
 
-            if current_rect != prev_rect and current_rect != (-1, -1, -1, -1):
-                self.changed_rect.emit(*current_rect)
-            prev_visible = visible
-            prev_rect = current_rect
-            time.sleep(0.5)
+                if current_rect != prev_rect and current_rect != (-1, -1, -1, -1):
+                    self.changed_rect.emit(*current_rect)
+                prev_visible = visible
+                prev_rect = current_rect
+                time.sleep(0.5)
+

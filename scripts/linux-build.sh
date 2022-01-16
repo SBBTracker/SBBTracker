@@ -8,8 +8,8 @@ pip install .
 cd ../../
 pyinstaller SBBTracker.spec
 cp -r dist/SBBTracker/. release/linux/bin
-cp -r assets release/linux/assets
-cp -r cards release/linux/cards
+cp -r assets release/linux/
+cp -r cards release/linux/
 cd release/
 tar -zcvf "SBBTracker-v${version}.tar.gz" linux/ --transform s/linux/SBBTracker-v${version}/
 cd ..
