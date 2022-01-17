@@ -125,23 +125,42 @@ def update_table(table: QTableWidget, data: list[list]):
             table.setItem(row, column, QTableWidgetItem(str(datum)))
 
 
-today = date.today()
-_, days_this_month = calendar.monthrange(today.year, today.month)
-first_day_this_month = today.replace(day=1)
-last_day_this_month = today.replace(day=days_this_month)
-last_day_prev_month = first_day_this_month - datetime.timedelta(days=1)
-first_day_prev_month = last_day_prev_month.replace(day=1)
+all_matches = "All Matches"
+latest_patch = "Latest Patch (65.10)"
+prev_patch = "Previous Patch (64.2)"
+today_ = "Today"
+last_7 = "Last 7 days"
+last_30 = "Last 30 days"
+this_month = "This month"
+last_month = "Last month"
 
-default_dates = {
-    "All Matches": ("1970-01-01", today.isoformat()),
-    "Latest Patch (65.10)": ("2021-12-14", today.isoformat()),
-    "Previous Patch (64.2)": ("2021-11-08", "2021-12-14"),
-    "Today": (today.isoformat(), today.isoformat()),
-    "Last 7 days": ((today - datetime.timedelta(days=7)).isoformat(), today.isoformat()),
-    "Last 30 days": ((today - datetime.timedelta(days=30)).strftime("%Y-%m-%d"), today.strftime("%Y-%m-%d")),
-    "This month": (first_day_this_month.isoformat(), last_day_this_month.isoformat()),
-    "Last month": (first_day_prev_month.isoformat(), last_day_prev_month.isoformat()),
-}
+default_dates = [all_matches, latest_patch, prev_patch, today_, last_7, last_30, this_month, last_month ]
+
+
+def get_date_range(key):
+    today = date.today()
+    _, days_this_month = calendar.monthrange(today.year, today.month)
+    first_day_this_month = today.replace(day=1)
+    last_day_this_month = today.replace(day=days_this_month)
+    last_day_prev_month = first_day_this_month - datetime.timedelta(days=1)
+    first_day_prev_month = last_day_prev_month.replace(day=1)
+
+    if key == all_matches:
+        return "1970-01-01", today.isoformat()
+    elif key == latest_patch:
+        return "2021-12-14", today.isoformat()
+    elif key == prev_patch:
+        return "2021-11-08", "2021-12-14"
+    elif key == today_:
+        return today.isoformat(), today.isoformat()
+    elif key == last_7:
+        return (today - datetime.timedelta(days=7)).isoformat(), today.isoformat()
+    elif key == last_30:
+        return (today - datetime.timedelta(days=30)).strftime("%Y-%m-%d"), today.strftime("%Y-%m-%d")
+    elif key == this_month:
+        return first_day_this_month.isoformat(), last_day_this_month.isoformat()
+    elif key == last_month:
+        return first_day_prev_month.isoformat(), last_day_prev_month.isoformat()
 
 
 class SimulationThread(QThread):
@@ -1106,7 +1125,7 @@ QTabBar::tab:right{
         self.toggle_hero.activated.connect(self.toggle_heroes)
         self.toggle_hero.addItems(hero_types)
         self.filter_combo = QComboBox()
-        self.filter_combo.addItems(default_dates.keys())
+        self.filter_combo.addItems(default_dates)
         index = self.filter_combo.findText(self.filter_)
         if index != -1:  # -1 for not found
             self.filter_combo.setCurrentIndex(index)
@@ -1150,7 +1169,7 @@ QTabBar::tab:right{
         self.page_indicator.setText(f'Page {self.page} of {max(1, self.player_stats.get_num_pages())}')
 
     def update_stats_table(self):
-        start, end = default_dates[self.filter_]
+        start, end = get_date_range(self.filter_)
         hero_stats = self.player_stats.filter(start, end, self.sort_col, self.sort_asc)
         chosen_stats = hero_stats[self.display_starting_hero]
         update_table(self.stats_table, chosen_stats)
