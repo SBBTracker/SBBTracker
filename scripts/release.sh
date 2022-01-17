@@ -3,7 +3,7 @@
 . venv/Scripts/activate
 bumpversion $1
 rm -rf ./dist
-cd src/SBBBattleSim
+cd sbbtracker/SBBBattleSim
 pip install .
 cd ../../
 pyinstaller SBBTracker.spec

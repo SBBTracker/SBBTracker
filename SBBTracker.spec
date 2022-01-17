@@ -4,7 +4,7 @@ from PyInstaller.utils.hooks import collect_submodules
 block_cipher = None
 
 
-a = Analysis(['src/application.py'],
+a = Analysis(['sbbtracker/application.py'],
              pathex=[],
              binaries=[],
              datas=[],
