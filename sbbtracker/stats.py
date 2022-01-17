@@ -107,6 +107,7 @@ class PlayerStats:
                     self.df = pd.DataFrame(columns=stats_columns)
         else:
             self.df = pd.DataFrame(columns=stats_columns)
+        self.df = self.df.dropna()  # cleanup any weird stats
 
     def export(self, filepath: Path):
         self.df.to_csv(filepath, index=False)
