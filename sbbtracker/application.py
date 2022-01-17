@@ -47,13 +47,7 @@ from PySide6.QtWidgets import (
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from qt_material import apply_stylesheet
 
-import asset_utils
-import graphs
-import log_parser
-import stats
-import updater
-import version
-import settings
+from sbbtracker import asset_utils, graphs, log_parser, stats, updater, version, settings
 
 if not stats.sbbtracker_folder.exists():
     stats.sbbtracker_folder.mkdir()
@@ -1702,6 +1696,8 @@ def main():
       border: 0px;
     }""") + "QTabBar{ text-transform: none; }"
     app.setStyleSheet(stylesheet)
+    
+    stats.backup_stats()
 
 # TODO: uncomment this when the updater doesn't require input
 
