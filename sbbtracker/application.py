@@ -16,6 +16,7 @@ from pathlib import Path
 from queue import Queue
 
 import matplotlib
+
 matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
 import numpy as np
@@ -128,7 +129,7 @@ last_30 = "Last 30 days"
 this_month = "This month"
 last_month = "Last month"
 
-default_dates = [all_matches, latest_patch, prev_patch, today_, last_7, last_30, this_month, last_month ]
+default_dates = [all_matches, latest_patch, prev_patch, today_, last_7, last_30, this_month, last_month]
 
 
 def get_date_range(key):
@@ -462,7 +463,8 @@ and Lunco
         turn_display_font = QLineEdit()
         turn_display_font.setValidator(QIntValidator(1, 100))
         turn_display_font.setText(str(settings.get(settings.turn_display_font_size)))
-        turn_display_font.textChanged.connect(lambda text: settings.set_(settings.turn_display_font_size, text) if text != '' else None)
+        turn_display_font.textChanged.connect(
+            lambda text: settings.set_(settings.turn_display_font_size, text) if text != '' else None)
 
         choose_monitor = QComboBox()
         monitors = QGuiApplication.screens()
@@ -470,7 +472,7 @@ and Lunco
         choose_monitor.setCurrentIndex(settings.get(settings.monitor))
 
         self.comp_transparency_slider = SliderCombo(0, 100, settings.get(settings.boardcomp_transparency))
-        self.simulator_transparency_slider = SliderCombo(0, 100,  settings.get(settings.simulator_transparency))
+        self.simulator_transparency_slider = SliderCombo(0, 100, settings.get(settings.simulator_transparency))
         self.num_sims_silder = SliderCombo(100, 10000, settings.get(settings.number_simulations, 1000))
         self.num_threads_slider = SliderCombo(1, 4, settings.get(settings.number_threads))
         self.overlay_comps_scaling = SliderCombo(50, 200, settings.get(settings.overlay_comps_scaling))
@@ -566,6 +568,7 @@ and Lunco
 
         # self.main_window.overlay.update_monitor()
         self.main_window.overlay.update_comp_scaling()
+        self.main_window.streamer_overlay.update_comp_scaling()
         self.main_window.overlay.set_transparency()
         self.main_window.show_scores()
         if not settings.get(settings.hide_overlay_in_bg) or self.main_window.overlay.visible:
@@ -573,7 +576,7 @@ and Lunco
         if settings.get(settings.streaming_mode):
             self.main_window.streamer_overlay.show()
             self.main_window.streamer_overlay.centralWidget().setStyleSheet(
-                f"QWidget#overlay {{background-color: { settings.get(settings.stream_overlay_color)}}}")
+                f"QWidget#overlay {{background-color: {settings.get(settings.stream_overlay_color)}}}")
         else:
             self.main_window.streamer_overlay.hide()
         self.main_window.overlay.set_comps_enabled(settings.get(settings.enable_comps))
@@ -652,7 +655,8 @@ class SBBTracker(QMainWindow):
         toolbar.insertAction(bug_action, settings_action)
         settings_action.triggered.connect(self.settings_window.show)
 
-        self.export_comp_action = QAction(QPixmap(asset_utils.get_asset("icons/file-export.png")), "&Export last combat", self)
+        self.export_comp_action = QAction(QPixmap(asset_utils.get_asset("icons/file-export.png")),
+                                          "&Export last combat", self)
         toolbar.insertAction(bug_action, self.export_comp_action)
         self.export_comp_action.triggered.connect(self.export_last_comp)
         self.export_comp_action.setVisible(settings.get(settings.export_comp_button))
@@ -665,7 +669,8 @@ class SBBTracker(QMainWindow):
 
         self.update_banner = QToolBar(self)
         self.update_banner.setMinimumHeight(40)
-        self.update_banner.setStyleSheet(f"QToolBar {{border-bottom: none; border-top: none; background: {primary_color};}}")
+        self.update_banner.setStyleSheet(
+            f"QToolBar {{border-bottom: none; border-top: none; background: {primary_color};}}")
         update_text = QLabel("    An update is available! Would you like to install?    ")
         update_text.setStyleSheet(f"QLabel {{ color : {default_bg_color}; }}")
         self.update_banner.addWidget(update_text)
@@ -809,7 +814,8 @@ class SBBTracker(QMainWindow):
                                       settings.get(settings.number_threads, 3)))
 
     def update_stats(self, starting_hero: str, player, session_id: str):
-        if settings.get(settings.save_stats, True) and (not settings.get(settings.matchmaking_only) or self.in_matchmaking):
+        if settings.get(settings.save_stats, True) and (
+                not settings.get(settings.matchmaking_only) or self.in_matchmaking):
             place = player.place if int(player.health) <= 0 else "1"
             self.player_stats.update_stats(starting_hero, asset_utils.get_hero_name(player.heroid),
                                            place, player.mmr, session_id)
@@ -1069,8 +1075,9 @@ class MatchHistory(QWidget):
             action = menu.exec(self.match_history_table.mapToGlobal(position))
             if action == delete_action:
                 self.player_stats.delete_entry(self.match_history_table.itemAt(position).row() +
-                                               (self.page-1) * stats.stats_per_page, reverse=True)
+                                               (self.page - 1) * stats.stats_per_page, reverse=True)
                 self.update_history_table()
+
         self.match_history_table.customContextMenuRequested.connect(history_menu)
 
         paged_table = QWidget()
@@ -1267,7 +1274,7 @@ def portrait_location(resolution: (int, int)):
 def get_hover_size(resolution: (int, int)):
     x, y = resolution
     width = 0.0773 * y + 0.687
-    return width, width * 17/21
+    return width, width * 17 / 21
 
 
 hover_size = (84, 68)
@@ -1296,7 +1303,9 @@ class OverlayWindow(QMainWindow):
         self.scale_factor = 1
         self.sbb_rect = QRect(0, 0, 1920, 1080)
         self.dpi_scale = 1
-        self.hover_regions = [HoverRegion(main_widget, *map(operator.mul, hover_size, (self.scale_factor, self.scale_factor))) for _ in range(0, 8)]
+        self.hover_regions = [
+            HoverRegion(main_widget, *map(operator.mul, hover_size, (self.scale_factor, self.scale_factor))) for _ in
+            range(0, 8)]
         self.simulation_stats = SimulatorStats(main_widget)
         self.simulation_stats.setVisible(settings.get(settings.enable_sim))
         self.turn_display = TurnDisplay(main_widget)
@@ -1393,38 +1402,39 @@ class OverlayWindow(QMainWindow):
             #  fixes bug where hovering over the hero at the end of combat gets the overlay stuck
             widget.setVisible(False)
 
-    def set_rect(self, left, top, right, bottom):
-        self.sbb_rect = QRect(left, top, right-left, bottom-top)
+    def set_rect(self, left, top, right, bottom, dpi):
+        self.dpi_scale = 96 / dpi
+        self.sbb_rect = QRect(left, top, right - left, bottom - top)
         self.setFixedSize(self.sbb_rect.size())
         self.setGeometry(QGuiApplication.screens()[0].geometry())
         self.move(left, top)
         self.scale_factor = self.sbb_rect.size().height() / base_size[1]
         self.update_hovers()
         for widget in self.comp_widgets:
-            widget.move(round(self.size().width() / 2 - 100), 0)
+            widget.move(QPoint(round(self.size().width() / 2 - 100), 0) * self.dpi_scale)
 
         sim_pos = QPoint(*settings.get(settings.simulator_position, (self.sbb_rect.top() / 2 - 100, 0)))
         if not self.centralWidget().geometry().contains(sim_pos):
             sim_pos = QPoint(0, 0)
-        self.simulation_stats.move(sim_pos)
+        self.simulation_stats.move(sim_pos * self.dpi_scale)
         turn_pos = QPoint(*settings.get(settings.turn_indicator_position, (self.sbb_rect.top() - 300, 0)))
         if not self.centralWidget().geometry().contains(turn_pos):
             turn_pos = QPoint(0, 0)
-        self.turn_display.move(turn_pos)
+        self.turn_display.move(turn_pos * self.dpi_scale)
         self.turn_display.label.setFont(QFont("Roboto", int(settings.get(settings.turn_display_font_size))))
         self.turn_display.update()
         if settings.get(settings.streaming_mode) and self.stream_overlay is not None:
-            self.stream_overlay.set_rect(left, top, right, bottom)
+            self.stream_overlay.set_rect(left, top, right, bottom, dpi)
 
     def update_hovers(self):
         true_scale = self.scale_factor
         for i in range(len(self.hover_regions)):
             hover = self.hover_regions[i]
-            loc = (38 * true_scale,
-                   portrait_location(self.sbb_rect.size().toTuple()) +
-                   hover_distance * i * true_scale +
-                   hover_size[1] * true_scale * i)
-            hover.move(*loc)
+            loc = QPoint(38 * true_scale,
+                         portrait_location(self.sbb_rect.size().toTuple()) +
+                         hover_distance * i * true_scale +
+                         hover_size[1] * true_scale * i)
+            hover.move(loc * self.dpi_scale)
             new_size = QSize(*get_hover_size(self.sbb_rect.size().toTuple()))
             hover.resize(new_size)
             hover.background.setFixedSize(new_size)
@@ -1456,7 +1466,8 @@ class StreamerOverlayWindow(OverlayWindow):
         self.setWindowFlags(self.windowFlags() &
                             ~Qt.WindowStaysOnTopHint & ~Qt.SubWindow
                             | Qt.WindowStaysOnBottomHint)
-        self.centralWidget().setStyleSheet(f"QWidget#overlay {{background-color: { settings.get(settings.stream_overlay_color)} ;}}")
+        self.centralWidget().setStyleSheet(
+            f"QWidget#overlay {{background-color: {settings.get(settings.stream_overlay_color)} ;}}")
         self.show_button.hide()
         self.disable_hovers()
 
@@ -1554,7 +1565,8 @@ class SimulatorStats(MovableWidget):
         self.error_msg = QLabel("Error in simulation!")
         error_layout.addWidget(self.error_msg, alignment=Qt.AlignCenter)
         error_layout.setContentsMargins(0, 0, 0, 0)
-        self.error_msg.setStyleSheet("QLabel#sim-error { text-align: center; font-size: 20px; background-color: rgba(0,0,0,0%); }")
+        self.error_msg.setStyleSheet(
+            "QLabel#sim-error { text-align: center; font-size: 20px; background-color: rgba(0,0,0,0%); }")
         self.error_msg.setObjectName("sim-error")
         self.error_msg.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
@@ -1710,19 +1722,19 @@ def main():
 
     stats.backup_stats()
 
-# TODO: uncomment this when the updater doesn't require input
+    # TODO: uncomment this when the updater doesn't require input
 
-#     if settings.silent_updates not in settings:
-#         reply = QMessageBox.question(None, "Enable silent updates?",
-#                                      f"""Would you like to enable silent updates?
-# This will allow the application to update automatically
-# when you open it (if there's an update).
-#
-# You can change this setting at any time at:
-# settings > Updates > Enable silent updates
-# """)
-#         settings.set(settings.silent_updates, reply == QMessageBox.Yes)
-#         settings.save()
+    #     if settings.silent_updates not in settings:
+    #         reply = QMessageBox.question(None, "Enable silent updates?",
+    #                                      f"""Would you like to enable silent updates?
+    # This will allow the application to update automatically
+    # when you open it (if there's an update).
+    #
+    # You can change this setting at any time at:
+    # settings > Updates > Enable silent updates
+    # """)
+    #         settings.set(settings.silent_updates, reply == QMessageBox.Yes)
+    #         settings.save()
 
     main_window = SBBTracker()
     main_window.show()

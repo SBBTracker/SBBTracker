@@ -4,6 +4,7 @@ from PySide6.QtCore import QThread, Signal
 
 try:
     from win32gui import GetForegroundWindow, GetClientRect, FindWindow, ClientToScreen
+    from ctypes import windll
 except:
     pass
 from log_parser import os_name
@@ -34,18 +35,25 @@ def sbb_is_visible():
 
 def get_sbb_rect():
     window = get_sbb_window()
+    scale = get_sbb_scale()
     if window != 0:
         rect = GetClientRect(get_sbb_window())
         (left, top) = ClientToScreen(window, (rect[0], rect[1]))
         (right, bottom) = ClientToScreen(window, (rect[2], rect[3]))
-        return left, top, right, bottom
+        return left, top, right, bottom, scale
     else:
-        return -1, -1, -1, -1
+        return -1, -1, -1, -1, scale
+
+
+def get_sbb_scale():
+    window = get_sbb_window()
+    user32 = windll.user32
+    return user32.GetDpiForWindow(window) if window != 0 else 96
 
 
 class SBBWindowCheckThread(QThread):
     changed_foreground = Signal(bool)
-    changed_rect = Signal(int, int, int, int)
+    changed_rect = Signal(int, int, int, int, int)
 
     def __init__(self):
         super(SBBWindowCheckThread, self).__init__()
@@ -63,7 +71,7 @@ class SBBWindowCheckThread(QThread):
                 if visible != prev_visible:
                     self.changed_foreground.emit(visible)
 
-                if current_rect != prev_rect and current_rect != (-1, -1, -1, -1):
+                if current_rect != prev_rect and current_rect != (-1, -1, -1, -1, 96):
                     self.changed_rect.emit(*current_rect)
                 prev_visible = visible
                 prev_rect = current_rect
