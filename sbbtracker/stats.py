@@ -1,8 +1,9 @@
 import logging
 import math
 import os.path
+import re
 import shutil
-from datetime import datetime
+from datetime import date, datetime
 from os.path import expanduser
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -11,11 +12,22 @@ import pandas as pd
 
 import asset_utils
 
-sbbtracker_folder = Path(expanduser('~/Documents')).joinpath("SBBTracker")
-statsfile = Path(expanduser('~/Documents')).joinpath("SBBTracker/stats.csv")
-backup_statsfile = Path(str(statsfile) + "_backup")
+
+old_sbbtracker_folder = Path(expanduser('~/Documents')).joinpath("SBBTracker")
+sbbtracker_folder = Path(os.getenv('APPDATA')).joinpath("SBBTracker")
+stats_format = ".csv"
+statsfile = sbbtracker_folder.joinpath("stats" + stats_format)
+backup_dir = Path(sbbtracker_folder).joinpath("backups")
 if not sbbtracker_folder.exists():
-    sbbtracker_folder.mkdir()
+    if old_sbbtracker_folder.exists():
+        #  Found the legacy folder
+        shutil.copytree(old_sbbtracker_folder, sbbtracker_folder, dirs_exist_ok=True)
+    else:
+        sbbtracker_folder.mkdir()
+
+if not backup_dir.exists():
+    backup_dir.mkdir()
+
 
 headings = ["Hero", "# Matches", "Avg Place", "Top 4", "Wins", "Net MMR"]
 stats_per_page = 20
@@ -57,6 +69,19 @@ def adjust_legacy_df(df: pd.DataFrame):
     return df
 
 
+def backup_stats():
+    daily_file = backup_dir.joinpath("backup_" + date.today().strftime("%Y-%m-%d") + stats_format)
+    if not daily_file.exists() and statsfile.exists():
+        # we haven't written the backup today lets do it
+        backups = [name for name in os.listdir(backup_dir) if os.path.isfile(name) and re.match("backup.*" +
+                                                                                                stats_format, name)]
+        backups.sort()
+        shutil.copyfile(statsfile, daily_file)
+        if len(backups) == 7:
+            # we have reached the max number of backups, delete the oldest one + add the new one
+            os.remove(backups[-1])
+
+
 class PlayerStats:
     """
     A class for loading, storing, and manipulating a player's match history and its relevant stats
@@ -67,12 +92,12 @@ class PlayerStats:
                 self.df = pd.read_csv(str(statsfile))
                 self.df = adjust_legacy_df(self.df)
                 if not set(stats_columns).issubset(self.df.columns):
-                    self.df = pd.read_csv(backup_statsfile)
+                    self.df = pd.read_csv(os.listdir(backup_dir)[0])
                     self.df = adjust_legacy_df(self.df)
             except:
                 logging.exception("Error loading stats file. Attempting to load backup.")
                 try:
-                    self.df = pd.read_csv(backup_statsfile)
+                    self.df = pd.read_csv(os.listdir(backup_dir)[0])
                 except:
                     logging.exception("Couldn't load backup. Starting a new stats file")
                     self.df = pd.DataFrame(columns=stats_columns)
@@ -83,8 +108,7 @@ class PlayerStats:
         self.df.to_csv(filepath, index=False)
 
     def save(self):
-        if statsfile.exists():
-            os.replace(statsfile, str(backup_statsfile))
+        backup_stats()
         with NamedTemporaryFile(delete=False, mode='w', newline='') as temp_file:
             self.df.to_csv(temp_file, index=False)
             temp_name = temp_file.name
