@@ -1413,6 +1413,8 @@ class OverlayWindow(QMainWindow):
         self.turn_display.move(turn_pos)
         self.turn_display.label.setFont(QFont("Roboto", int(settings.get(settings.turn_display_font_size))))
         self.turn_display.update()
+        if settings.get(settings.streaming_mode) and self.stream_overlay is not None:
+            self.stream_overlay.set_rect(left, top, right, bottom)
 
     def update_hovers(self):
         true_scale = self.scale_factor
