@@ -16,6 +16,7 @@ from pathlib import Path
 from queue import Queue
 
 import matplotlib
+import win32api
 
 matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
@@ -55,6 +56,8 @@ if not stats.sbbtracker_folder.exists():
 logging.basicConfig(filename=stats.sbbtracker_folder.joinpath("sbbtracker.log"), filemode="w",
                     format='%(name)s - %(levelname)s - %(message)s', level=logging.WARNING)
 logging.getLogger().addHandler(logging.StreamHandler())
+
+DEBUG = False
 
 from sbbbattlesim import from_state, simulate
 from sbbbattlesim.exceptions import SBBBSCrocException
@@ -1283,6 +1286,30 @@ hover_distance = 15
 base_size = (1920, 1080)
 
 
+def move_point_by_scale(x, y, scale):
+    monitor_at_point = QGuiApplication.screenAt(QPoint(x, y))
+    primary = QGuiApplication.primaryScreen()
+    new_x, new_y = x * scale, y * scale
+    if primary != monitor_at_point:
+        dimensions = monitor_at_point.size()
+        if not (0 < x < dimensions.width()):
+            if x < 0:
+                new_x = x + dimensions.width()
+            elif x > dimensions.width():
+                new_x = x - dimensions.width()
+            scaled_x = new_x * scale
+            new_x = x - scaled_x
+        if not (0 < y < dimensions.height()):
+            if y < 0:
+                new_y = y + dimensions.height()
+            elif y > dimensions.height():
+                new_y = y - dimensions.height()
+            scaled_y = new_y * scale
+            new_y = y - scaled_y
+
+    return new_x, new_y
+
+
 class OverlayWindow(QMainWindow):
     simluation_update = Signal(str, str, str, str, str)
 
@@ -1404,10 +1431,19 @@ class OverlayWindow(QMainWindow):
 
     def set_rect(self, left, top, right, bottom, dpi):
         self.dpi_scale = 96 / dpi
-        self.sbb_rect = QRect(left, top, right - left, bottom - top)
+        left_edge = left
+        top_edge = top
+        right_edge = right - left
+        bottom_edge = bottom - top
+        if self.dpi_scale != 1:
+            left_edge, top_edge = move_point_by_scale(left, top, self.dpi_scale)
+            right_edge *= self.dpi_scale
+            bottom_edge *= self.dpi_scale
+
+        self.sbb_rect = QRect(left_edge, top_edge, right_edge, bottom_edge)
         self.setFixedSize(self.sbb_rect.size())
         self.setGeometry(QGuiApplication.screens()[0].geometry())
-        self.move(left, top)
+        self.move(left_edge, top_edge)
         self.scale_factor = self.sbb_rect.size().height() / base_size[1]
         self.update_hovers()
         for widget in self.comp_widgets:
@@ -1431,10 +1467,10 @@ class OverlayWindow(QMainWindow):
         for i in range(len(self.hover_regions)):
             hover = self.hover_regions[i]
             loc = QPoint(38 * true_scale,
-                         portrait_location(self.sbb_rect.size().toTuple()) +
+                         portrait_location((self.sbb_rect.size() / self.dpi_scale).toTuple()) * self.dpi_scale +
                          hover_distance * i * true_scale +
                          hover_size[1] * true_scale * i)
-            hover.move(loc * self.dpi_scale)
+            hover.move(loc)
             new_size = QSize(*get_hover_size(self.sbb_rect.size().toTuple()))
             hover.resize(new_size)
             hover.background.setFixedSize(new_size)
@@ -1649,7 +1685,8 @@ class HoverRegion(QWidget):
         self.background = QWidget(self)
         self.background.setMinimumSize(width, height)
         self.setStyleSheet("background-color: rgba(0, 0, 0, 0.01);")
-        # self.setStyleSheet("background-color: rgba(255, 255, 255, 0.5);")
+        if DEBUG:
+            self.setStyleSheet("background-color: rgba(255, 255, 255, 0.5);")
         self.setMinimumSize(width, height)
 
     def enterEvent(self, event):
@@ -1710,6 +1747,7 @@ def main():
     splash.show()
 
     app.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.RoundPreferFloor)
+    screens = QGuiApplication.screens()
     apply_stylesheet(app, theme='dark_teal.xml')
     stylesheet = app.styleSheet()
     stylesheet = stylesheet.replace("""QTabBar::tab {

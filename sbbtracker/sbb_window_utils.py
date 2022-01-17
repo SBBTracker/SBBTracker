@@ -4,6 +4,7 @@ from PySide6.QtCore import QThread, Signal
 
 try:
     from win32gui import GetForegroundWindow, GetClientRect, FindWindow, ClientToScreen
+    from win32api import MonitorFromPoint
     from ctypes import windll
 except:
     pass
