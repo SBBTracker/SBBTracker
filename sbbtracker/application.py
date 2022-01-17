@@ -36,7 +36,7 @@ from PySide6.QtWidgets import (
     QHeaderView,
     QLabel,
     QLayout, QLineEdit, QMainWindow,
-    QMessageBox, QProgressBar, QPushButton, QScrollArea, QSizePolicy, QSlider, QSplashScreen, QStackedLayout,
+    QMenu, QMessageBox, QProgressBar, QPushButton, QScrollArea, QSizePolicy, QSlider, QSplashScreen, QStackedLayout,
     QTabWidget,
     QTableWidget,
     QTableWidgetItem,
@@ -1058,11 +1058,20 @@ class MatchHistory(QWidget):
         self.match_history_table.setColumnWidth(1, 140)
         self.match_history_table.setColumnWidth(2, 80)
         self.match_history_table.setColumnWidth(3, 85)
-        self.match_history_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        self.match_history_table.setFocusPolicy(Qt.NoFocus)
-        self.match_history_table.setSelectionMode(QAbstractItemView.NoSelection)
         self.match_history_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.match_history_table.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
+
+        self.match_history_table.setContextMenuPolicy(Qt.CustomContextMenu)
+
+        def history_menu(position):
+            menu = QMenu()
+            delete_action = menu.addAction("Delete")
+            action = menu.exec(self.match_history_table.mapToGlobal(position))
+            if action == delete_action:
+                self.player_stats.delete_entry(self.match_history_table.itemAt(position).row() +
+                                               (self.page-1) * stats.stats_per_page, reverse=True)
+                self.update_history_table()
+        self.match_history_table.customContextMenuRequested.connect(history_menu)
 
         paged_table = QWidget()
         paged_table.setMaximumWidth(533)
@@ -1696,7 +1705,7 @@ def main():
       border: 0px;
     }""") + "QTabBar{ text-transform: none; }"
     app.setStyleSheet(stylesheet)
-    
+
     stats.backup_stats()
 
 # TODO: uncomment this when the updater doesn't require input

@@ -192,3 +192,7 @@ class PlayerStats:
         else:
             filtered = df[(df['Timestamp'] >= start_date) & (df['Timestamp'] <= end_date)]
             return self.generate_stats(sort_col, sort_asc, filtered)
+
+    def delete_entry(self, row, reverse=False):
+        index = len(self.df.index) - row - 1 if reverse else row
+        self.df = self.df.drop(self.df.index[index])
