@@ -47,7 +47,7 @@ from PySide6.QtWidgets import (
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from qt_material import apply_stylesheet
 
-from sbbtracker import asset_utils, graphs, log_parser, stats, updater, version, settings
+import asset_utils, graphs, log_parser, stats, updater, version, settings
 
 if not stats.sbbtracker_folder.exists():
     stats.sbbtracker_folder.mkdir()

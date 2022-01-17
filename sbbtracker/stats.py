@@ -1,6 +1,7 @@
 import logging
 import math
 import os.path
+import platform
 import re
 import shutil
 from datetime import date, datetime
@@ -12,14 +13,17 @@ import pandas as pd
 
 import asset_utils
 
-
+os_name = platform.system()
 old_sbbtracker_folder = Path(expanduser('~/Documents')).joinpath("SBBTracker")
-sbbtracker_folder = Path(os.getenv('APPDATA')).joinpath("SBBTracker")
+if "Windows" == os_name:
+    sbbtracker_folder = Path(os.getenv('APPDATA')).joinpath("SBBTracker")
+else:
+    sbbtracker_folder = old_sbbtracker_folder
 stats_format = ".csv"
 statsfile = sbbtracker_folder.joinpath("stats" + stats_format)
 backup_dir = Path(sbbtracker_folder).joinpath("backups")
 if not sbbtracker_folder.exists():
-    if old_sbbtracker_folder.exists():
+    if old_sbbtracker_folder.exists() and os_name == "Windows":
         #  Found the legacy folder
         shutil.copytree(old_sbbtracker_folder, sbbtracker_folder, dirs_exist_ok=True)
     else:
