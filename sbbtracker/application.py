@@ -1290,7 +1290,7 @@ def move_point_by_scale(x, y, scale):
     monitor_at_point = QGuiApplication.screenAt(QPoint(x, y))
     primary = QGuiApplication.primaryScreen()
     new_x, new_y = x * scale, y * scale
-    if primary != monitor_at_point:
+    if primary != monitor_at_point and primary and monitor_at_point:
         dimensions = monitor_at_point.size()
         if not (0 < x < dimensions.width()):
             if x < 0:
@@ -1430,7 +1430,7 @@ class OverlayWindow(QMainWindow):
             widget.setVisible(False)
 
     def set_rect(self, left, top, right, bottom, dpi):
-        self.dpi_scale = 96 / dpi
+        self.dpi_scale = 1 / round(dpi / 96 - .24) #  round .75 and up to nearest int
         left_edge = left
         top_edge = top
         right_edge = right - left
