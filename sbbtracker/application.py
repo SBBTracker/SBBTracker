@@ -57,11 +57,11 @@ logging.basicConfig(filename=stats.sbbtracker_folder.joinpath("sbbtracker.log"),
                     format='%(name)s - %(levelname)s - %(message)s', level=logging.WARNING)
 logging.getLogger().addHandler(logging.StreamHandler())
 
-DEBUG = False
-
 from sbbbattlesim import from_state, simulate
 from sbbbattlesim.exceptions import SBBBSCrocException
 from sbb_window_utils import SBBWindowCheckThread
+
+DEBUG = False
 
 art_dim = (161, 204)
 att_loc = (26, 181)
@@ -255,6 +255,8 @@ class LogThread(QThread):
         matchmaking = False
         after_first_combat = False
         session_id = None
+        match_data = {}
+        combats = []
         while True:
             update = queue.get()
             job = update.job
@@ -263,6 +265,7 @@ class LogThread(QThread):
                 matchmaking = True
             elif job == log_parser.JOB_NEWGAME:
                 states.clear()
+                match_data.clear()
                 current_player = None
                 round_number = 0
                 self.new_game.emit(matchmaking)
@@ -293,13 +296,25 @@ class LogThread(QThread):
                     after_first_combat = True
             elif job == log_parser.JOB_BOARDINFO:
                 self.comp_update.emit(state, round_number)
+                combat = from_state(asset_utils.replace_template_ids(state))
+                combat["round"] = round_number
+                combats.append(combat)
             elif job == log_parser.JOB_ENDCOMBAT:
                 counter = 0
             elif job == log_parser.JOB_ENDGAME:
                 self.end_combat.emit()
+                match_data["tracker-id"] = "test-id-pls-ignore"
+                match_data["player-id"] = current_player.playerid
+                match_data["match-id"] = session_id
+                match_data["combat-info"] = combats
+                match_data["placement"] = state.place
+                match_data["players"] = states.json_friendly()
                 if state and current_player and session_id:
                     self.stats_update.emit(asset_utils.get_hero_name(current_player.heroid), state, session_id)
                 session_id = None
+                print(json.dumps(match_data))
+                combats.clear()
+                match_data.clear()
             elif job == log_parser.JOB_HEALTHUPDATE:
                 self.health_update.emit(state)
 
