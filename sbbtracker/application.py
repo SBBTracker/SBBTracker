@@ -38,7 +38,8 @@ from PySide6.QtWidgets import (
     QHeaderView,
     QLabel,
     QLayout, QLineEdit, QMainWindow,
-    QMenu, QMessageBox, QProgressBar, QPushButton, QScrollArea, QSizePolicy, QSlider, QSplashScreen, QStackedLayout,
+    QMenu, QMessageBox, QProgressBar, QProgressDialog, QPushButton, QScrollArea, QSizePolicy, QSlider, QSplashScreen,
+    QStackedLayout,
     QTabWidget,
     QTableWidget,
     QTableWidgetItem,
@@ -49,11 +50,10 @@ from PySide6.QtWidgets import (
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from qt_material import apply_stylesheet
 
-import asset_utils, graphs, log_parser, stats, updater, version, settings
+import asset_utils, graphs, log_parser, stats, updater, version, settings, paths
 
-if not stats.sbbtracker_folder.exists():
-    stats.sbbtracker_folder.mkdir()
-logging.basicConfig(filename=stats.sbbtracker_folder.joinpath("sbbtracker.log"), filemode="w",
+
+logging.basicConfig(filename=paths.sbbtracker_folder.joinpath("sbbtracker.log"), filemode="w",
                     format='%(name)s - %(levelname)s - %(message)s', level=logging.WARNING)
 logging.getLogger().addHandler(logging.StreamHandler())
 
@@ -80,9 +80,9 @@ plt.rcParams.update({'text.color': "white",
                      'axes.labelcolor': "white"})
 
 round_font = QFont("Roboto", 18)
-display_font_family = "Impact" if log_parser.os_name == "Windows" else "Ubuntu Bold"
+display_font_family = "Impact" if paths.os_name == "Windows" else "Ubuntu Bold"
 
-patch_notes_file = stats.sbbtracker_folder.joinpath("patch_notes.txt")
+patch_notes_file = paths.sbbtracker_folder.joinpath("patch_notes.txt")
 
 
 def get_image_location(position: int):
@@ -237,11 +237,6 @@ class LogThread(QThread):
     new_game = Signal(bool)
     end_combat = Signal()
 
-    def __init__(self, *args, **kwargs):
-        super(LogThread, self).__init__()
-        self.args = args
-        self.kwargs = kwargs
-
     def run(self):
         queue = Queue()
         threading.Thread(target=log_parser.run,
@@ -304,6 +299,17 @@ class LogThread(QThread):
                 self.health_update.emit(state)
 
 
+class ImportThread(QThread):
+    update_progress = Signal(int, int)
+
+    def __init__(self, player_stats: stats.PlayerStats):
+        super(ImportThread, self).__init__()
+        self.player_stats = player_stats
+
+    def run(self):
+        self.player_stats.import_matches(self.update_progress.emit)
+
+
 class SliderCombo(QWidget):
     def __init__(self, minimum, maximum, default, step=1):
         super().__init__()
@@ -362,10 +368,12 @@ class SettingsWindow(QMainWindow):
         overlay_settings_scroll = QScrollArea(widgetResizable=True)
         overlay_settings_scroll.setWidget(overlay_settings)
         about_tab = QWidget()
+        data_tab = QWidget()
         advanced_tab = QWidget()
         streaming_tab = QWidget()
         settings_tabs = QTabWidget()
         settings_tabs.addTab(general_settings, "General")
+        settings_tabs.addTab(data_tab, "Data")
         settings_tabs.addTab(overlay_settings_scroll, "Overlay")
         settings_tabs.addTab(advanced_tab, "Advanced")
         settings_tabs.addTab(streaming_tab, "Streaming")
@@ -396,11 +404,6 @@ and Lunco
 
         general_layout = QFormLayout(general_settings)
 
-        export_button = QPushButton("Export Stats")
-        export_button.clicked.connect(main_window.export_csv)
-        delete_button = QPushButton("Delete Stats")
-        delete_button.clicked.connect(lambda: main_window.delete_stats(self))
-
         save_stats_checkbox = QCheckBox()
         save_stats_checkbox.setChecked(settings.get(settings.save_stats))
         save_stats_checkbox.stateChanged.connect(lambda: settings.toggle(settings.save_stats))
@@ -418,11 +421,24 @@ and Lunco
 
         save_stats_checkbox.stateChanged.connect(lambda state: matchmaking_only_checkbox.setEnabled(bool(state)))
 
-        general_layout.addWidget(export_button)
-        general_layout.addWidget(delete_button)
         general_layout.addRow("Save match results", save_stats_checkbox)
         general_layout.addRow("Ignore practice and group lobbies", matchmaking_only_checkbox)
         general_layout.addRow("Graph color palette", self.graph_color_chooser)
+
+        data_layout = QFormLayout(data_tab)
+        export_button = QPushButton("Export Stats")
+        export_button.clicked.connect(main_window.export_csv)
+        delete_button = QPushButton("Delete Stats")
+        delete_button.clicked.connect(lambda: main_window.delete_stats(self))
+        self.last_backed_up = QLabel(f"Last backed up on: {stats.most_recent_backup_date()}")
+        backup_button = QPushButton("Backup Stats")
+        backup_button.clicked.connect(self.backup)
+        reimport_button = QPushButton("Reimport Stats")
+        reimport_button.clicked.connect(self.import_stats)
+        data_layout.addRow(self.last_backed_up, backup_button)
+        data_layout.addWidget(export_button)
+        data_layout.addWidget(delete_button)
+        data_layout.addWidget(reimport_button)
 
         overlay_layout = QFormLayout(overlay_settings)
         enable_overlay_checkbox = QCheckBox()
@@ -588,6 +604,46 @@ and Lunco
         self.main_window.overlay.show_button.setVisible(settings.get(settings.show_tracker_button))
         self.main_window.overlay.turn_display.setVisible(settings.get(settings.enable_turn_display))
         self.main_window.export_comp_action.setVisible(settings.get(settings.export_comp_button))
+
+    def import_stats(self):
+        message = """
+Would you like to import your old games? This is done by 
+reading the record files generated by the game. This will 
+import games going back to Dec 14 2021 (assuming you have not
+deleted the record files).
+
+Note that not all games are guaranteed to be imported.
+
+If you have games already recorded from before Jan 2nd 2022
+duplicated matches may appear. You may wish to backup and delete 
+your current stats before doing this, or manually remove stats 
+yourself.
+
+The importer may take a long time to complete. Please be patient.
+
+
+
+"""
+        reply = QMessageBox.question(self, "Reimport Stats?", message)
+        if reply == QMessageBox.Yes:
+            self.import_thread = ImportThread(self.main_window.player_stats)
+            self.progress = QProgressDialog("Import progress", "Cancel", 0, 100, self)
+            self.progress.setWindowTitle("Importer")
+            self.import_thread.update_progress.connect(self.handle_import_progress)
+            self.import_thread.start()
+            self.progress.canceled.connect(self.import_thread.terminate)
+            self.progress.show()
+            self.main_window.match_history.update_history_table()
+
+    def backup(self):
+        stats.backup_stats(force=True)
+        self.last_backed_up.setText(f"Last backed up on: {stats.most_recent_backup_date()}")
+
+    def handle_import_progress(self, num, totalsize):
+        import_percent = num * 100 / totalsize
+        self.progress.setValue(import_percent)
+        if num == totalsize:
+            self.progress.close()
 
 
 class SBBTracker(QMainWindow):
@@ -850,7 +906,7 @@ class SBBTracker(QMainWindow):
 
     def export_last_comp(self):
         if self.most_recent_combat:
-            with open(stats.sbbtracker_folder.joinpath("last_combat.json"), "w") as file:
+            with open(paths.sbbtracker_folder.joinpath("last_combat.json"), "w") as file:
                 json.dump(from_state(asset_utils.replace_template_ids(self.most_recent_combat)),
                           file, default=lambda o: o.__dict__)
 
@@ -919,12 +975,14 @@ class SBBTracker(QMainWindow):
         filepath, filetype = QFileDialog.getSaveFileName(parent=None, caption='Export to .csv',
                                                          dir=str(Path(os.environ['USERPROFILE']).joinpath("Documents")),
                                                          filter="Text CSV (*.csv)")
-        self.player_stats.export(Path(filepath))
+        if filepath:
+            self.player_stats.export(Path(filepath))
 
     def delete_stats(self, window):
         reply = QMessageBox.question(window, "Delete all Stats", "Do you want to delete *ALL* saved stats?")
         if reply == QMessageBox.Yes:
             self.player_stats.delete()
+            self.match_history.update_history_table()
 
     def reattach_to_log(self):
         try:

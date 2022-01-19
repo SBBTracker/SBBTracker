@@ -8,7 +8,7 @@ try:
     from ctypes import windll
 except:
     pass
-from log_parser import os_name
+from paths import os_name
 
 
 def get_sbb_window():
