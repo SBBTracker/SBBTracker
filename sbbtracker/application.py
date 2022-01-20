@@ -485,10 +485,10 @@ and Lunco
         turn_display_font.textChanged.connect(
             lambda text: settings.set_(settings.turn_display_font_size, text) if text != '' else None)
 
-        choose_monitor = QComboBox()
-        monitors = QGuiApplication.screens()
-        choose_monitor.addItems([f"Monitor {i + 1}" for i in range(0, len(monitors))])
-        choose_monitor.setCurrentIndex(settings.get(settings.monitor))
+        windows_scaling = QCheckBox()
+        windows_scaling.setEnabled(enable_overlay_checkbox.checkState())
+        windows_scaling.setChecked(settings.get(settings.disable_scaling))
+        windows_scaling.stateChanged.connect(lambda: settings.toggle(settings.disable_scaling))
 
         self.comp_transparency_slider = SliderCombo(0, 100, settings.get(settings.boardcomp_transparency))
         self.simulator_transparency_slider = SliderCombo(0, 100, settings.get(settings.simulator_transparency))
@@ -510,7 +510,7 @@ and Lunco
         overlay_layout.addRow("Board comps scaling", self.overlay_comps_scaling)
         overlay_layout.addRow("Enable turn display", enable_turn_display)
         overlay_layout.addRow("Turn font size (restart to resize)", turn_display_font)
-        overlay_layout.addRow("Choose overlay monitor", choose_monitor)
+        overlay_layout.addRow("Ignore windows scaling (Windows 8 compat)", windows_scaling)
         overlay_layout.addRow("Adjust comps transparency", self.comp_transparency_slider)
         overlay_layout.addRow("Adjust simulator transparency", self.simulator_transparency_slider)
 
@@ -1489,6 +1489,9 @@ class OverlayWindow(QMainWindow):
 
     def set_rect(self, left, top, right, bottom, dpi):
         self.dpi_scale = 1 / round(dpi / 96 - .24)  # round .75 and up to nearest int
+        if settings.get(settings.disable_scaling):
+            # Windows 8 scaling is different and I don't want to deal with it
+            self.dpi_scale = 1
         left_edge = left
         top_edge = top
         right_edge = right - left
@@ -1520,7 +1523,6 @@ class OverlayWindow(QMainWindow):
             self.turn_display.update()
             if settings.get(settings.streaming_mode) and self.stream_overlay is not None:
                 self.stream_overlay.set_rect(left, top, right, bottom, dpi)
-
 
     def update_hovers(self):
         true_scale = self.scale_factor
