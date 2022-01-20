@@ -970,7 +970,7 @@ class SBBTracker(QMainWindow):
                 logging.exception("Couldn't write patch notes!")
 
     def install_update(self):
-        if log_parser.os_name == "Windows":
+        if paths.os_name == "Windows":
             dialog = QDialog(self)
             dialog.setWindowTitle("Updater")
             dialog_layout = QVBoxLayout(dialog)
