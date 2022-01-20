@@ -32,10 +32,13 @@ class Setting:
 filter_ = Setting("filter", "All Matches")
 show_patch_notes = Setting("show-patch-notes", False)
 player_id = Setting("player-id", False)
+api_key = Setting("api-key", "")
 # general
 live_palette = Setting("live-palette", "paired")
 matchmaking_only = Setting("matchmaking-only", False)
 save_stats = Setting("save-stats", True)
+#data
+upload_data = Setting("upload-data", False)
 # overlay
 boardcomp_transparency = Setting("boardcomp-transparency", 0)
 simulator_transparency = Setting("simulator-transparency", 0)
@@ -71,6 +74,7 @@ def get(setting: Setting, default=None):
 
 def set_(setting: Setting, value):
     settings_dict[setting.key] = value
+    return value
 
 
 def toggle(setting: Setting):
