@@ -1488,7 +1488,7 @@ class OverlayWindow(QMainWindow):
             widget.setVisible(False)
 
     def set_rect(self, left, top, right, bottom, dpi):
-        self.dpi_scale = 1 / round(dpi / 96 - .24) #  round .75 and up to nearest int
+        self.dpi_scale = 1 / round(dpi / 96 - .24)  # round .75 and up to nearest int
         left_edge = left
         top_edge = top
         right_edge = right - left
@@ -1499,26 +1499,28 @@ class OverlayWindow(QMainWindow):
             bottom_edge *= self.dpi_scale
 
         self.sbb_rect = QRect(left_edge, top_edge, right_edge, bottom_edge)
-        self.setFixedSize(self.sbb_rect.size())
-        self.setGeometry(QGuiApplication.screens()[0].geometry())
-        self.move(left_edge, top_edge)
-        self.scale_factor = self.sbb_rect.size().height() / base_size[1]
-        self.update_hovers()
-        for widget in self.comp_widgets:
-            widget.move(QPoint(round(self.size().width() / 2 - 100), 0) * self.dpi_scale)
+        if all(param != 0 for param in self.sbb_rect.size().toTuple()):
+            self.setFixedSize(self.sbb_rect.size())
+            self.setGeometry(QGuiApplication.screens()[0].geometry())
+            self.move(left_edge, top_edge)
+            self.scale_factor = self.sbb_rect.size().height() / base_size[1]
+            self.update_hovers()
+            for widget in self.comp_widgets:
+                widget.move(QPoint(round(self.size().width() / 2 - 100), 0) * self.dpi_scale)
 
-        sim_pos = QPoint(*settings.get(settings.simulator_position, (self.sbb_rect.top() / 2 - 100, 0)))
-        if not self.centralWidget().geometry().contains(sim_pos):
-            sim_pos = QPoint(0, 0)
-        self.simulation_stats.move(sim_pos * self.dpi_scale)
-        turn_pos = QPoint(*settings.get(settings.turn_indicator_position, (self.sbb_rect.top() - 300, 0)))
-        if not self.centralWidget().geometry().contains(turn_pos):
-            turn_pos = QPoint(0, 0)
-        self.turn_display.move(turn_pos * self.dpi_scale)
-        self.turn_display.label.setFont(QFont("Roboto", int(settings.get(settings.turn_display_font_size))))
-        self.turn_display.update()
-        if settings.get(settings.streaming_mode) and self.stream_overlay is not None:
-            self.stream_overlay.set_rect(left, top, right, bottom, dpi)
+            sim_pos = QPoint(*settings.get(settings.simulator_position, (self.sbb_rect.top() / 2 - 100, 0)))
+            if not self.centralWidget().geometry().contains(sim_pos):
+                sim_pos = QPoint(0, 0)
+            self.simulation_stats.move(sim_pos * self.dpi_scale)
+            turn_pos = QPoint(*settings.get(settings.turn_indicator_position, (self.sbb_rect.top() - 300, 0)))
+            if not self.centralWidget().geometry().contains(turn_pos):
+                turn_pos = QPoint(0, 0)
+            self.turn_display.move(turn_pos * self.dpi_scale)
+            self.turn_display.label.setFont(QFont("Roboto", int(settings.get(settings.turn_display_font_size))))
+            self.turn_display.update()
+            if settings.get(settings.streaming_mode) and self.stream_overlay is not None:
+                self.stream_overlay.set_rect(left, top, right, bottom, dpi)
+
 
     def update_hovers(self):
         true_scale = self.scale_factor
