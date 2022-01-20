@@ -71,7 +71,7 @@ def backup_stats(force=False):
 
 
 def most_recent_backup_date():
-    backups = backup_dir.glob("backup*.csv")
+    backups = list(backup_dir.glob("backup*.csv"))
     if backups:
         sorted_by_recent = sorted(backups, key=os.path.getmtime, reverse=True)
         timestamp = os.path.getmtime(sorted_by_recent[0])
