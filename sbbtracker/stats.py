@@ -1,36 +1,20 @@
 import logging
 import math
 import os.path
-import platform
 import re
 import shutil
 from datetime import date, datetime
-from os.path import expanduser
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 
 import pandas as pd
+from construct import GreedyRange
 
 import asset_utils
-
-os_name = platform.system()
-old_sbbtracker_folder = Path(expanduser('~/Documents')).joinpath("SBBTracker")
-if "Windows" == os_name:
-    sbbtracker_folder = Path(os.getenv('APPDATA')).joinpath("SBBTracker")
-else:
-    sbbtracker_folder = old_sbbtracker_folder
-stats_format = ".csv"
-statsfile = sbbtracker_folder.joinpath("stats" + stats_format)
-backup_dir = Path(sbbtracker_folder).joinpath("backups")
-if not sbbtracker_folder.exists():
-    if old_sbbtracker_folder.exists() and os_name == "Windows":
-        #  Found the legacy folder
-        shutil.copytree(old_sbbtracker_folder, sbbtracker_folder, dirs_exist_ok=True)
-    else:
-        sbbtracker_folder.mkdir()
-
-if not backup_dir.exists():
-    backup_dir.mkdir()
+import log_parser
+import paths
+from record_parser import STRUCT_ACTION, id_to_action_name
+from paths import sbbtracker_folder, backup_dir, statsfile, stats_format
 
 
 headings = ["Hero", "# Matches", "Avg Place", "Top 4", "Wins", "Net MMR"]
@@ -73,17 +57,28 @@ def adjust_legacy_df(df: pd.DataFrame):
     return df
 
 
-def backup_stats():
+def backup_stats(force=False):
     daily_file = backup_dir.joinpath("backup_" + date.today().strftime("%Y-%m-%d") + stats_format)
-    if not daily_file.exists() and statsfile.exists():
-        # we haven't written the backup today lets do it
+    if (not daily_file.exists() or force) and statsfile.exists():
+        # we haven't written the backup today lets do it (or we're forcing an overwrite)
         backups = [name for name in os.listdir(backup_dir) if os.path.isfile(name) and re.match("backup.*" +
                                                                                                 stats_format, name)]
         backups.sort()
-        shutil.copyfile(statsfile, daily_file)
+        shutil.copy(statsfile, daily_file)
         if len(backups) == 7:
             # we have reached the max number of backups, delete the oldest one + add the new one
             os.remove(backups[-1])
+
+
+def most_recent_backup_date():
+    backups = list(backup_dir.glob("backup*.csv"))
+    if backups:
+        sorted_by_recent = sorted(backups, key=os.path.getmtime, reverse=True)
+        timestamp = os.path.getmtime(sorted_by_recent[0])
+        return datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")
+    else:
+        return "Never"
+
 
 
 class PlayerStats:
@@ -126,7 +121,7 @@ class PlayerStats:
             logging.exception("Couldn't save settings correctly")
 
     def delete(self):
-        self.df = pd.DataFrame(columns=['StartingHero', 'EndingHero', 'Placement', 'Timestamp'])
+        self.df = pd.DataFrame(columns=stats_columns)
 
     def get_num_pages(self):
         return math.ceil(len(self.df.index) / stats_per_page)
@@ -140,12 +135,15 @@ class PlayerStats:
         match_stats += padding
         return match_stats
 
-    def update_stats(self, starting_hero: str, ending_hero: str, placement: str, mmr_change: str, session_id: str):
+    def update_stats(self, starting_hero: str, ending_hero: str, placement: str, mmr_change: str, session_id: str,
+                     timestamp: date = None):
         if session_id not in self.df['SessionId'].values and starting_hero and ending_hero and placement \
                 and mmr_change and session_id:
+            if timestamp is None:
+                timestamp = datetime.now()
             self.df = self.df.append(
                 {"StartingHero": starting_hero, "EndingHero": ending_hero, "Placement": placement,
-                 "Timestamp": datetime.now().strftime("%Y-%m-%d"), "+/-MMR": str(mmr_change), "SessionId": session_id},
+                 "Timestamp": timestamp.strftime("%Y-%m-%d"), "+/-MMR": str(mmr_change), "SessionId": session_id},
                 ignore_index=True)
         else:
             logging.warning("Not adding existing match!")
@@ -201,3 +199,57 @@ class PlayerStats:
     def delete_entry(self, row, reverse=False):
         index = len(self.df.index) - row - 1 if reverse else row
         self.df = self.df.drop(self.df.index[index])
+
+    def import_matches(self, progress_handler=None):
+        save_dir = paths.sbb_root
+        filenames = save_dir.glob("record_*.txt")
+        sorted_by_recent = sorted(filenames, key=os.path.getctime)
+        i = 0
+        for game in sorted_by_recent:
+            match = extract_endgame_stats_from_record_file(game)
+            if match:
+                # print(match)
+                self.update_stats(*match)
+            if progress_handler:
+                progress_handler(i, len(sorted_by_recent) - 1)
+                i += 1
+
+
+def extract_endgame_stats_from_record_file(filename):
+    with open(filename, 'rb') as f:
+        result = GreedyRange(STRUCT_ACTION).parse_stream(f)
+        remaining_binary_contents = f.read()
+    if len(remaining_binary_contents) != 0:
+        return
+    starting_hero = None
+    ending_hero = None
+    mmr_change = 0
+    game_over = False
+    session_id = None
+    placement = None
+    player_id = None
+    timestamp = datetime.fromtimestamp(os.path.getmtime(filename))
+    player_names = set()
+    hero_names = set()
+    bot_game = False
+
+    for record in result:
+        action_name = id_to_action_name[record.action_id]
+        if action_name in log_parser.EVENT_ADDPLAYER:
+            hero_names.add(asset_utils.get_hero_name(str(record.template_id)))
+            player_names.add(record.player_name)
+            bot_game = len(hero_names.intersection(player_names)) == 7
+        if action_name in log_parser.EVENT_CONNINFO:
+            session_id = record.session_id
+        if not game_over and action_name in log_parser.EVENT_ADDPLAYER and starting_hero is None:
+            starting_hero = asset_utils.get_hero_name(str(record.template_id))
+            player_id = record.player_id
+        if action_name in log_parser.EVENT_ENTERRESULTSPHASE:
+            game_over = True
+            mmr_change = record.rank_reward
+        if game_over and action_name in log_parser.EVENT_ADDPLAYER and player_id == record.player_id:
+            ending_hero = asset_utils.get_hero_name(str(record.template_id))
+            placement = record.place
+    results = (starting_hero, ending_hero, placement, mmr_change, session_id, timestamp)
+    if all(result is not None and results != "" for result in results) and not bot_game:
+        return results

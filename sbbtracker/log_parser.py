@@ -5,33 +5,12 @@ import platform
 import time
 from collections import defaultdict
 from enum import Enum
-from os.path import exists, expanduser
-from pathlib import Path
+from os.path import exists
 from queue import Queue
 
 from pygtail import Pygtail
+from paths import logfile, offsetfile
 
-import stats
-
-os_name = platform.system()
-if os_name == 'Linux':
-    sbb_root = Path(expanduser("~/.steam/steam/steamapps/compatdata/1367020/pfx/drive_c/users/steamuser"
-                               "/AppData/LocalLow/Good Luck Games/Storybook Brawl"))
-elif os_name == "Windows":
-    sbb_root = Path(os.environ["LOCALAPPDATA"]).parent.joinpath("LocalLow/Good Luck Games/Storybook Brawl")
-elif os_name == "Darwin":
-    pass  # todo: implement Mac
-logfile = sbb_root.joinpath("Player.log")
-offsetfile = stats.sbbtracker_folder.joinpath("logfile.offset")
-if not stats.sbbtracker_folder.exists():
-    stats.sbbtracker_folder.mkdir()
-if not offsetfile.exists():
-    offsetfile.touch()
-
-# try:
-#     os.remove(offsetfile)
-# except:
-#     pass
 
 VERYLARGE = 2 ** 20
 NOTFOUND = -1
