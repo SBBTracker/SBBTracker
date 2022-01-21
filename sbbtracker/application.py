@@ -1567,6 +1567,7 @@ class StreamerOverlayWindow(OverlayWindow):
         self.centralWidget().setStyleSheet(
             f"QWidget#overlay {{background-color: {settings.get(settings.stream_overlay_color)} ;}}")
         self.show_button.hide()
+        self.setFixedSize(*settings.get(settings.streamer_overlay_size))
         self.disable_hovers()
 
     def set_transparency(self):
@@ -1578,6 +1579,10 @@ class StreamerOverlayWindow(OverlayWindow):
         alpha = 1
         style = f"background-color: rgba({default_bg_color_rgb}, {alpha}); font-size: 17px"
         self.simulation_stats.setStyleSheet(style)
+
+    def set_rect(self, left, top, right, bottom, dpi):
+        super().set_rect(left, top, right, bottom, dpi)
+        settings.set_(settings.streamer_overlay_size, self.sbb_rect.size().toTuple())
 
 
 class SimStatWidget(QFrame):
