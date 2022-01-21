@@ -316,6 +316,7 @@ class LogThread(QThread):
                 self.end_combat.emit()
                 match_data["tracker-id"] = api_id
                 match_data["player-id"] = current_player.playerid
+                match_data["display-name"] = current_player.displayname
                 match_data["match-id"] = session_id
                 match_data["combat-info"] = combats
                 match_data["placement"] = state.place
@@ -1836,7 +1837,6 @@ def main():
     splash.show()
 
     app.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.RoundPreferFloor)
-    screens = QGuiApplication.screens()
     apply_stylesheet(app, theme='dark_teal.xml')
     stylesheet = app.styleSheet()
     stylesheet = stylesheet.replace("""QTabBar::tab {
