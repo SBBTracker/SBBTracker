@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "SBBTracker"
-#define MyAppVersion "3.13.2"
+#define MyAppVersion "3.13.3"
 #define MyAppPublisher "SBBTracker"
 #define MyAppURL "sbbtracker.com"
 #define MyAppExeName "SBBTracker.exe"

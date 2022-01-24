@@ -33,6 +33,7 @@ filter_ = Setting("filter", "All Matches")
 show_patch_notes = Setting("show-patch-notes", False)
 player_id = Setting("player-id", False)
 api_key = Setting("api-key", "")
+streamer_overlay_size = Setting("streamer-overlay-size", (0, 0))
 # general
 live_palette = Setting("live-palette", "paired")
 matchmaking_only = Setting("matchmaking-only", False)
