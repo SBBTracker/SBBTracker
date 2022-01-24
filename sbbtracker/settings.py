@@ -38,6 +38,7 @@ streamer_overlay_size = Setting("streamer-overlay-size", (0, 0))
 live_palette = Setting("live-palette", "paired")
 matchmaking_only = Setting("matchmaking-only", False)
 save_stats = Setting("save-stats", True)
+show_ids = Setting("show-ids", False)
 #data
 upload_data = Setting("upload-data", False)
 # overlay

@@ -54,7 +54,6 @@ from qt_material import apply_stylesheet
 
 import asset_utils, graphs, log_parser, stats, updater, version, settings, paths
 
-
 logging.basicConfig(filename=paths.sbbtracker_folder.joinpath("sbbtracker.log"), filemode="w",
                     format='%(name)s - %(levelname)s - %(message)s', level=logging.WARNING)
 logging.getLogger().addHandler(logging.StreamHandler())
@@ -172,7 +171,6 @@ if not api_id:
 def upload_data(payload):
     try:
         resp = requests.post(api_url, data=json.dumps(payload))
-        print(resp.content)
     except:
         logging.exception("Unable to post data!")
 
@@ -479,6 +477,8 @@ and Lunco
         data_layout.addWidget(delete_button)
         data_layout.addWidget(reimport_button)
         data_layout.addRow("Upload matches to sbbtracker.com", enable_upload)
+        data_layout.addWidget(QLabel("Match uploads include your steam name, sbb id, board comps,"
+                                     "placement, and change in mmr."))
 
         overlay_layout = QFormLayout(overlay_settings)
         enable_overlay_checkbox = SettingsCheckbox(settings.enable_overlay)
@@ -543,10 +543,10 @@ and Lunco
         overlay_layout.addRow("Adjust simulator transparency", self.simulator_transparency_slider)
 
         advanced_layout = QFormLayout(advanced_tab)
-        enable_export_comp_checkbox = QCheckBox()
-        enable_export_comp_checkbox.setChecked(settings.get(settings.export_comp_button))
-        enable_export_comp_checkbox.stateChanged.connect(lambda: settings.toggle(settings.export_comp_button))
+        enable_export_comp_checkbox = SettingsCheckbox(settings.export_comp_button)
+        show_id_mode = SettingsCheckbox(settings.show_ids)
         advanced_layout.addRow("Enable export last comp button", enable_export_comp_checkbox)
+        advanced_layout.addRow("Hide art and show template ids", show_id_mode)
 
         streaming_layout = QFormLayout(streaming_tab)
         enable_stream_overlay = QCheckBox()
@@ -1080,7 +1080,8 @@ class BoardComp(QWidget):
         pixmap = QPixmap(path)
         painter.setPen(QPen(QColor("white"), 1))
         painter.drawText(card_loc[0] + 75, card_loc[1] + 100, str(content_id))
-        painter.drawPixmap(card_loc[0], card_loc[1], pixmap)
+        if not settings.get(settings.show_ids):
+            painter.drawPixmap(card_loc[0], card_loc[1], pixmap)
         painter.drawPixmap(card_loc[0], card_loc[1], self.border)
         if actually_is_golden:
             painter.drawPixmap(card_loc[0], card_loc[1], self.golden_overlay)
@@ -1530,7 +1531,9 @@ class OverlayWindow(QMainWindow):
             bottom_edge *= self.dpi_scale
 
         self.sbb_rect = QRect(left_edge, top_edge, right_edge, bottom_edge)
-        if all(param != 0 for param in self.sbb_rect.size().toTuple()):
+        sbb_is_visible = QGuiApplication.screenAt(self.sbb_rect.topLeft()) is not None or QGuiApplication.screenAt(
+            self.sbb_rect.bottomRight()) is not None
+        if sbb_is_visible:
             self.setFixedSize(self.sbb_rect.size())
             self.setGeometry(QGuiApplication.screens()[0].geometry())
             self.move(left_edge, top_edge)
@@ -1763,6 +1766,8 @@ class TurnDisplay(MovableWidget):
         self.label.setFont(QFont("Roboto", int(settings.get(settings.turn_display_font_size))))
         layout.addWidget(frame)
         frame_layout.addWidget(self.label, Qt.AlignVCenter)
+
+        layout.setContentsMargins(0, 0, 0, 0)
 
         layout.setSizeConstraint(QLayout.SetMinimumSize)
         frame_layout.setSizeConstraint(QLayout.SetMinimumSize)
