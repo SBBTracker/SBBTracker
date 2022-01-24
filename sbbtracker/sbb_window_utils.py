@@ -30,8 +30,7 @@ def get_settings_window():
 def sbb_is_visible():
     current_window = GetForegroundWindow()
     sbb_window = get_sbb_window()
-    return ((current_window == sbb_window) or (current_window == get_overlay_window()) or
-                       (current_window == get_tracker_window()) or (current_window == get_settings_window())) and sbb_window != 0
+    return (current_window == sbb_window) or (current_window == get_overlay_window()) and sbb_window != 0
 
 
 def get_sbb_rect():

@@ -10,12 +10,14 @@ import re
 import sys
 import threading
 import time
+import uuid
 from collections import defaultdict
 from datetime import date
 from pathlib import Path
 from queue import Queue
 
 import matplotlib
+import requests
 import win32api
 
 matplotlib.use('Qt5Agg')
@@ -57,11 +59,11 @@ logging.basicConfig(filename=paths.sbbtracker_folder.joinpath("sbbtracker.log"),
                     format='%(name)s - %(levelname)s - %(message)s', level=logging.WARNING)
 logging.getLogger().addHandler(logging.StreamHandler())
 
-DEBUG = False
-
 from sbbbattlesim import from_state, simulate
 from sbbbattlesim.exceptions import SBBBSCrocException
 from sbb_window_utils import SBBWindowCheckThread
+
+DEBUG = False
 
 art_dim = (161, 204)
 att_loc = (26, 181)
@@ -161,6 +163,20 @@ def get_date_range(key):
         return first_day_prev_month.isoformat(), last_day_prev_month.isoformat()
 
 
+api_url = "https://9n2ntsouxb.execute-api.us-east-1.amazonaws.com/prod/api/v1/game"
+api_id = settings.get(settings.api_key)
+if not api_id:
+    api_id = settings.set_(settings.api_key, str(uuid.uuid4()))
+
+
+def upload_data(payload):
+    try:
+        resp = requests.post(api_url, data=json.dumps(payload))
+        print(resp.content)
+    except:
+        logging.exception("Unable to post data!")
+
+
 class SimulationThread(QThread):
     end_simulation = Signal(str, str, str, str, str)
     error_simulation = Signal(str)
@@ -250,6 +266,8 @@ class LogThread(QThread):
         matchmaking = False
         after_first_combat = False
         session_id = None
+        match_data = {}
+        combats = []
         while True:
             update = queue.get()
             job = update.job
@@ -258,6 +276,7 @@ class LogThread(QThread):
                 matchmaking = True
             elif job == log_parser.JOB_NEWGAME:
                 states.clear()
+                match_data.clear()
                 current_player = None
                 round_number = 0
                 self.new_game.emit(matchmaking)
@@ -288,13 +307,27 @@ class LogThread(QThread):
                     after_first_combat = True
             elif job == log_parser.JOB_BOARDINFO:
                 self.comp_update.emit(state, round_number)
+                combat = from_state(state)
+                combat["round"] = round_number
+                combats.append(combat)
             elif job == log_parser.JOB_ENDCOMBAT:
                 counter = 0
             elif job == log_parser.JOB_ENDGAME:
                 self.end_combat.emit()
+                match_data["tracker-id"] = api_id
+                match_data["player-id"] = current_player.playerid
+                match_data["display-name"] = current_player.displayname
+                match_data["match-id"] = session_id
+                match_data["combat-info"] = combats
+                match_data["placement"] = state.place
+                match_data["players"] = states.json_friendly()
                 if state and current_player and session_id:
                     self.stats_update.emit(asset_utils.get_hero_name(current_player.heroid), state, session_id)
+                    if settings.get(settings.upload_data):
+                        upload_data(match_data)
                 session_id = None
+                combats.clear()
+                match_data.clear()
             elif job == log_parser.JOB_HEALTHUPDATE:
                 self.health_update.emit(state)
 
@@ -355,6 +388,13 @@ class HexColorEdit(QWidget):
             widget.setStyleSheet(f"background-color: {text} ;")
 
 
+class SettingsCheckbox(QCheckBox):
+    def __init__(self, setting: settings.Setting):
+        super().__init__()
+        self.setChecked(settings.get(setting))
+        self.stateChanged.connect(lambda: settings.toggle(setting))
+
+
 class SettingsWindow(QMainWindow):
     def __init__(self, main_window):
         super().__init__()
@@ -404,9 +444,7 @@ and Lunco
 
         general_layout = QFormLayout(general_settings)
 
-        save_stats_checkbox = QCheckBox()
-        save_stats_checkbox.setChecked(settings.get(settings.save_stats))
-        save_stats_checkbox.stateChanged.connect(lambda: settings.toggle(settings.save_stats))
+        save_stats_checkbox = SettingsCheckbox(settings.save_stats)
 
         self.graph_color_chooser = QComboBox()
         palettes = list(graphs.color_palettes.keys())
@@ -414,10 +452,8 @@ and Lunco
         self.graph_color_chooser.setCurrentIndex(palettes.index(settings.get(settings.live_palette)))
         self.graph_color_chooser.currentTextChanged.connect(main_window.live_graphs.set_color_palette)
 
-        matchmaking_only_checkbox = QCheckBox()
-        matchmaking_only_checkbox.setChecked(settings.get(settings.matchmaking_only))
-        matchmaking_only_checkbox.setEnabled(save_stats_checkbox.checkState())
-        matchmaking_only_checkbox.stateChanged.connect(lambda: settings.toggle(settings.matchmaking_only))
+        matchmaking_only_checkbox = SettingsCheckbox(settings.matchmaking_only)
+        matchmaking_only_checkbox.setEnabled(bool(save_stats_checkbox.checkState()))
 
         save_stats_checkbox.stateChanged.connect(lambda state: matchmaking_only_checkbox.setEnabled(bool(state)))
 
@@ -435,47 +471,39 @@ and Lunco
         backup_button.clicked.connect(self.backup)
         reimport_button = QPushButton("Reimport Stats")
         reimport_button.clicked.connect(self.import_stats)
+
+        enable_upload = SettingsCheckbox(settings.upload_data)
+
         data_layout.addRow(self.last_backed_up, backup_button)
         data_layout.addWidget(export_button)
         data_layout.addWidget(delete_button)
         data_layout.addWidget(reimport_button)
+        data_layout.addRow("Upload matches to sbbtracker.com", enable_upload)
 
         overlay_layout = QFormLayout(overlay_settings)
-        enable_overlay_checkbox = QCheckBox()
-        enable_overlay_checkbox.setChecked(settings.get(settings.enable_overlay))
-        enable_overlay_checkbox.stateChanged.connect(lambda: settings.toggle(settings.enable_overlay))
+        enable_overlay_checkbox = SettingsCheckbox(settings.enable_overlay)
 
-        hide_overlay_in_bg_checkbox = QCheckBox()
-        hide_overlay_in_bg_checkbox.setChecked(settings.get(settings.hide_overlay_in_bg))
-        hide_overlay_in_bg_checkbox.stateChanged.connect(lambda: settings.toggle(settings.hide_overlay_in_bg))
+        hide_overlay_in_bg_checkbox = SettingsCheckbox(settings.hide_overlay_in_bg)
 
         enable_overlay_checkbox.stateChanged.connect(lambda state: hide_overlay_in_bg_checkbox.setEnabled(bool(state)))
 
-        enable_sim_checkbox = QCheckBox()
+        enable_sim_checkbox = SettingsCheckbox(settings.enable_sim)
         enable_sim_checkbox.setEnabled(enable_overlay_checkbox.checkState())
-        enable_sim_checkbox.setChecked(settings.get(settings.enable_sim))
-        enable_sim_checkbox.stateChanged.connect(lambda: settings.toggle(settings.enable_sim))
 
         enable_overlay_checkbox.stateChanged.connect(lambda state: enable_sim_checkbox.setEnabled(bool(state)))
 
-        show_tracker_button_checkbox = QCheckBox()
+        show_tracker_button_checkbox = SettingsCheckbox(settings.show_tracker_button)
         show_tracker_button_checkbox.setEnabled(enable_overlay_checkbox.checkState())
-        show_tracker_button_checkbox.setChecked(settings.get(settings.show_tracker_button))
-        show_tracker_button_checkbox.stateChanged.connect(lambda: settings.toggle(settings.show_tracker_button))
 
         enable_overlay_checkbox.stateChanged.connect(lambda state: show_tracker_button_checkbox.setEnabled(bool(state)))
 
-        enable_comps = QCheckBox()
+        enable_comps = SettingsCheckbox(settings.enable_comps)
         enable_comps.setEnabled(enable_overlay_checkbox.checkState())
-        enable_comps.setChecked(settings.get(settings.enable_comps))
-        enable_comps.stateChanged.connect(lambda: settings.toggle(settings.enable_comps))
 
         enable_overlay_checkbox.stateChanged.connect(lambda state: enable_comps.setEnabled(bool(state)))
 
-        enable_turn_display = QCheckBox()
+        enable_turn_display = SettingsCheckbox(settings.enable_turn_display)
         enable_turn_display.setEnabled(enable_overlay_checkbox.checkState())
-        enable_turn_display.setChecked(settings.get(settings.enable_turn_display))
-        enable_turn_display.stateChanged.connect(lambda: settings.toggle(settings.enable_turn_display))
 
         enable_overlay_checkbox.stateChanged.connect(lambda state: enable_turn_display.setEnabled(bool(state)))
 
@@ -485,10 +513,10 @@ and Lunco
         turn_display_font.textChanged.connect(
             lambda text: settings.set_(settings.turn_display_font_size, text) if text != '' else None)
 
-        windows_scaling = QCheckBox()
+        windows_scaling = SettingsCheckbox(settings.disable_scaling)
         windows_scaling.setEnabled(enable_overlay_checkbox.checkState())
-        windows_scaling.setChecked(settings.get(settings.disable_scaling))
-        windows_scaling.stateChanged.connect(lambda: settings.toggle(settings.disable_scaling))
+
+        enable_overlay_checkbox.stateChanged.connect(lambda state: windows_scaling.setEnabled(bool(state)))
 
         self.comp_transparency_slider = SliderCombo(0, 100, settings.get(settings.boardcomp_transparency))
         self.simulator_transparency_slider = SliderCombo(0, 100, settings.get(settings.simulator_transparency))
@@ -1814,7 +1842,6 @@ def main():
     splash.show()
 
     app.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.RoundPreferFloor)
-    screens = QGuiApplication.screens()
     apply_stylesheet(app, theme='dark_teal.xml')
     stylesheet = app.styleSheet()
     stylesheet = stylesheet.replace("""QTabBar::tab {

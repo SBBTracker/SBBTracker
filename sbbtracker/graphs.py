@@ -1,3 +1,4 @@
+import json
 from collections import defaultdict
 
 import matplotlib
@@ -23,19 +24,19 @@ class LivePlayerStates:
         self.ids_to_health = defaultdict(dict)
         self.ids_to_xp = defaultdict(dict)
         self.ids_to_fractional_xp = defaultdict(dict)
-        self.ids_to_heroes = {}
+        self.ids_to_heroes = defaultdict(list)
 
     def update_player(self, playerid, round_number, health, xp, hero):
         self.ids_to_health[playerid][round_number] = health
         self.ids_to_xp[playerid][round_number] = xp
         self.ids_to_fractional_xp[playerid][round_number] = float(f"{xp[0]}.{int(xp[2]) * 333333333}")
-        self.ids_to_heroes[playerid] = hero
+        self.ids_to_heroes[playerid].append(hero)
 
     def get_ids(self):
         return list(self.ids_to_heroes.keys())
 
     def get_hero(self, player_id):
-        return self.ids_to_heroes[player_id]
+        return self.ids_to_heroes[player_id][-1]
 
     def get_healths(self, player_id):
         return self.ids_to_health[player_id]
@@ -51,6 +52,20 @@ class LivePlayerStates:
         self.ids_to_xp.clear()
         self.ids_to_fractional_xp.clear()
         self.ids_to_heroes.clear()
+
+    def json_friendly(self):
+        players = [
+            {
+                "player-id": player_id,
+                "heroes": self.ids_to_heroes[player_id],
+                "healths": self.ids_to_health[player_id],
+                "xps": self.ids_to_xp[player_id]
+            } for player_id in self.ids_to_heroes.keys()
+        ]
+        return players
+
+    def to_json(self):
+        return json.dumps(self.json_friendly(), separators=(',', ':'))
 
 
 def live_health_graph(states: LivePlayerStates, ax, palette):
