@@ -312,14 +312,14 @@ class LogThread(QThread):
                 counter = 0
             elif job == log_parser.JOB_ENDGAME:
                 self.end_combat.emit()
-                match_data["tracker-id"] = api_id
-                match_data["player-id"] = current_player.playerid
-                match_data["display-name"] = current_player.displayname
-                match_data["match-id"] = session_id
-                match_data["combat-info"] = combats
-                match_data["placement"] = state.place
-                match_data["players"] = states.json_friendly()
                 if state and current_player and session_id:
+                    match_data["tracker-id"] = api_id
+                    match_data["player-id"] = current_player.playerid
+                    match_data["display-name"] = current_player.displayname
+                    match_data["match-id"] = session_id
+                    match_data["combat-info"] = combats
+                    match_data["placement"] = state.place
+                    match_data["players"] = states.json_friendly()
                     self.stats_update.emit(asset_utils.get_hero_name(current_player.heroid), state, session_id)
                     if settings.get(settings.upload_data):
                         upload_data(match_data)
