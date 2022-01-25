@@ -3,10 +3,6 @@
     "Id": "SBB_CHARACTER_FROGPRINCE",
     "Name": "Frog Prince"
   },
-  "8": {
-    "Id": "SBB_CHARACTER_PIG",
-    "Name": "Pig"
-  },
   "16": {
     "Id": "SBB_CHARACTER_AWOKENPRINCESS",
     "Name": "Awoken Princess"
@@ -171,13 +167,13 @@
     "Id": "SBB_HERO_KINGMIDAS",
     "Name": "King Midas"
   },
-  "84": {
-    "Id": "SBB_HERO_SEER",
-    "Name": "Sphinx"
-  },
-  "89": {
+  "81": {
     "Id": "SBB_HERO_SHAREBEAR",
     "Name": "Sharebear"
+  },
+  "82": {
+    "Id": "SBB_HERO_SEER",
+    "Name": "Sphinx"
   },
   "92": {
     "Id": "SBB_CHARACTER_WEEWILLIEWINKIE",
@@ -675,380 +671,372 @@
     "Id": "SBB_CHARACTER_MONSTERBOOK",
     "Name": "Monster Book"
   },
-  "284": {
+  "280": {
     "Id": "SBB_SPELL_NEWFACES",
     "Name": "Masquerade Ball"
   },
-  "285": {
+  "281": {
     "Id": "SBB_SPELL_FLAMINGAURA",
     "Name": "Burning Palm"
   },
-  "286": {
+  "282": {
     "Id": "SBB_SPELL_STONESKIN",
     "Name": "Stoneskin"
   },
-  "287": {
+  "283": {
     "Id": "SBB_SPELL_FEEDTHEKRAKEN",
     "Name": "Feed the Kraken"
   },
-  "288": {
+  "284": {
     "Id": "SBB_SPELL_RIDEOFTHEVALKYRIES",
     "Name": "Ride of the Valkyries"
   },
-  "289": {
+  "285": {
     "Id": "SBB_SPELL_POTIONOFHEROISM",
     "Name": "Merlin's Test"
   },
-  "290": {
+  "286": {
     "Id": "SBB_SPELL_ROYALPOWER",
     "Name": "Queen's Grace"
   },
-  "291": {
+  "287": {
     "Id": "SBB_SPELL_SEVENDWARVES",
     "Name": "Hi Ho!"
   },
-  "292": {
+  "288": {
     "Id": "SBB_SPELL_MENAGERIE",
     "Name": "Toil and Trouble"
   },
-  "293": {
+  "289": {
     "Id": "SBB_SPELL_LIGHTNINGBOLT",
     "Name": "Lightning Bolt"
   },
-  "294": {
+  "290": {
     "Id": "SBB_SPELL_FIREBALL",
     "Name": "Fireball"
   },
-  "295": {
+  "291": {
     "Id": "SBB_SPELL_ANGEL'SBLESSING",
     "Name": "Blessing of Athena"
   },
-  "296": {
+  "292": {
     "Id": "SBB_SPELL_FARFARAWAY",
     "Name": "The End"
   },
-  "297": {
+  "293": {
     "Id": "SBB_SPELL_BEASTWITHIN",
     "Name": "Cat's Call"
   },
-  "298": {
-    "Id": "SBB_TREASURE_PAUPER'SCROWN",
-    "Name": "Hidden Cache"
-  },
-  "299": {
+  "294": {
     "Id": "SBB_TREASURE_SKYCASTLE",
     "Name": "Sky Castle"
   },
-  "300": {
+  "295": {
     "Id": "SBB_TREASURE_MONKEY'SPAW",
     "Name": "Coin of Charon"
   },
-  "301": {
+  "296": {
     "Id": "SBB_TREASURE_GLOVESOFTHIEVING",
     "Name": "Gloves of Thieving"
   },
-  "302": {
+  "297": {
     "Id": "SBB_TREASURE_REDUPLICATOR",
     "Name": "Reduplicator"
   },
-  "303": {
+  "298": {
     "Id": "SBB_TREASURE_DWARVENFORGE",
     "Name": "Dwarven Forge"
   },
-  "304": {
+  "299": {
     "Id": "SBB_TREASURE_FOOL'SGOLD",
     "Name": "Fool's Gold"
   },
-  "305": {
+  "300": {
     "Id": "SBB_TREASURE_COMPACTMIRROR",
     "Name": "Forking Rod"
   },
-  "306": {
+  "301": {
     "Id": "SBB_TREASURE_SURGINGSTONE",
     "Name": "Ring of Rage"
   },
-  "307": {
+  "302": {
     "Id": "SBB_TREASURE_RINGOFDISCIPLINE",
     "Name": "Six of Shields"
   },
-  "308": {
-    "Id": "SBB_TREASURE_JUMPINGJACKS",
-    "Name": "Other Hand of Vekna"
-  },
-  "309": {
+  "303": {
     "Id": "SBB_TREASURE_DECKOFMANYTHINGS",
     "Name": "Deck of Many Things"
   },
-  "310": {
+  "304": {
     "Id": "SBB_TREASURE_POWERGEM",
     "Name": "Moonsong Horn"
   },
-  "311": {
+  "305": {
     "Id": "SBB_TREASURE_SUMMONINGCIRCLE",
     "Name": "Summoning Portal"
   },
-  "313": {
-    "Id": "SBB_CHARACTER_NIAN,THESEATERROR",
-    "Name": "Nian, The Sea Terror"
-  },
-  "315": {
-    "Id": "SBB_CHARACTER_LANCELOT",
-    "Name": "Lancelot"
-  },
-  "317": {
-    "Id": "SBB_CHARACTER_DWARFMINER",
-    "Name": "Angry"
-  },
-  "319": {
-    "Id": "SBB_CHARACTER_BABYBEAR",
-    "Name": "Baby Bear"
-  },
-  "321": {
-    "Id": "SBB_CHARACTER_WOMBATSINDISGUISE",
-    "Name": "Wombats in Disguise"
-  },
-  "323": {
-    "Id": "SBB_CHARACTER_LOBO",
-    "Name": "Southern Siren"
-  },
-  "325": {
-    "Id": "SBB_CHARACTER_ROTTENAPPLETREE",
-    "Name": "Rotten Appletree"
-  },
-  "327": {
-    "Id": "SBB_CHARACTER_CUPID",
-    "Name": "Cupid"
-  },
-  "329": {
-    "Id": "SBB_CHARACTER_SUMMONER",
-    "Name": "Aon"
-  },
-  "331": {
-    "Id": "SBB_CHARACTER_BABAYAGA",
-    "Name": "Baba Yaga"
-  },
-  "333": {
-    "Id": "SBB_CHARACTER_GOODANDEVILSISTERS",
-    "Name": "Shoulder Faeries"
-  },
-  "337": {
-    "Id": "SBB_SPELL_ENFEEBLEMENT",
-    "Name": "Shrivel"
-  },
-  "338": {
-    "Id": "SBB_SPELL_POISONAPPLE",
-    "Name": "Poison Apple"
-  },
-  "339": {
-    "Id": "SBB_SPELL_LUCKYCOIN",
-    "Name": "Lucky Coin"
-  },
-  "340": {
-    "Id": "SBB_TREASURE_TREASURECHEST",
-    "Name": "Mimic"
-  },
-  "341": {
-    "Id": "SBB_TREASURE_SWORDOFFIREANDICE",
-    "Name": "Sword of Fire and Ice"
-  },
-  "342": {
-    "Id": "SBB_TREASURE_CIRCLEOFLIFE",
-    "Name": "Tree of Life"
-  },
-  "343": {
-    "Id": "SBB_TREASURE_AMBROSIA",
-    "Name": "Ambrosia"
-  },
-  "344": {
-    "Id": "SBB_TREASURE_DRACULA'SSABER",
-    "Name": "Dracula's Saber"
-  },
-  "345": {
-    "Id": "SBB_TREASURE_MIDASHAND",
-    "Name": "Hand of Midas"
-  },
-  "346": {
-    "Id": "SBB_TREASURE_SCROLLOFTHEELDERS",
-    "Name": "Staff of the Old Toad"
-  },
-  "347": {
+  "306": {
     "Id": "SBB_TREASURE_BANNEROFCOMMAND",
     "Name": "Horn of Olympus"
   },
-  "348": {
-    "Id": "SBB_TREASURE_HEXINGWAND",
-    "Name": "Monkey's Paw"
+  "307": {
+    "Id": "SBB_CHARACTER_NIAN,THESEATERROR",
+    "Name": "Nian, The Sea Terror"
   },
-  "349": {
-    "Id": "SBB_TREASURE_HELMOFTHEUGLYGOSLING",
-    "Name": "Helm of the Ugly Gosling"
+  "309": {
+    "Id": "SBB_CHARACTER_LANCELOT",
+    "Name": "Lancelot"
   },
-  "351": {
-    "Id": "SBB_TREASURE_THENINTHBOOKOFMERLIN",
-    "Name": "The 9th Book of Merlin"
+  "311": {
+    "Id": "SBB_CHARACTER_DWARFMINER",
+    "Name": "Angry"
   },
-  "352": {
-    "Id": "SBB_CHARACTER_WORLDSERPENT",
-    "Name": "Jormungand"
+  "313": {
+    "Id": "SBB_CHARACTER_BABYBEAR",
+    "Name": "Baby Bear"
   },
-  "354": {
+  "315": {
+    "Id": "SBB_CHARACTER_WOMBATSINDISGUISE",
+    "Name": "Wombats in Disguise"
+  },
+  "317": {
+    "Id": "SBB_CHARACTER_LOBO",
+    "Name": "Southern Siren"
+  },
+  "319": {
+    "Id": "SBB_CHARACTER_ROTTENAPPLETREE",
+    "Name": "Rotten Appletree"
+  },
+  "321": {
+    "Id": "SBB_CHARACTER_CUPID",
+    "Name": "Cupid"
+  },
+  "323": {
+    "Id": "SBB_CHARACTER_SUMMONER",
+    "Name": "Aon"
+  },
+  "325": {
+    "Id": "SBB_CHARACTER_BABAYAGA",
+    "Name": "Baba Yaga"
+  },
+  "327": {
+    "Id": "SBB_CHARACTER_GOODANDEVILSISTERS",
+    "Name": "Shoulder Faeries"
+  },
+  "329": {
+    "Id": "SBB_CHARACTER_BIGBOSS",
+    "Name": "Bossy"
+  },
+  "331": {
     "Id": "SBB_CHARACTER_PUMPKINKING",
     "Name": "Great Pumpkin King"
   },
-  "356": {
-    "Id": "SBB_CHARACTER_GRUMBLEGORE",
-    "Name": "Grumblegore"
+  "335": {
+    "Id": "SBB_SPELL_ENFEEBLEMENT",
+    "Name": "Shrivel"
   },
-  "358": {
-    "Id": "SBB_CHARACTER_THEGREENKNIGHT",
-    "Name": "The Green Knight"
+  "336": {
+    "Id": "SBB_SPELL_POISONAPPLE",
+    "Name": "Poison Apple"
   },
-  "360": {
-    "Id": "SBB_CHARACTER_FORGEMASTERDWARF",
-    "Name": "Lordy"
+  "337": {
+    "Id": "SBB_SPELL_LUCKYCOIN",
+    "Name": "Lucky Coin"
   },
-  "362": {
-    "Id": "SBB_CHARACTER_DOOMBREATH",
-    "Name": "Doombreath"
+  "338": {
+    "Id": "SBB_TREASURE_TREASURECHEST",
+    "Name": "Mimic"
   },
-  "364": {
-    "Id": "SBB_CHARACTER_ROBINWOOD",
-    "Name": "Robin Wood"
+  "339": {
+    "Id": "SBB_TREASURE_SWORDOFFIREANDICE",
+    "Name": "Sword of Fire and Ice"
   },
-  "366": {
-    "Id": "SBB_CHARACTER_HERCULES",
-    "Name": "Hercules"
+  "340": {
+    "Id": "SBB_TREASURE_AMBROSIA",
+    "Name": "Ambrosia"
   },
-  "368": {
-    "Id": "SBB_CHARACTER_ECHOWOODSHAMBLER",
-    "Name": "Echowood"
+  "341": {
+    "Id": "SBB_TREASURE_DRACULA'SSABER",
+    "Name": "Dracula's Saber"
   },
-  "370": {
-    "Id": "SBB_CHARACTER_MONSTERLORD",
-    "Name": "Oni King"
+  "342": {
+    "Id": "SBB_TREASURE_MIDASHAND",
+    "Name": "Hand of Midas"
   },
-  "372": {
-    "Id": "SBB_CHARACTER_THREEBIGPIGS",
-    "Name": "Three Big Pigs"
+  "343": {
+    "Id": "SBB_TREASURE_SCROLLOFTHEELDERS",
+    "Name": "Staff of the Old Toad"
   },
-  "374": {
-    "Id": "SBB_CHARACTER_GOODBOY",
-    "Name": "Good Boy"
-  },
-  "376": {
-    "Id": "SBB_CHARACTER_PROSPERO",
-    "Name": "Bearstine"
-  },
-  "378": {
-    "Id": "SBB_CHARACTER_THEGREATANDPOWERFUL",
-    "Name": "The Storm King"
-  },
-  "380": {
-    "Id": "SBB_CHARACTER_KINGTREE",
-    "Name": "Ashwood Elm"
-  },
-  "386": {
-    "Id": "SBB_SPELL_CROCBAIT",
-    "Name": "Croc Bait"
-  },
-  "387": {
-    "Id": "SBB_SPELL_GIGANTIFY",
-    "Name": "Gigantify"
-  },
-  "388": {
-    "Id": "SBB_SPELL_HUGIFY",
-    "Name": "Hugeify"
-  },
-  "389": {
-    "Id": "SBB_SPELL_KNIGHTHOOD",
-    "Name": "Knighthood"
-  },
-  "390": {
-    "Id": "SBB_SPELL_EVILTWIN",
-    "Name": "Evil Twin"
-  },
-  "391": {
-    "Id": "SBB_SPELL_DISINTEGRATE",
-    "Name": "Smite"
-  },
-  "392": {
-    "Id": "SBB_SPELL_PIGOMORPH",
-    "Name": "Pigomorph"
-  },
-  "393": {
-    "Id": "SBB_SPELL_FOG",
-    "Name": "Fog"
-  },
-  "394": {
-    "Id": "SBB_SPELL_DIVINATION",
-    "Name": "Drink Me Potion"
-  },
-  "395": {
-    "Id": "SBB_SPELL_MASTERDISGUISE",
-    "Name": "It Was All a Dream"
-  },
-  "396": {
-    "Id": "SBB_TREASURE_SPEAROFACHILLES",
-    "Name": "Spear of Achilles"
-  },
-  "397": {
-    "Id": "SBB_TREASURE_EMBIGGININGSTONE",
-    "Name": "Embiggening Stone"
-  },
-  "398": {
-    "Id": "SBB_TREASURE_ELDERWAND",
-    "Name": "Wand of Weirding"
-  },
-  "399": {
+  "344": {
     "Id": "SBB_TREASURE_HELMOFCOMMAND",
     "Name": "Evil Eye"
   },
-  "400": {
+  "345": {
+    "Id": "SBB_TREASURE_HEXINGWAND",
+    "Name": "Monkey's Paw"
+  },
+  "346": {
+    "Id": "SBB_TREASURE_HELMOFTHEUGLYGOSLING",
+    "Name": "Helm of the Ugly Gosling"
+  },
+  "348": {
+    "Id": "SBB_CHARACTER_WORLDSERPENT",
+    "Name": "Jormungand"
+  },
+  "350": {
+    "Id": "SBB_CHARACTER_GRUMBLEGORE",
+    "Name": "Grumblegore"
+  },
+  "352": {
+    "Id": "SBB_CHARACTER_THEGREENKNIGHT",
+    "Name": "The Green Knight"
+  },
+  "354": {
+    "Id": "SBB_CHARACTER_FORGEMASTERDWARF",
+    "Name": "Lordy"
+  },
+  "356": {
+    "Id": "SBB_CHARACTER_DOOMBREATH",
+    "Name": "Doombreath"
+  },
+  "358": {
+    "Id": "SBB_CHARACTER_ROBINWOOD",
+    "Name": "Robin Wood"
+  },
+  "360": {
+    "Id": "SBB_CHARACTER_HERCULES",
+    "Name": "Hercules"
+  },
+  "362": {
+    "Id": "SBB_CHARACTER_ECHOWOODSHAMBLER",
+    "Name": "Echowood"
+  },
+  "364": {
+    "Id": "SBB_CHARACTER_MONSTERLORD",
+    "Name": "Oni King"
+  },
+  "366": {
+    "Id": "SBB_CHARACTER_THREEBIGPIGS",
+    "Name": "Three Big Pigs"
+  },
+  "368": {
+    "Id": "SBB_CHARACTER_GOODBOY",
+    "Name": "Good Boy"
+  },
+  "370": {
+    "Id": "SBB_CHARACTER_THEGREATANDPOWERFUL",
+    "Name": "The Storm King"
+  },
+  "372": {
+    "Id": "SBB_CHARACTER_KINGTREE",
+    "Name": "Ashwood Elm"
+  },
+  "374": {
+    "Id": "SBB_CHARACTER_PROSPERO",
+    "Name": "Bearstine"
+  },
+  "380": {
+    "Id": "SBB_SPELL_CROCBAIT",
+    "Name": "Croc Bait"
+  },
+  "381": {
+    "Id": "SBB_SPELL_GIGANTIFY",
+    "Name": "Gigantify"
+  },
+  "382": {
+    "Id": "SBB_SPELL_HUGIFY",
+    "Name": "Hugeify"
+  },
+  "383": {
+    "Id": "SBB_SPELL_KNIGHTHOOD",
+    "Name": "Knighthood"
+  },
+  "384": {
+    "Id": "SBB_SPELL_EVILTWIN",
+    "Name": "Evil Twin"
+  },
+  "385": {
+    "Id": "SBB_SPELL_DISINTEGRATE",
+    "Name": "Smite"
+  },
+  "386": {
+    "Id": "SBB_SPELL_PIGOMORPH",
+    "Name": "Pigomorph"
+  },
+  "387": {
+    "Id": "SBB_SPELL_FOG",
+    "Name": "Fog"
+  },
+  "388": {
+    "Id": "SBB_SPELL_DIVINATION",
+    "Name": "Drink Me Potion"
+  },
+  "389": {
+    "Id": "SBB_SPELL_MASTERDISGUISE",
+    "Name": "It Was All a Dream"
+  },
+  "390": {
+    "Id": "SBB_TREASURE_SPEAROFACHILLES",
+    "Name": "Spear of Achilles"
+  },
+  "391": {
+    "Id": "SBB_TREASURE_EMBIGGININGSTONE",
+    "Name": "Embiggening Stone"
+  },
+  "392": {
+    "Id": "SBB_TREASURE_ELDERWAND",
+    "Name": "Wand of Weirding"
+  },
+  "393": {
     "Id": "SBB_TREASURE_WHIRLINGBLADES",
     "Name": "The Singing Sword"
   },
-  "401": {
+  "394": {
     "Id": "SBB_TREASURE_IVORYOWL",
     "Name": "Ivory Owl"
   },
-  "402": {
+  "395": {
     "Id": "SBB_TREASURE_DRAGONSHOARD",
     "Name": "Pandora's Box"
   },
-  "403": {
+  "396": {
     "Id": "SBB_TREASURE_THEARK",
     "Name": "The Ark"
   },
-  "405": {
+  "397": {
     "Id": "SBB_TREASURE_PHOENIXFEATHER",
     "Name": "Phoenix Feather"
   },
-  "406": {
+  "398": {
+    "Id": "SBB_TREASURE_THENINTHBOOKOFMERLIN",
+    "Name": "The 9th Book of Merlin"
+  },
+  "399": {
     "Id": "SBB_TREASURE_THEROUNDTABLE",
     "Name": "The Round Table"
   },
-  "407": {
+  "400": {
     "Id": "SBB_TREASURE_BLACKPRISM",
     "Name": "Black Prism"
   },
-  "408": {
+  "401": {
     "Id": "SBB_TREASURE_EXCALIBUR",
     "Name": "Excalibur"
   },
-  "409": {
+  "402": {
     "Id": "SBB_TREASURE_THEHOLYGRAIL",
     "Name": "The Holy Grail"
   },
-  "410": {
+  "403": {
     "Id": "SBB_TREASURE_MIRRORUNIVERSE",
     "Name": "Mirror Mirror"
   },
-  "411": {
+  "404": {
     "Id": "SBB_TREASURE_FAIRYQUEENSWAND",
     "Name": "Fairy Queen's Wand"
   },
-  "412": {
+  "405": {
     "Id": "SBB_TREASURE_MAGICSWORD+100",
     "Name": "Magic Sword +100"
   }
-}
+},
