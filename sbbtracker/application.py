@@ -171,6 +171,7 @@ if not api_id:
 def upload_data(payload):
     try:
         resp = requests.post(api_url, data=json.dumps(payload))
+        logging.debug(resp.content)
     except:
         logging.exception("Unable to post data!")
 
@@ -282,6 +283,8 @@ class LogThread(QThread):
                 matchmaking = False
                 after_first_combat = False
                 session_id = state.session_id
+                combats.clear()
+                match_data.clear()
             elif job == log_parser.JOB_INITCURRENTPLAYER:
                 if not after_first_combat:
                     current_player = state
@@ -321,9 +324,6 @@ class LogThread(QThread):
                     match_data["placement"] = state.place
                     match_data["players"] = states.json_friendly()
                     self.stats_update.emit(asset_utils.get_hero_name(current_player.heroid), state, session_id, match_data)
-                session_id = None
-                combats.clear()
-                match_data.clear()
             elif job == log_parser.JOB_HEALTHUPDATE:
                 self.health_update.emit(state)
 
