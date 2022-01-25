@@ -61,13 +61,13 @@ def backup_stats(force=False):
     daily_file = backup_dir.joinpath("backup_" + date.today().strftime("%Y-%m-%d") + stats_format)
     if (not daily_file.exists() or force) and statsfile.exists():
         # we haven't written the backup today lets do it (or we're forcing an overwrite)
-        backups = [name for name in os.listdir(backup_dir) if os.path.isfile(name) and re.match("backup.*" +
-                                                                                                stats_format, name)]
-        backups.sort()
+        backups = list(backup_dir.glob("backup*.csv"))
+        backups.sort(reverse=True)
         shutil.copy(statsfile, daily_file)
-        if len(backups) == 7:
-            # we have reached the max number of backups, delete the oldest one + add the new one
-            os.remove(backups[-1])
+        if len(backups) > 7:
+            # we have reached the max number of backups, delete the oldest ones
+            for old_backup in backups[-(len(backups) - 7):]:
+                os.remove(old_backup)
 
 
 def most_recent_backup_date():
@@ -236,19 +236,19 @@ def extract_endgame_stats_from_record_file(filename):
     for record in result:
         action_name = id_to_action_name[record.action_id]
         if action_name in log_parser.EVENT_ADDPLAYER:
-            hero_names.add(asset_utils.get_hero_name(str(record.template_id)))
+            hero_names.add(asset_utils.get_card_name(str(record.template_id)))
             player_names.add(record.player_name)
             bot_game = len(hero_names.intersection(player_names)) == 7
         if action_name in log_parser.EVENT_CONNINFO:
             session_id = record.session_id
         if not game_over and action_name in log_parser.EVENT_ADDPLAYER and starting_hero is None:
-            starting_hero = asset_utils.get_hero_name(str(record.template_id))
+            starting_hero = asset_utils.get_card_name(str(record.template_id))
             player_id = record.player_id
         if action_name in log_parser.EVENT_ENTERRESULTSPHASE:
             game_over = True
             mmr_change = record.rank_reward
         if game_over and action_name in log_parser.EVENT_ADDPLAYER and player_id == record.player_id:
-            ending_hero = asset_utils.get_hero_name(str(record.template_id))
+            ending_hero = asset_utils.get_card_name(str(record.template_id))
             placement = record.place
     results = (starting_hero, ending_hero, placement, mmr_change, session_id, timestamp)
     if all(result is not None and results != "" for result in results) and not bot_game:

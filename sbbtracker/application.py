@@ -298,7 +298,7 @@ class LogThread(QThread):
                 self.player_update.emit(state, round_number)
                 xp = f"{state.level}.{state.experience}"
                 states.update_player(state.playerid, round_number, state.health, xp,
-                                     asset_utils.get_hero_name(state.heroid))
+                                     asset_utils.get_card_name(state.heroid))
                 counter += 1
                 if counter == 8:
                     self.player_info_update.emit(states)
@@ -323,7 +323,7 @@ class LogThread(QThread):
                     match_data["combat-info"] = combats
                     match_data["placement"] = state.place
                     match_data["players"] = states.json_friendly()
-                    self.stats_update.emit(asset_utils.get_hero_name(current_player.heroid), state, session_id, match_data)
+                    self.stats_update.emit(asset_utils.get_card_name(current_player.heroid), state, session_id, match_data)
             elif job == log_parser.JOB_HEALTHUPDATE:
                 self.health_update.emit(state)
 
@@ -852,7 +852,7 @@ class SBBTracker(QMainWindow):
 
     def update_player(self, player, round_number):
         index = self.get_player_index(player.playerid)
-        real_hero_name = asset_utils.get_hero_name(player.heroid)
+        real_hero_name = asset_utils.get_card_name(player.heroid)
         title = f"{real_hero_name}"
         if player.health <= 0:
             self.comp_tabs.tabBar().setTabTextColor(index, "red")
@@ -905,7 +905,7 @@ class SBBTracker(QMainWindow):
         if settings.get(settings.save_stats, True) and (
                 not settings.get(settings.matchmaking_only) or self.in_matchmaking):
             place = player.place if int(player.health) <= 0 else "1"
-            self.player_stats.update_stats(starting_hero, asset_utils.get_hero_name(player.heroid),
+            self.player_stats.update_stats(starting_hero, asset_utils.get_card_name(player.heroid),
                                            place, player.mmr, session_id)
             self.match_history.update_history_table()
             self.match_history.update_stats_table()

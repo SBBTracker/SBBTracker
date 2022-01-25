@@ -15,7 +15,8 @@ with open(get_asset("template-ids.json"), "r") as json_file:
 def get_card_art_name(template_id: str, is_golden: bool):
     """
     Map the content ID to the card to prevent issues with skins/renames.
-    :param content_id: content_id of the card, e.g. SBB_HERO_GWEN
+    :param template_id: content_id of the card, e.g. SBB_HERO_GWEN
+    :param is_golden: is the card golden
     :return: the base card art name
     """
     try:
@@ -25,9 +26,9 @@ def get_card_art_name(template_id: str, is_golden: bool):
         return ""
 
 
-def get_hero_name(template_id: str):
+def get_card_name(template_id: str, is_golden=False):
     try:
-        return content_id_lookup.get(str(template_id))["Name"]
+        return content_id_lookup.get(str(int(template_id) - int(is_golden)))["Name"]
     except TypeError:
         logging.error(template_id)
         return ""
