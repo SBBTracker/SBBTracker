@@ -245,7 +245,7 @@ class LogThread(QThread):
     round_update = Signal(int)
     player_update = Signal(object, int)
     comp_update = Signal(object, int)
-    stats_update = Signal(str, object, str)
+    stats_update = Signal(str, object, str, object)
     player_info_update = Signal(graphs.LivePlayerStates)
     health_update = Signal(object)
     new_game = Signal(bool)
@@ -320,9 +320,7 @@ class LogThread(QThread):
                     match_data["combat-info"] = combats
                     match_data["placement"] = state.place
                     match_data["players"] = states.json_friendly()
-                    self.stats_update.emit(asset_utils.get_hero_name(current_player.heroid), state, session_id)
-                    if settings.get(settings.upload_data):
-                        upload_data(match_data)
+                    self.stats_update.emit(asset_utils.get_hero_name(current_player.heroid), state, session_id, match_data)
                 session_id = None
                 combats.clear()
                 match_data.clear()
@@ -900,7 +898,10 @@ class SBBTracker(QMainWindow):
                 self.board_queue.put((state, self.player_ids[0], settings.get(settings.number_simulations, 1000),
                                       settings.get(settings.number_threads, 3)))
 
-    def update_stats(self, starting_hero: str, player, session_id: str):
+    def update_stats(self, starting_hero: str, player, session_id: str, match_data):
+        if settings.get(settings.upload_data) and self.in_matchmaking and session_id not in self.player_stats.df['SessionId'].values:
+            # upload only matchmade games
+            upload_data(match_data)
         if settings.get(settings.save_stats, True) and (
                 not settings.get(settings.matchmaking_only) or self.in_matchmaking):
             place = player.place if int(player.health) <= 0 else "1"
