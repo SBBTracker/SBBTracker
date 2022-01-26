@@ -48,7 +48,10 @@ def get_sbb_rect():
 def get_sbb_scale():
     window = get_sbb_window()
     user32 = windll.user32
-    return user32.GetDpiForWindow(window) if window != 0 else 96
+    if hasattr(user32, 'GetDpiForWindow'):
+        return user32.GetDpiForWindow(window) if window != 0 else 96
+    else:
+        return 96
 
 
 class SBBWindowCheckThread(QThread):
