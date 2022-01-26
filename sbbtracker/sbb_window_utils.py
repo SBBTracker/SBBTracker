@@ -12,7 +12,7 @@ from paths import os_name
 
 
 def get_sbb_window():
-    return FindWindow(None, "Storybook Brawl")
+    return FindWindow("UnityWndClass", "Storybook Brawl")
 
 
 def get_overlay_window():
