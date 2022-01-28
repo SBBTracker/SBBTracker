@@ -1873,6 +1873,27 @@ def main():
     #         settings.set(settings.silent_updates, reply == QMessageBox.Yes)
     #         settings.save()
 
+    if settings.get(settings.prompt_data_collection) and not settings.get(settings.upload_data):
+        settings.set_(settings.prompt_data_collection, False)
+        reply = QMessageBox.question(None, "Opt-in to data collection?",
+                                     """Would you like to opt into to data collection?
+This enables you to upload your matches to sbbtracker.com
+and contribute to the community dataset.
+
+Things that are currently collected:
+* Your steam name (this is not shared)
+* Board states
+* Placement
+* Hero, Health, and XP
+* Net MMR
+
+This may include more game-related information as we improve 
+our ability to collect it.
+
+You may change your selection at any time at Settings > Data > Upload Matches""")
+        settings.set_(settings.upload_data, reply == QMessageBox.Yes)
+        settings.save()
+
     main_window = SBBTracker()
     main_window.show()
     splash.finish(main_window)
