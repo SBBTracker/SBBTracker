@@ -171,7 +171,7 @@ if not api_id:
 def upload_data(payload):
     try:
         resp = requests.post(api_url, data=json.dumps(payload))
-        logging.debug(resp.content)
+        print(resp.content)
     except:
         logging.exception("Unable to post data!")
 
@@ -298,7 +298,7 @@ class LogThread(QThread):
                 self.player_update.emit(state, round_number)
                 xp = f"{state.level}.{state.experience}"
                 states.update_player(state.playerid, round_number, state.health, xp,
-                                     asset_utils.get_card_name(state.heroid))
+                                     asset_utils.get_card_name(state.heroid), state.heroid)
                 counter += 1
                 if counter == 8:
                     self.player_info_update.emit(states)
@@ -817,10 +817,10 @@ class SBBTracker(QMainWindow):
         return self.player_ids.index(player_id)
 
     def new_game(self, matchmaking):
+        self.in_matchmaking = matchmaking
         self.player_ids.clear()
         self.overlay.enable_hovers()
         self.overlay.turn_display.setVisible(settings.get(settings.enable_turn_display))
-        self.in_matchmaking = matchmaking
         for index in range(0, 8):
             self.comp_tabs.tabBar().setTabTextColor(index, "white")
             comp = self.comps[index]

@@ -25,12 +25,14 @@ class LivePlayerStates:
         self.ids_to_xp = defaultdict(dict)
         self.ids_to_fractional_xp = defaultdict(dict)
         self.ids_to_heroes = defaultdict(list)
+        self.ids_to_hero_ids = defaultdict(list)
 
-    def update_player(self, playerid, round_number, health, xp, hero):
+    def update_player(self, playerid, round_number, health, xp, hero, hero_id):
         self.ids_to_health[playerid][round_number] = health
         self.ids_to_xp[playerid][round_number] = xp
         self.ids_to_fractional_xp[playerid][round_number] = float(f"{xp[0]}.{int(xp[2]) * 333333333}")
         self.ids_to_heroes[playerid].append(hero)
+        self.ids_to_hero_ids[playerid].append(hero_id)
 
     def get_ids(self):
         return list(self.ids_to_heroes.keys())
@@ -52,12 +54,13 @@ class LivePlayerStates:
         self.ids_to_xp.clear()
         self.ids_to_fractional_xp.clear()
         self.ids_to_heroes.clear()
+        self.ids_to_hero_ids.clear()
 
     def json_friendly(self):
         players = [
             {
                 "player-id": player_id,
-                "heroes": self.ids_to_heroes[player_id],
+                "heroes": self.ids_to_hero_ids[player_id],
                 "healths": self.ids_to_health[player_id],
                 "xps": self.ids_to_xp[player_id]
             } for player_id in self.ids_to_heroes.keys()
