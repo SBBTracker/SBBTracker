@@ -302,6 +302,7 @@ class Action:
                 self.content_id = info['Action']['Card']['[ClientCardCard]']['CardTemplate']['Card']['CardTemplateId']
                 self.attrs = ['cardattack', 'cardhealth', 'is_golden', 'slot', 'zone', 'cost', 'subtypes', 'counter', 'content_id']
 
+
             elif self.action_type in [EVENT_BRAWLCOMPLETE, EVENT_SUMMONCHARACTER, EVENT_ATTACK, EVENT_DEALDAMAGE]:
                 self.task = TASK_ENDROUNDGATHER
                 self.attrs = []
@@ -389,13 +390,19 @@ def run(queue: Queue, log=logfile):
             elif not inbrawl and action.task == TASK_GATHERIDS:
                 inbrawl = True
                 brawldt = dict()
+                character_slots = set()
                 brawldt[action.player1] = list()
                 brawldt[action.player2] = list()
                 lastupdated[action.player1] = current_round
                 lastupdated[action.player2] = current_round
             elif inbrawl and action.task == TASK_GETROUNDGATHER:
                 if action.zone in ['Spell', 'Treasure', 'Character', 'Hero']:
-                    brawldt[action.playerid].append(action)
+                    if action.zone == 'Character':
+                        if action.slot not in character_slots:
+                            character_slots.add(action.slot)
+                            brawldt[action.playerid].append(action)
+                    else:
+                        brawldt[action.playerid].append(action)
             elif inbrawl and action.task != TASK_GETROUNDGATHER:
                 queue.put(Update(JOB_BOARDINFO, brawldt))
                 inbrawl = False
