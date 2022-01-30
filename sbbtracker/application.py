@@ -308,6 +308,7 @@ class LogThread(QThread):
                     after_first_combat = True
             elif job == log_parser.JOB_BOARDINFO:
                 self.comp_update.emit(state, round_number)
+
                 combat = from_state(state)
                 combat["round"] = round_number
                 combats.append(combat)
