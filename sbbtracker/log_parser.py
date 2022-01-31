@@ -390,7 +390,7 @@ def run(queue: Queue, log=logfile):
             elif not inbrawl and action.task == TASK_GATHERIDS:
                 inbrawl = True
                 brawldt = dict()
-                character_slots = set()
+                character_slots = defaultdict(set)
                 brawldt[action.player1] = list()
                 brawldt[action.player2] = list()
                 lastupdated[action.player1] = current_round
@@ -398,8 +398,8 @@ def run(queue: Queue, log=logfile):
             elif inbrawl and action.task == TASK_GETROUNDGATHER:
                 if action.zone in ['Spell', 'Treasure', 'Character', 'Hero']:
                     if action.zone == 'Character':
-                        if action.slot not in character_slots:
-                            character_slots.add(action.slot)
+                        if action.slot not in character_slots[action.playerid]:
+                            character_slots[action.playerid].add(action.slot)
                             brawldt[action.playerid].append(action)
                     else:
                         brawldt[action.playerid].append(action)
