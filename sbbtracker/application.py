@@ -318,6 +318,7 @@ class LogThread(QThread):
                 self.end_combat.emit()
                 if state and current_player and session_id:
                     match_data["tracker-id"] = api_id
+                    match_data["tracker-version"] = version.__version__
                     match_data["player-id"] = current_player.playerid
                     match_data["display-name"] = current_player.displayname
                     match_data["match-id"] = session_id

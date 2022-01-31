@@ -62,12 +62,9 @@ class UpdateCheckThread(QThread):
 
     def run(self):
         update_available = False
-        release_notes = ""
         while not update_available:
             update_available, release_notes = check_updates()
             if update_available:
-                break
+                self.github_update.emit(update_available, release_notes)
             time.sleep(7200)  # Check for updates every 2 hours
-        # wait for an update
-        self.github_update.emit(update_available, release_notes)
 
