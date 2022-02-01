@@ -61,8 +61,7 @@ class UpdateCheckThread(QThread):
         self.kwargs = kwargs
 
     def run(self):
-        update_available = False
-        while not update_available:
+        while True:
             update_available, release_notes = check_updates()
             if update_available:
                 self.github_update.emit(update_available, release_notes)
