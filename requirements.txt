@@ -18,4 +18,4 @@ pyinstaller~=4.7
 bumpversion~=0.6.0 
 sbbbattlesim~=0.1
 setuptools~=57.0.0
-pywin32~=302
+pywin32==302
