@@ -113,7 +113,7 @@ def get_image_location(position: int):
 
 def round_to_xp(round_number: int):
     lvl = min(6, (round_number - 1) // 3 + 2)
-    xp = (round_number - 1) % 3 if lvl != 6 else 0
+    xp = (round_number - 1) % 3 if lvl != 6 else round_number - 13
     return "0.0" if round_number == 0 else f"{lvl}.{xp}"
 
 
@@ -823,6 +823,7 @@ class SBBTracker(QMainWindow):
         self.player_ids.clear()
         self.overlay.enable_hovers()
         self.overlay.turn_display.setVisible(settings.get(settings.enable_turn_display))
+        self.streamer_overlay.turn_display.setVisible(settings.get(settings.enable_turn_display))
         for index in range(0, 8):
             self.comp_tabs.tabBar().setTabTextColor(index, "white")
             comp = self.comps[index]

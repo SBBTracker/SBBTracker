@@ -35,7 +35,7 @@ def get_card_name(template_id: str, is_golden=False):
 
 
 def get_num_heroes():
-    return len([v for v in content_id_lookup.values() if v['Id'].startswith("SBB_HERO")])
+    return len([v for v in content_id_lookup.values() if v['Id'].startswith("SBB_HERO") and v['Name'] != "Big Bad Wolf"])
 
 
 def get_card_path(content_id: str, is_golden: bool):
