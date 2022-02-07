@@ -265,6 +265,7 @@ class LogThread(QThread):
         matchmaking = False
         after_first_combat = False
         session_id = None
+        build_id = None
         match_data = {}
         combats = []
         while True:
@@ -283,6 +284,7 @@ class LogThread(QThread):
                 matchmaking = False
                 after_first_combat = False
                 session_id = state.session_id
+                build_id = state.build_id
                 combats.clear()
                 match_data.clear()
             elif job == log_parser.JOB_INITCURRENTPLAYER:
@@ -316,12 +318,13 @@ class LogThread(QThread):
                 counter = 0
             elif job == log_parser.JOB_ENDGAME:
                 self.end_combat.emit()
-                if state and current_player and session_id:
+                if state and current_player and session_id and build_id:
                     match_data["tracker-id"] = api_id
                     match_data["tracker-version"] = version.__version__
                     match_data["player-id"] = current_player.playerid
                     match_data["display-name"] = current_player.displayname
                     match_data["match-id"] = session_id
+                    match_data["build-id"] = build_id
                     match_data["combat-info"] = combats
                     match_data["placement"] = state.place
                     match_data["players"] = states.json_friendly()
@@ -623,6 +626,7 @@ and Lunco
             self.main_window.streamer_overlay.show()
             self.main_window.streamer_overlay.centralWidget().setStyleSheet(
                 f"QWidget#overlay {{background-color: {settings.get(settings.stream_overlay_color)}}}")
+            self.main_window.streamer_overlay.turn_display.setVisible(settings.get(settings.enable_turn_display))
         else:
             self.main_window.streamer_overlay.hide()
         self.main_window.overlay.set_comps_enabled(settings.get(settings.enable_comps))
