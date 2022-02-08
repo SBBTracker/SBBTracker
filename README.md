@@ -14,6 +14,7 @@ If FAQ doesn't help you, consider creating an issue or posting in the #bugs chan
 * Record game placements
 * Stat analysis of your results
 * Export your stats to csv
+* Run a simulation of different board configurations.
 
 Get the installer for the latest release [here](https://github.com/SBBTracker/SBBTracker/releases/latest)
 
