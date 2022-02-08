@@ -18,7 +18,6 @@ from queue import Queue
 
 import matplotlib
 import requests
-import win32api
 
 matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
