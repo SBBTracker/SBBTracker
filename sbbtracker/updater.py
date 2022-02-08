@@ -4,7 +4,6 @@ import os
 import subprocess
 import platform
 import time
-from os.path import expanduser
 from pathlib import Path
 from urllib.request import urlretrieve
 
@@ -17,6 +16,7 @@ from version import __version__
 os_name = platform.system()
 
 latest_release_url = "https://api.github.com/repos/SBBTracker/SBBTracker/releases/latest"
+
 
 def check_updates():
     r = requests.get(latest_release_url)

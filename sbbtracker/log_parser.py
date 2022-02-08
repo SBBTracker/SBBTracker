@@ -1,7 +1,6 @@
 import gzip
 import json
 import os
-import platform
 import time
 from collections import defaultdict
 from enum import Enum
@@ -319,7 +318,8 @@ class Action:
             elif self.action_type == EVENT_CONNINFO:
                 self.task = TASK_NEWGAME
                 self.session_id = info['SessionId']
-                self.attrs = ['session_id']
+                self.build_id = info['BuildId']
+                self.attrs = ['session_id', 'build_id']
 
             else:
                 self.task = None
@@ -364,11 +364,9 @@ class SBBPygtail(Pygtail):
 
 def run(queue: Queue, log=logfile):
     inbrawl = False
-    skip_extra_msgs = True
     current_round = None
     current_player_stats = None
     lastupdated = dict()
-    last_player_timestamp = -2
     while True:
         prev_action = None
         ifs = SBBPygtail(filename=str(log), offset_file=offsetfile, every_n=100)
