@@ -1,7 +1,6 @@
 import logging
 import math
 import os.path
-import re
 import shutil
 from datetime import date, datetime
 from pathlib import Path
@@ -14,7 +13,7 @@ import asset_utils
 import log_parser
 import paths
 from record_parser import STRUCT_ACTION, id_to_action_name
-from paths import sbbtracker_folder, backup_dir, statsfile, stats_format
+from paths import backup_dir, statsfile, stats_format
 
 
 headings = ["Hero", "# Matches", "Avg Place", "Top 4", "Wins", "Net MMR"]

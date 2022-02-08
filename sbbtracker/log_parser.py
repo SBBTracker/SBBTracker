@@ -1,7 +1,6 @@
 import gzip
 import json
 import os
-import platform
 import time
 from collections import defaultdict
 from enum import Enum
