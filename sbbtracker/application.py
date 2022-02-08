@@ -875,8 +875,6 @@ class SBBTracker(QMainWindow):
 
     # Somehow here update the display
     def update_comp(self, state, round_number):
-        last_brawl_comps = []
-        self.update_analysis_board(last_brawl_comps)
         for player_id in state:
             board = state[player_id]
             index = self.get_player_index(player_id)
@@ -896,6 +894,7 @@ class SBBTracker(QMainWindow):
             comp.last_seen = round_number
 
             self.overlay.update_comp(index, board, round_number)
+            self.board_analysis.update_board_analysis(comp)
             self.streamer_overlay.update_comp(index, board, round_number)
             self.update()
 
@@ -906,7 +905,6 @@ class SBBTracker(QMainWindow):
             if self.board_queue.qsize() == 0:
                 self.board_queue.put((state, self.player_ids[0], settings.get(settings.number_simulations, 1000),
                                       settings.get(settings.number_threads, 3)))
-    def update_board_analysis(self):
 
 
     def update_stats(self, starting_hero: str, player, session_id: str, match_data):
@@ -1351,17 +1349,15 @@ class BoardAnalysis(QWidget):
         super().__init__()
         self.layout = QVBoxLayout(self)
 
-        self.last_brawl_tab = QVBoxLayout(QWidget)
-
-        self.boards = QSplitter(Qt.Horizontal)
-        self.player_board = SelectableBoardComp()
+        self.last_brawl_tab = QSplitter(Qt.Horizontal)
+        # self.player_board = SelectableBoardComp()
+        self.player_board = BoardComp()
         self.opponent_board = BoardComp()
-        self.boards.addWidget(player_board)
-        self.boards.addWidget(opponent_board)
+        self.player_last_updated = True
+        self.last_brawl_tab.addWidget(self.player_board)
+        self.last_brawl_tab.addWidget(self.opponent_board)
 
-        self.last_brawl_tab.addWidget(self.boards)
-
-        # self.sim_results, = FigureCanvasQTAgg(plt.Figure(figsize=(13.5, 18)))
+        self.sim_results = FigureCanvasQTAgg(plt.Figure(figsize=(13.5, 18)))
         # self.xp_ax = self.xp_canvas.figure.subplots()
 
         analysis_tabs = QTabWidget(self)
@@ -1373,14 +1369,19 @@ class BoardAnalysis(QWidget):
         self.user_palette = palette
         self.update_graph()
 
-    def update_last_round(self, comps):
-        self.last_round_comps = []
-        for comp in comps:
-            if comp.last_seen = 0:
-                self.last_round_comps.append(comp)
+    def update_board_analysis(self, comp):
+        if comp.last_seen == 0:
+            if self.player_last_updated:
+                comp.setParent(self.opponent_board)
+                self.player_last_updated = False
+            else:
+                comp.setParent(self.player_board)
+                self.player_last_updated = True
 
-    def update_graph(self, analysis_results: simulator.AnalysisResults):
+    def update_graph(self, analysis_results):
+
         # display results == hard
+        pass
 
 
 
