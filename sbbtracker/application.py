@@ -896,8 +896,8 @@ class SBBTracker(QMainWindow):
             comp.composition = board
             comp.last_seen = round_number
 
+            self.board_analysis.update_comp(board, round_number)
             self.overlay.update_comp(index, board, round_number)
-            self.board_analysis.update_board_analysis(comp)
             self.streamer_overlay.update_comp(index, board, round_number)
             self.update()
 
@@ -1155,6 +1155,21 @@ class SelectableBoardComp(BoardComp):
     def __init__(self):
         super().__init__()
 
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.scale(self.scale/2.0, self.scale/2.0)
+        if self.composition is not None:
+            for action in self.composition:
+                if action.zone != "Hero":
+                    #  skip hero because we handle it elsewhere
+                    #  spells broke
+                    slot = action.slot
+                    zone = action.zone
+                    position = 10 if zone == 'Spell' else (7 + int(slot)) if zone == "Treasure" else slot
+                    self.update_card(painter, position, action.content_id, action.cardhealth,
+                                     action.cardattack, action.is_golden)
+        else:
+            painter.eraseRect(QRect(0, 0, 1350, 820))
 
 
 class MatchHistory(QWidget):
@@ -1353,9 +1368,8 @@ class BoardAnalysis(QWidget):
         self.layout = QVBoxLayout(self)
 
         self.last_brawl_tab = QSplitter(Qt.Horizontal)
-        # self.player_board = SelectableBoardComp()
-        self.player_board = BoardComp()
-        self.opponent_board = BoardComp()
+        self.player_board = SelectableBoardComp()
+        self.opponent_board = SelectableBoardComp()
         self.player_last_updated = True
         self.last_brawl_tab.addWidget(self.player_board)
         self.last_brawl_tab.addWidget(self.opponent_board)
@@ -1372,14 +1386,16 @@ class BoardAnalysis(QWidget):
         self.user_palette = palette
         self.update_graph()
 
-    def update_board_analysis(self, comp):
-        if comp.last_seen == 0:
-            if self.player_last_updated:
-                comp.setParent(self.opponent_board)
-                self.player_last_updated = False
-            else:
-                comp.setParent(self.player_board)
-                self.player_last_updated = True
+    def update_comp(self, player, round_number):
+        if self.player_last_updated:
+            comp = self.opponent_board
+            self.player_last_updated = False
+        else:
+            comp = self.player_board
+            self.player_last_updated = True
+        comp.composition = player
+        comp.last_seen = round_number
+        self.update()
 
     def update_graph(self, analysis_results):
 
