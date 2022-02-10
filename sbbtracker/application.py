@@ -48,6 +48,7 @@ from PySide6.QtWidgets import (
     QToolBar,
     QVBoxLayout,
     QWidget,
+    QCheckBox,
 )
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from qt_material import apply_stylesheet
@@ -61,6 +62,8 @@ logging.getLogger().addHandler(logging.StreamHandler())
 from sbbbattlesim import from_state, simulate
 from sbbbattlesim.exceptions import SBBBSCrocException
 from sbb_window_utils import SBBWindowCheckThread
+
+from sbbtracker.animated_toggle import AnimatedToggle
 
 DEBUG = False
 
@@ -721,7 +724,7 @@ class SBBTracker(QMainWindow):
         self.match_history = MatchHistory(self, self.player_stats)
         self.live_graphs = LiveGraphs()
         self.stats_graph = StatsGraph(self.player_stats)
-        self.board_analysis = BoardAnalysis()
+        self.board_analysis = BoardAnalysis(size=self.size())
 
         main_tabs = QTabWidget()
         main_tabs.addTab(comps_widget, "Board Comps")
@@ -1154,6 +1157,19 @@ class SelectableBoardComp(BoardComp):
     """BoardComp with clickable characters and a submit button"""
     def __init__(self):
         super().__init__()
+        self.buttons = []
+        for i in range(7):
+            button = AnimatedToggle(self)
+            button.setChecked(False)
+            self.buttons.append(button)
+            card_loc = get_image_location(i)
+            # button.setGeometry(0, 0, 60, 120)
+            # / 2.0 b/c used by board_analysis tab
+            button.move(card_loc[0]/2.0 + 15, card_loc[1]/2.0 + 40)
+
+    def reset_buttons(self):
+        for button in self.buttons:
+            button.setChecked(False)
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -1168,6 +1184,8 @@ class SelectableBoardComp(BoardComp):
                     position = 10 if zone == 'Spell' else (7 + int(slot)) if zone == "Treasure" else slot
                     self.update_card(painter, position, action.content_id, action.cardhealth,
                                      action.cardattack, action.is_golden)
+
+
         else:
             painter.eraseRect(QRect(0, 0, 1350, 820))
 
@@ -1363,24 +1381,39 @@ class LiveGraphs(QWidget):
             self.health_canvas.draw()
 
 class BoardAnalysis(QWidget):
-    def __init__(self):
+    def __init__(self, size):
         super().__init__()
         self.layout = QVBoxLayout(self)
 
         self.last_brawl_tab = QSplitter(Qt.Horizontal)
+        # Submit analysis button
+        btn_widget = QWidget()
+        btn_layout = QHBoxLayout(btn_widget)
+        submit_button = QPushButton("Submit")
+        submit_button.clicked.connect(self.run_simulations)
+        btn_layout.addWidget(submit_button)
+        self.last_brawl_tab.addWidget(btn_widget)
+        # Submit analysis tab
         self.player_board = SelectableBoardComp()
         self.opponent_board = SelectableBoardComp()
-        self.player_last_updated = True
+        self.player_last_updated = False
         self.last_brawl_tab.addWidget(self.player_board)
         self.last_brawl_tab.addWidget(self.opponent_board)
 
-        self.sim_results = FigureCanvasQTAgg(plt.Figure(figsize=(13.5, 18)))
-        # self.xp_ax = self.xp_canvas.figure.subplots()
+        # Simulation results tab
+        self.sim_results = BoardAnalysisSimulationResults()
 
+        # Put it all together
         analysis_tabs = QTabWidget(self)
         analysis_tabs.addTab(self.last_brawl_tab, "Last Braws")
         analysis_tabs.addTab(self.sim_results, "Analysis Results")
         self.layout.addWidget(analysis_tabs)
+
+        # initialize simulation queue nad actions
+        self.board_queue = Queue()
+        self.simulation = SimulationThread(self.board_queue)
+        self.simulation.end_simulation.connect(self.sim_results.update_results)
+        self.simulation.error_simulation.connect(self.sim_results.show_error)
 
     def set_color_palette(self, palette):
         self.user_palette = palette
@@ -1397,9 +1430,59 @@ class BoardAnalysis(QWidget):
         comp.last_seen = round_number
         self.update()
 
+    def run_simulations(self):
+        player_board_selected = [
+            slot
+            for slot, button in enumerate(self.player_board.buttons)
+            if button.isChecked()
+        ]
+        opponent_board_selected = [
+            slot
+            for slot, button in enumerate(self.opponent_board.buttons)
+            if button.isChecked()
+        ]
+
+        player_perms = 1
+        for num in range(2, len(player_board_selected) + 1):
+            player_perms *= num
+        opponent_perms = 1
+        for num in range(2, len(opponent_board_selected) + 1):
+            opponent_perms *= num
+        total_perms = player_perms * opponent_perms
+
+        num_simulations = settings.get(settings.number_simulations, 1000),
+        num_threads = settings.get(settings.number_threads, 3)
+        if total_perms > 150:
+            print(f"Error: you wanted to run {total_perms*num_simulations} simulations!")
+
+        # TODO: permute
+        board = {
+            "player": self.player_board.composition,
+            "opponent": self.opponent_board.composition,
+        }
+        player_id = "player"
+
+
+
+
+        # reset buttons
+        self.player_board.reset_buttons()
+        self.opponent_board.reset_buttons()
+
     def update_graph(self, analysis_results):
 
         # display results == hard
+        pass
+
+class BoardAnalysisSimulationResults(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.yada = "todo"
+
+    def show_error(self):
+        pass
+
+    def update_results(self):
         pass
 
 
