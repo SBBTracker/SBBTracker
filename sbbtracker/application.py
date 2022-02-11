@@ -1,6 +1,8 @@
 import calendar
 import concurrent.futures
+import copy
 import datetime
+import itertools
 import json
 import logging
 import multiprocessing
@@ -1507,6 +1509,8 @@ class SimulationManager(QThread):
             num_simulations = settings.get(settings.number_simulations, 1000)
             num_threads = settings.get(settings.number_threads, 3)
 
+            player_board_permutations = list(itertools.permutations(player_board_selected))
+            opponent_board_permutations = list(itertools.permutations(opponent_board_selected))
             for row in range(min(player_perms, 6)):
                 for col in range(min(opponent_perms, 6)):
                     self.results_boards[row][col].sim_is_done = False
@@ -1514,7 +1518,11 @@ class SimulationManager(QThread):
                         # TODO: if ambrosia, error or say "assuming *wasn't* golden and do fiddling
                         (
                             permute_board(
-                                board, player_board_selected, opponent_board_selected, row, col
+                                board,
+                                player_board_selected,
+                                player_board_permutations[row],
+                                opponent_board_selected,
+                                opponent_board_permutations[col]
                             ),
                             playerid,
                             num_simulations,
@@ -1524,7 +1532,36 @@ class SimulationManager(QThread):
                     while not self.results_boards[row][col].sim_is_done:
                         time.sleep(3)
 
-def permute_board(board, player_board_selected, opponent_board_selected, row, col):
+def permute_board(
+    board,
+    player_board_selected,
+    player_board_permuted,
+    opponent_board_selected,
+    opponent_board_permuted
+):
+    # don't permute in place
+    board = copy.deepcopy(board)
+
+    player_permute_map = {
+        orig: perm
+        for orig, perm in zip(
+            player_board_selected, player_board_permuted
+        )
+    }
+    for character in board["player"]:
+        if character.action_type == "character" and character.slot in player_permute_map:
+            character.slot = player_permute_map[character.slot]
+
+    opponent_permute_map = {
+        orig: perm
+        for orig, perm in zip(
+            opponent_board_selected, opponent_board_permuted
+        )
+    }
+    for character in board["opponent"]:
+        if character.action_type == "character" and character.slot in opponent_permute_map:
+            character.slot = opponent_permute_map[character.slot]
+
     return board
 
 
