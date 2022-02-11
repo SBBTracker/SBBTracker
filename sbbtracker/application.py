@@ -196,8 +196,8 @@ class SimulationThread(QThread):
                 playerid = settings.get(settings.player_id)
             simulator_board = asset_utils.replace_template_ids(board)
             from_stated = from_state(simulator_board)
-
             if all([from_stated[player_id]['level'] != 0 for player_id in from_stated]):
+                print("Running SIMULATION")
                 try:
                     simulation_stats = simulate(simulator_board, t=num_threads, k=int(num_simulations / num_threads),
                                                 timeout=30)
@@ -1380,10 +1380,12 @@ class LiveGraphs(QWidget):
             graphs.live_health_graph(self.states, self.health_ax, self.user_palette)
             self.health_canvas.draw()
 
+
 class BoardAnalysis(QWidget):
     def __init__(self, size):
         super().__init__()
         self.layout = QVBoxLayout(self)
+
 
         self.last_brawl_tab = QSplitter(Qt.Horizontal)
         # Submit analysis button
@@ -1401,7 +1403,7 @@ class BoardAnalysis(QWidget):
         self.last_brawl_tab.addWidget(self.opponent_board)
 
         # Simulation results tab
-        self.sim_results = BoardAnalysisSimulationResults()
+        self.sim_results = QWidget()
 
         # Put it all together
         analysis_tabs = QTabWidget(self)
@@ -1409,11 +1411,10 @@ class BoardAnalysis(QWidget):
         analysis_tabs.addTab(self.sim_results, "Analysis Results")
         self.layout.addWidget(analysis_tabs)
 
-        # initialize simulation queue nad actions
-        self.board_queue = Queue()
-        self.simulation = SimulationThread(self.board_queue)
-        self.simulation.end_simulation.connect(self.sim_results.update_results)
-        self.simulation.error_simulation.connect(self.sim_results.show_error)
+        self.analysis_queue = Queue()
+        self.simulation_manager = SimulationManager(self.analysis_queue, self.sim_results)
+        self.simulation_manager.start()
+
 
     def set_color_palette(self, palette):
         self.user_palette = palette
@@ -1441,50 +1442,195 @@ class BoardAnalysis(QWidget):
             for slot, button in enumerate(self.opponent_board.buttons)
             if button.isChecked()
         ]
-
-        player_perms = 1
-        for num in range(2, len(player_board_selected) + 1):
-            player_perms *= num
-        opponent_perms = 1
-        for num in range(2, len(opponent_board_selected) + 1):
-            opponent_perms *= num
-        total_perms = player_perms * opponent_perms
-
-        num_simulations = settings.get(settings.number_simulations, 1000),
-        num_threads = settings.get(settings.number_threads, 3)
-        if total_perms > 150:
-            print(f"Error: you wanted to run {total_perms*num_simulations} simulations!")
-
-        # TODO: permute
         board = {
             "player": self.player_board.composition,
             "opponent": self.opponent_board.composition,
         }
-        player_id = "player"
-
-
-
-
+        print(board)
+        self.analysis_queue.put(
+            (board, player_board_selected, opponent_board_selected)
+        )
         # reset buttons
         self.player_board.reset_buttons()
         self.opponent_board.reset_buttons()
 
-    def update_graph(self, analysis_results):
+class SimulationManager(QThread):
+    # Maybe have good errors?
+    # end_simulation = Signal(str, str, str, str, str)
+    # error_simulation = Signal(str)
 
-        # display results == hard
-        pass
+    def __init__(self, analysis_queue, sim_results_page):
+        super(SimulationManager, self).__init__()
+        self.analysis_queue = analysis_queue
+
+        # initialize simulation queue and results
+        self.results_boards = []
+        self.board_queues = []
+        self.simulations = []
+        for row in range(6):
+            col_results = []
+            col_queues = []
+
+            for col in range(6):
+                results = BoardAnalysisSimulationResults(sim_results_page, (row, col))
+                col_results.append(results)
+
+                queue = Queue()
+                col_queues.append(queue)
+
+                simulation = SimulationThread(queue)
+                simulation.end_simulation.connect(results.update_chances)
+                simulation.error_simulation.connect(results.show_error)
+                # need to know when simulation ends to move to next one
+                simulation.end_simulation.connect(results.sim_end)
+                simulation.error_simulation.connect(results.sim_end)
+                simulation.start()
+                self.simulations.append(simulation)
+
+            self.results_boards.append(col_results)
+            self.board_queues.append(col_queues)
+
+    def run(self):
+        while True:
+            board, player_board_selected, opponent_board_selected = self.analysis_queue.get()
+
+            player_perms = 1
+            for num in range(2, len(player_board_selected) + 1):
+                player_perms *= num
+            opponent_perms = 1
+            for num in range(2, len(opponent_board_selected) + 1):
+                opponent_perms *= num
+            if player_perms > 6 or opponent_perms > 6:
+                print("only running first 36 permutations")
+
+            playerid = "player"
+            num_simulations = settings.get(settings.number_simulations, 1000)
+            num_threads = settings.get(settings.number_threads, 3)
+
+            for row in range(min(player_perms, 6)):
+                for col in range(min(opponent_perms, 6)):
+                    self.results_boards[row][col].sim_is_done = False
+                    self.board_queues[row][col].put(
+                        # TODO: if ambrosia, error or say "assuming *wasn't* golden and do fiddling
+                        (
+                            permute_board(
+                                board, player_board_selected, opponent_board_selected, row, col
+                            ),
+                            playerid,
+                            num_simulations,
+                            num_threads,
+                        )
+                    )
+                    while not self.results_boards[row][col].sim_is_done:
+                        time.sleep(3)
+
+def permute_board(board, player_board_selected, opponent_board_selected, row, col):
+    return board
+
+
 
 class BoardAnalysisSimulationResults(QWidget):
-    def __init__(self):
-        super().__init__()
-        self.yada = "todo"
+    def __init__(self, parent, pos):
+        super().__init__(parent)
+        self.sim_is_done = True
+        self.parent = parent
+        row, col = pos
+        self.move(row*420, col*85)
 
-    def show_error(self):
-        pass
+        self.layout = QStackedLayout(self)
+        background = QFrame(self)
+        self.layout.addWidget(background)
 
-    def update_results(self):
-        pass
+        self.win_dmg_label = QLabel("-", background)
+        self.win_label = QLabel("-", background)
+        self.tie_label = QLabel("-", background)
+        self.loss_label = QLabel("-", background)
+        self.loss_dmg_label = QLabel("-", background)
 
+        self.win_dmg = "-"
+        self.win = "-"
+        self.loss = "-"
+        self.tie = "-"
+        self.loss_dmg = "-"
+        self.displayable = False
+
+        label_layout = QGridLayout(background)
+
+        win_dmg_title = QLabel("DMG")
+        win_percent_title = QLabel("WIN")
+        win_dmg_title.setStyleSheet("QLabel { color : #9FD4A3 }")
+        win_percent_title.setStyleSheet("QLabel { color : #9FD4A3 }")
+
+        loss_dmg_title = QLabel("DMG")
+        loss_percent_title = QLabel("LOSS")
+        loss_dmg_title.setStyleSheet("QLabel { color : #e3365c }")
+        loss_percent_title.setStyleSheet("QLabel { color : #e3365c }")
+
+        tie_title = QLabel("TIE")
+
+        self.error_widget = QFrame(self)
+        error_layout = QVBoxLayout(self.error_widget)
+        self.error_msg = QLabel("Error in simulation!")
+        error_layout.addWidget(self.error_msg, alignment=Qt.AlignCenter)
+        error_layout.setContentsMargins(0, 0, 0, 0)
+        self.error_msg.setStyleSheet(
+            "QLabel#sim-error { text-align: center; font-size: 20px; background-color: rgba(0,0,0,0%); }")
+        self.error_msg.setObjectName("sim-error")
+        self.error_msg.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+        label_layout.addWidget(SimStatWidget(self, win_dmg_title, self.win_dmg_label), 0, 0)
+        label_layout.addWidget(SimStatWidget(self, win_percent_title, self.win_label), 0, 1)
+        label_layout.addWidget(SimStatWidget(self, tie_title, self.tie_label), 0, 2)
+        label_layout.addWidget(SimStatWidget(self, loss_percent_title, self.loss_label), 0, 3)
+        label_layout.addWidget(SimStatWidget(self, loss_dmg_title, self.loss_dmg_label), 0, 4)
+
+        self.layout.addWidget(self.error_widget)
+        self.error_widget.setMinimumSize(background.minimumSize())
+
+        label_layout.setSpacing(0)
+        label_layout.setRowStretch(0, 1)
+        label_layout.setRowStretch(1, 1)
+        label_layout.setContentsMargins(0, 0, 0, 0)
+
+    def reset_chances(self):
+        self.win_dmg = "-"
+        self.win = "-"
+        self.tie = "-"
+        self.loss = "-"
+        self.loss_dmg = "-"
+        self.win_dmg_label.setText(self.win_dmg)
+        self.win_label.setText(self.win)
+        self.loss_label.setText(self.loss)
+        self.tie_label.setText(self.tie)
+        self.loss_dmg_label.setText(self.loss_dmg)
+        self.displayable = False
+        self.layout.setCurrentIndex(0)
+
+    def update_chances(self, win, tie, loss, win_dmg, loss_dmg):
+        print("simulation emmited")
+        print(win, tie, loss, win_dmg, loss_dmg)
+        self.win_dmg = win_dmg
+        self.win = win
+        self.loss = loss
+        self.tie = tie
+        self.loss_dmg = loss_dmg
+        self.update_labels()
+        self.displayable = False
+
+    def show_error(self, msg: str):
+        self.error_msg.setText(msg)
+        self.layout.setCurrentIndex(1)
+
+    def update_labels(self):
+        self.win_dmg_label.setText(self.win_dmg)
+        self.win_label.setText(self.win)
+        self.loss_label.setText(self.loss)
+        self.tie_label.setText(self.tie)
+        self.loss_dmg_label.setText(self.loss_dmg)
+        self.displayable = True
+
+    def sim_end(self, *args):
+        self.sim_is_done = True
 
 
 class StatsGraph(QWidget):
