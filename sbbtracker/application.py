@@ -1448,7 +1448,6 @@ class BoardAnalysis(QWidget):
             "player": self.player_board.composition,
             "opponent": self.opponent_board.composition,
         }
-        print(board)
         self.analysis_queue.put(
             (board, player_board_selected, opponent_board_selected)
         )
@@ -1466,30 +1465,37 @@ class SimulationManager(QThread):
         self.analysis_queue = analysis_queue
 
         # initialize simulation queue and results
+        self.results_stats = []
         self.results_boards = []
         self.board_queues = []
         self.simulations = []
         for row in range(6):
-            col_results = []
+            col_stats = []
+            col_boards = []
             col_queues = []
 
             for col in range(6):
-                results = BoardAnalysisSimulationResults(sim_results_page, (row, col))
-                col_results.append(results)
+                simulated_stats = BoardAnalysisSimulationResults(sim_results_page, (row, col))
+                col_stats.append(simulated_stats)
+
+                simulated_board = BoardAnalysisOverlay(sim_results_page, (row, col))
+                col_boards.append(simulated_board)
 
                 queue = Queue()
                 col_queues.append(queue)
 
                 simulation = SimulationThread(queue)
-                simulation.end_simulation.connect(results.update_chances)
-                simulation.error_simulation.connect(results.show_error)
+
+                simulation.end_simulation.connect(simulated_stats.update_chances)
+                simulation.error_simulation.connect(simulated_stats.show_error)
                 # need to know when simulation ends to move to next one
-                simulation.end_simulation.connect(results.sim_end)
-                simulation.error_simulation.connect(results.sim_end)
+                simulation.end_simulation.connect(simulated_stats.sim_end)
+                simulation.error_simulation.connect(simulated_stats.sim_end)
                 simulation.start()
                 self.simulations.append(simulation)
 
-            self.results_boards.append(col_results)
+            self.results_stats.append(col_stats)
+            self.results_boards.append(col_boards)
             self.board_queues.append(col_queues)
 
     def run(self):
@@ -1513,11 +1519,12 @@ class SimulationManager(QThread):
             opponent_board_permutations = list(itertools.permutations(opponent_board_selected))
             for row in range(min(player_perms, 6)):
                 for col in range(min(opponent_perms, 6)):
-                    self.results_boards[row][col].sim_is_done = False
+                    self.results_stats[row][col].sim_is_done = False
+                    self.results_boards[row][col].update_comps(board["player"], board["player"])
                     self.board_queues[row][col].put(
                         # TODO: if ambrosia, error or say "assuming *wasn't* golden and do fiddling
                         (
-                            permute_board(
+                            self.permute_board(
                                 board,
                                 player_board_selected,
                                 player_board_permutations[row],
@@ -1529,41 +1536,127 @@ class SimulationManager(QThread):
                             num_threads,
                         )
                     )
-                    while not self.results_boards[row][col].sim_is_done:
+                    while not self.results_stats[row][col].sim_is_done:
                         time.sleep(3)
 
-def permute_board(
-    board,
-    player_board_selected,
-    player_board_permuted,
-    opponent_board_selected,
-    opponent_board_permuted
-):
-    # don't permute in place
-    board = copy.deepcopy(board)
 
-    player_permute_map = {
-        orig: perm
-        for orig, perm in zip(
-            player_board_selected, player_board_permuted
+    @staticmethod
+    def permute_board(
+        board,
+        player_board_selected,
+        player_board_permuted,
+        opponent_board_selected,
+        opponent_board_permuted
+    ):
+        # don't permute in place
+        board = copy.deepcopy(board)
+
+        player_permute_map = {
+            orig: perm
+            for orig, perm in zip(
+                player_board_selected, player_board_permuted
+            )
+        }
+        for character in board["player"]:
+            if character.action_type == "character" and character.slot in player_permute_map:
+                character.slot = player_permute_map[character.slot]
+
+        opponent_permute_map = {
+            orig: perm
+            for orig, perm in zip(
+                opponent_board_selected, opponent_board_permuted
+            )
+        }
+        for character in board["opponent"]:
+            if character.action_type == "character" and character.slot in opponent_permute_map:
+                character.slot = opponent_permute_map[character.slot]
+
+        return board
+
+
+class BoardAnalysisOverlay(QWidget):
+    simluation_update = Signal(str, str, str, str, str)
+
+    def __init__(self, parent, pos):
+        super().__init__()
+        row, col = pos
+        self.setAttribute(Qt.WA_TranslucentBackground, True)
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.SubWindow)
+        self.setWindowTitle("SBBTrackerOverlay")
+
+        self.simulated_board = QSplitter(Qt.Horizontal)
+        # Submit analysis tab
+        self.player_board = BoardComp()
+        self.opponent_board = BoardComp()
+        self.simulated_board.addWidget(self.player_board)
+        self.simulated_board.addWidget(self.opponent_board)
+
+        self.main_frame = QFrame()
+        self.simulated_board.setParent(self.main_frame)
+
+        self.visible = True
+        self.scale_factor = 1
+        self.sbb_rect = QRect(0, 0, 1920, 1080)
+        self.dpi_scale = 1
+        self.hover_region = HoverRegion(
+            parent, *map(
+                operator.mul, (400, 80), (self.scale_factor, self.scale_factor)
+            )
         )
-    }
-    for character in board["player"]:
-        if character.action_type == "character" and character.slot in player_permute_map:
-            character.slot = player_permute_map[character.slot]
+        self.base_comp_size = QSize(1100, 650)
+        self.set_transparency()
+        self.update_comp_scaling()
+        self.enable_hover()
 
-    opponent_permute_map = {
-        orig: perm
-        for orig, perm in zip(
-            opponent_board_selected, opponent_board_permuted
-        )
-    }
-    for character in board["opponent"]:
-        if character.action_type == "character" and character.slot in opponent_permute_map:
-            character.slot = opponent_permute_map[character.slot]
+        self.hover_region.move(420*row, 85*col)
+        size = QSize(420, 80)
+        self.hover_region.resize(size)
+        self.hover_region.background.setFixedSize(size)
+        self.hover_region.enter_hover.connect(lambda: self.show_hide_comp(True))
+        self.hover_region.leave_hover.connect(lambda: self.show_hide_comp(False))
 
-    return board
 
+    def visible_in_bg(self, visible):
+        self.visible = visible
+        self.setVisible(visible)
+
+    def disable_hover(self):
+        self.hover_region.setVisible(False)
+
+    def enable_hover(self):
+        self.hover_region.setVisible(True)
+
+    def show_hide_comp(self, show_or_hide: bool):
+        self.hover_region.setVisible(show_or_hide)
+
+    def update_round(self, round_num):
+        self.turn_display.update_label(f"Turn {round_num} ({round_to_xp(round_num)})")
+        if self.stream_overlay:
+            self.stream_overlay.update_round(round_num)
+
+    def update_comps(self, player_board, opponent_board):
+        self.player_board.composition = player_board
+        self.player_board.last_seen = None
+        self.opponent_board.composition = opponent_board
+        self.opponent_board.last_seen = None
+        self.update()
+
+    def update_comp_scaling(self):
+        self.player_board.setFixedSize(self.base_comp_size) # * comp.scale)
+        self.opponent_board.setFixedSize(self.base_comp_size) # * comp.scale)
+        self.player_board.updateGeometry()
+        self.opponent_board.updateGeometry()
+
+    def set_transparency(self):
+        alpha = (100 - settings.get(settings.boardcomp_transparency, 0)) / 100
+        style = f"background-color: rgba({default_bg_color_rgb}, {alpha});"
+        self.hover_region.setStyleSheet(style)
+
+    def toggle_transparency(self):
+        if settings.get(settings.streaming_mode):
+            self.setWindowFlags(self.windowFlags() | Qt.SubWindow)
+        else:
+            self.setWindowFlags(Qt.SubWindow)
 
 
 class BoardAnalysisSimulationResults(QWidget):
