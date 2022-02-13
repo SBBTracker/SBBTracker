@@ -199,6 +199,7 @@ class SimulationThread(QThread):
             simulator_board = asset_utils.replace_template_ids(board)
             from_stated = from_state(simulator_board)
             if all([from_stated[player_id]['level'] != 0 for player_id in from_stated]):
+                print("RUNNING SIM")
                 try:
                     simulation_stats = simulate(simulator_board, t=num_threads, k=int(num_simulations / num_threads),
                                                 timeout=30)
@@ -900,7 +901,7 @@ class SBBTracker(QMainWindow):
             comp.composition = board
             comp.last_seen = round_number
 
-            self.board_analysis.update_comp(board, round_number)
+            self.board_analysis.update_comp(board, round_number, player_id)
             self.overlay.update_comp(index, board, round_number)
             self.streamer_overlay.update_comp(index, board, round_number)
             self.update()
@@ -1050,7 +1051,7 @@ class SBBTracker(QMainWindow):
 
 
 class BoardComp(QWidget):
-    def __init__(self):
+    def __init__(self, scale=1):
         super().__init__()
         self.composition = None
         self.golden_overlay = QPixmap(asset_utils.get_asset("golden_overlay.png"))
@@ -1058,7 +1059,7 @@ class BoardComp(QWidget):
         self.last_seen = None
         self.current_round = 0
         self.player = None
-        self.scale = 1
+        self.scale = scale
 
         self.number_display_font = QFont(display_font_family, 25, weight=QFont.ExtraBold)
 
@@ -1420,9 +1421,9 @@ class BoardAnalysis(QWidget):
         self.user_palette = palette
         self.update_graph()
 
-    def update_comp(self, player, round_number):
+    def update_comp(self, player, round_number, player_id):
         # The person playing is player_ids[0]
-        if player.playerid == self.player_ids[0]:
+        if player_id == self.player_ids[0]:
             comp = self.player_board
         else:
             comp = self.opponent_board
@@ -1432,12 +1433,12 @@ class BoardAnalysis(QWidget):
 
     def run_simulations(self):
         player_board_selected = [
-            slot
+            str(slot)
             for slot, button in enumerate(self.player_board.buttons)
             if button.isChecked()
         ]
         opponent_board_selected = [
-            slot
+            str(slot)
             for slot, button in enumerate(self.opponent_board.buttons)
             if button.isChecked()
         ]
@@ -1517,17 +1518,18 @@ class SimulationManager(QThread):
             for row in range(min(player_perms, 6)):
                 for col in range(min(opponent_perms, 6)):
                     self.results_stats[row][col].sim_is_done = False
-                    self.results_boards[row][col].update_comps(board["player"], board["player"])
+                    perm_board = self.permute_board(
+                        board,
+                        player_board_selected,
+                        player_board_permutations[row],
+                        opponent_board_selected,
+                        opponent_board_permutations[col]
+                    )
+                    self.results_boards[row][col].update_comps(perm_board["player"], perm_board["opponent"])
                     self.board_queues[row][col].put(
                         # TODO: if ambrosia, error or say "assuming *wasn't* golden and do fiddling
                         (
-                            self.permute_board(
-                                board,
-                                player_board_selected,
-                                player_board_permutations[row],
-                                opponent_board_selected,
-                                opponent_board_permutations[col]
-                            ),
+                            perm_board,
                             playerid,
                             num_simulations,
                             num_threads,
@@ -1545,6 +1547,12 @@ class SimulationManager(QThread):
         opponent_board_selected,
         opponent_board_permuted
     ):
+        print("============= BOARD BEFORE =============")
+        print([
+            {"slot": char.slot, "subtypes": char.subtypes, "action_type": char.action_type}
+            for char in board["player"]
+            if char.zone == "Character" and char.slot in player_board_selected
+        ])
         # don't permute in place
         board = copy.deepcopy(board)
 
@@ -1554,8 +1562,11 @@ class SimulationManager(QThread):
                 player_board_selected, player_board_permuted
             )
         }
+        print(f"{player_permute_map=}")
+        print(list(map(type, list(player_permute_map.items())[0])))
         for character in board["player"]:
-            if character.action_type == "character" and character.slot in player_permute_map:
+            print(f"{character=}")
+            if character.zone == "Character" and character.slot in player_permute_map:
                 character.slot = player_permute_map[character.slot]
 
         opponent_permute_map = {
@@ -1565,8 +1576,14 @@ class SimulationManager(QThread):
             )
         }
         for character in board["opponent"]:
-            if character.action_type == "character" and character.slot in opponent_permute_map:
+            if character.zone == "Character" and character.slot in opponent_permute_map:
                 character.slot = opponent_permute_map[character.slot]
+        print("============= BOARD AFTER =============")
+        print([
+            {"slot": char.slot, "subtypes": char.subtypes, "action_type": char.action_type}
+            for char in board["player"]
+            if char.zone == "Character" and char.slot in player_board_selected
+        ])
 
         return board
 
@@ -1583,30 +1600,30 @@ class BoardAnalysisOverlay(QWidget):
 
         self.simulated_board = QSplitter(Qt.Horizontal)
         # Submit analysis tab
-        self.player_board = BoardComp()
-        self.opponent_board = BoardComp()
+        self.player_board = BoardComp(scale=0.5)
+        self.opponent_board = BoardComp(scale=0.5)
         self.simulated_board.addWidget(self.player_board)
         self.simulated_board.addWidget(self.opponent_board)
-
         self.main_frame = QFrame()
-        self.simulated_board.setParent(self.main_frame)
+        self.main_frame.move(0, 500)
+        self.layout = QHBoxLayout(self.main_frame)
+        self.layout.addWidget(self.simulated_board)
 
         self.visible = True
         self.scale_factor = 1
-        self.sbb_rect = QRect(0, 0, 1920, 1080)
         self.dpi_scale = 1
         self.hover_region = HoverRegion(
             parent, *map(
                 operator.mul, (400, 80), (self.scale_factor, self.scale_factor)
             )
         )
-        self.base_comp_size = QSize(1100, 650)
-        self.set_transparency()
+        self.base_comp_size = QSize(550, 325)
+        self.disable_hover()
         self.update_comp_scaling()
         self.enable_hover()
 
         self.hover_region.move(420*row, 85*col)
-        size = QSize(420, 80)
+        size = QSize(210, 80)
         self.hover_region.resize(size)
         self.hover_region.background.setFixedSize(size)
         self.hover_region.enter_hover.connect(lambda: self.show_hide_comp(True))
@@ -1624,7 +1641,7 @@ class BoardAnalysisOverlay(QWidget):
         self.hover_region.setVisible(True)
 
     def show_hide_comp(self, show_or_hide: bool):
-        self.hover_region.setVisible(show_or_hide)
+        self.main_frame.setVisible(show_or_hide)
 
     def update_round(self, round_num):
         self.turn_display.update_label(f"Turn {round_num} ({round_to_xp(round_num)})")
