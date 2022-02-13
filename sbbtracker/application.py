@@ -199,7 +199,6 @@ class SimulationThread(QThread):
             simulator_board = asset_utils.replace_template_ids(board)
             from_stated = from_state(simulator_board)
             if all([from_stated[player_id]['level'] != 0 for player_id in from_stated]):
-                print("Running SIMULATION")
                 try:
                     simulation_stats = simulate(simulator_board, t=num_threads, k=int(num_simulations / num_threads),
                                                 timeout=30)
@@ -726,7 +725,7 @@ class SBBTracker(QMainWindow):
         self.match_history = MatchHistory(self, self.player_stats)
         self.live_graphs = LiveGraphs()
         self.stats_graph = StatsGraph(self.player_stats)
-        self.board_analysis = BoardAnalysis(size=self.size())
+        self.board_analysis = BoardAnalysis(size=self.size(), player_ids=self.player_ids)
 
         main_tabs = QTabWidget()
         main_tabs.addTab(comps_widget, "Board Comps")
@@ -1384,10 +1383,10 @@ class LiveGraphs(QWidget):
 
 
 class BoardAnalysis(QWidget):
-    def __init__(self, size):
+    def __init__(self, size, player_ids):
         super().__init__()
+        self.player_ids = player_ids
         self.layout = QVBoxLayout(self)
-
 
         self.last_brawl_tab = QSplitter(Qt.Horizontal)
         # Submit analysis button
@@ -1400,7 +1399,6 @@ class BoardAnalysis(QWidget):
         # Submit analysis tab
         self.player_board = SelectableBoardComp()
         self.opponent_board = SelectableBoardComp()
-        self.player_last_updated = False
         self.last_brawl_tab.addWidget(self.player_board)
         self.last_brawl_tab.addWidget(self.opponent_board)
 
@@ -1423,12 +1421,11 @@ class BoardAnalysis(QWidget):
         self.update_graph()
 
     def update_comp(self, player, round_number):
-        if self.player_last_updated:
-            comp = self.opponent_board
-            self.player_last_updated = False
-        else:
+        # The person playing is player_ids[0]
+        if player.playerid == self.player_ids[0]:
             comp = self.player_board
-            self.player_last_updated = True
+        else:
+            comp = self.opponent_board
         comp.composition = player
         comp.last_seen = round_number
         self.update()
