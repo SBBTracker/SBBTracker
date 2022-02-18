@@ -9,10 +9,10 @@ from tempfile import NamedTemporaryFile
 import pandas as pd
 from construct import GreedyRange
 
-import asset_utils
-import log_parser
+from sbbtracker.utils import asset_utils
+from sbbtracker.parsers import log_parser
 import paths
-from record_parser import STRUCT_ACTION, id_to_action_name
+from sbbtracker.parsers.record_parser import STRUCT_ACTION, id_to_action_name
 from paths import backup_dir, statsfile, stats_format
 
 
