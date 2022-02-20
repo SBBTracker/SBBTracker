@@ -6,8 +6,7 @@ import cv2
 
 # https://drive.google.com/drive/folders/1bA-tChpvQj39tN_0_72e_vJRdph1M_gI
 # before running this script, you need to downlaod the assets folder and place the art folder in the
-# root directory of the repo, named "ALL SBB ART"
-import numpy as np
+# root directory of the repo, named "ALL SBB ART"6
 
 path = Path("../All SBB ART")
 dirs = os.listdir(path)

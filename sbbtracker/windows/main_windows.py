@@ -650,7 +650,7 @@ class SBBTracker(QMainWindow):
         self.streamable_scores = StreamableMatchDisplay()
         self.show_scores()
 
-        self.comp_tabs = QTabWidget()
+        self.comp_tabs = QTabWidget(self)
         for index in range(len(self.comps)):
             self.comp_tabs.addTab(self.comps[index], f"Player{index}")
 
@@ -792,6 +792,8 @@ class SBBTracker(QMainWindow):
                 overlay_comp.player = None
                 overlay_comp.current_round = 0
                 overlay_comp.last_seen = None
+                overlay_comp.xps.clear()
+                overlay_comp.healths.clear()
                 overlay.simulation_stats.reset_chances()
 
     def end_combat(self):
@@ -812,17 +814,13 @@ class SBBTracker(QMainWindow):
         title = f"{real_hero_name}"
         if player.health <= 0:
             self.comp_tabs.tabBar().setTabTextColor(index, "red")
+            print(self.comp_tabs.styleSheet())
             title += " *DEAD*"
         self.comp_tabs.tabBar().setTabText(index, title)
         comp = self.get_comp(index)
         comp.player = player
         comp.current_round = round_number
-        self.overlay.comps[index].current_round = round_number
-        self.overlay.new_places[int(player.place) - 1] = index
-        self.streamer_overlay.comps[index].current_round = round_number
-        self.streamer_overlay.new_places[int(player.place) - 1] = index
-
-        self.update()
+        self.overlay.update_player(index, player.health, f"{player.level}.{player.experience}", round_number, player.place)
 
     def update_comp(self, state, round_number):
         for player_id in state:
@@ -844,7 +842,6 @@ class SBBTracker(QMainWindow):
             comp.last_seen = round_number
             self.overlay.update_comp(index, board, round_number)
             self.streamer_overlay.update_comp(index, board, round_number)
-            self.update()
 
         self.overlay.simulation_stats.reset_chances()
         self.streamer_overlay.simulation_stats.reset_chances()
@@ -892,7 +889,8 @@ class SBBTracker(QMainWindow):
     def export_last_comp(self):
         if self.most_recent_combat:
             with open(paths.sbbtracker_folder.joinpath("last_combat.json"), "w") as file:
-                json.dump(from_state(asset_utils.replace_template_ids(self.most_recent_combat)),
+                # json.dump(from_state(asset_utils.replace_template_ids(self.most_recent_combat)),
+                json.dump(self.most_recent_combat,
                           file, default=lambda o: o.__dict__)
 
     def open_url(self, url_string: str):
