@@ -199,7 +199,6 @@ class SimulationThread(QThread):
             simulator_board = asset_utils.replace_template_ids(board)
             from_stated = from_state(simulator_board)
             if all([from_stated[player_id]['level'] != 0 for player_id in from_stated]):
-                print("RUNNING SIM")
                 try:
                     simulation_stats = simulate(simulator_board, t=num_threads, k=int(num_simulations / num_threads),
                                                 timeout=30)
@@ -1507,6 +1506,7 @@ class SimulationManager(QThread):
             for num in range(2, len(opponent_board_selected) + 1):
                 opponent_perms *= num
             if player_perms > 6 or opponent_perms > 6:
+                # TODO: make this display
                 print("only running first 36 permutations")
 
             playerid = "player"
@@ -1527,7 +1527,7 @@ class SimulationManager(QThread):
                     )
                     self.results_boards[row][col].update_comps(perm_board["player"], perm_board["opponent"])
                     self.board_queues[row][col].put(
-                        # TODO: if ambrosia, error or say "assuming *wasn't* golden and do fiddling
+                        # TODO: if ambrosia, error/warn
                         (
                             perm_board,
                             playerid,
@@ -1547,25 +1547,16 @@ class SimulationManager(QThread):
         opponent_board_selected,
         opponent_board_permuted
     ):
-        print("============= BOARD BEFORE =============")
-        print([
-            {"slot": char.slot, "subtypes": char.subtypes, "action_type": char.action_type}
-            for char in board["player"]
-            if char.zone == "Character" and char.slot in player_board_selected
-        ])
         # don't permute in place
         board = copy.deepcopy(board)
-
         player_permute_map = {
             orig: perm
             for orig, perm in zip(
                 player_board_selected, player_board_permuted
             )
         }
-        print(f"{player_permute_map=}")
-        print(list(map(type, list(player_permute_map.items())[0])))
+        # TODO add a layer unapply support buffs (before) and re-apply (after) permuting
         for character in board["player"]:
-            print(f"{character=}")
             if character.zone == "Character" and character.slot in player_permute_map:
                 character.slot = player_permute_map[character.slot]
 
@@ -1578,12 +1569,6 @@ class SimulationManager(QThread):
         for character in board["opponent"]:
             if character.zone == "Character" and character.slot in opponent_permute_map:
                 character.slot = opponent_permute_map[character.slot]
-        print("============= BOARD AFTER =============")
-        print([
-            {"slot": char.slot, "subtypes": char.subtypes, "action_type": char.action_type}
-            for char in board["player"]
-            if char.zone == "Character" and char.slot in player_board_selected
-        ])
 
         return board
 
@@ -1605,7 +1590,7 @@ class BoardAnalysisOverlay(QWidget):
         self.simulated_board.addWidget(self.player_board)
         self.simulated_board.addWidget(self.opponent_board)
         self.main_frame = QFrame()
-        self.main_frame.move(0, 500)
+        self.main_frame.move(300, 700)
         self.layout = QHBoxLayout(self.main_frame)
         self.layout.addWidget(self.simulated_board)
 
@@ -1751,8 +1736,6 @@ class BoardAnalysisSimulationResults(QWidget):
         self.layout.setCurrentIndex(0)
 
     def update_chances(self, win, tie, loss, win_dmg, loss_dmg):
-        print("simulation emmited")
-        print(win, tie, loss, win_dmg, loss_dmg)
         self.win_dmg = win_dmg
         self.win = win
         self.loss = loss
