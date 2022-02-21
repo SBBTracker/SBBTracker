@@ -1466,12 +1466,12 @@ class SimulationManager(QThread):
         self.results_boards = []
         self.board_queues = []
         self.simulations = []
-        for row in range(6):
+        for row in range(10):
             col_stats = []
             col_boards = []
             col_queues = []
 
-            for col in range(6):
+            for col in range(10):
                 simulated_stats = BoardAnalysisSimulationResults(sim_results_page, (row, col))
                 col_stats.append(simulated_stats)
 
@@ -1515,8 +1515,8 @@ class SimulationManager(QThread):
 
             player_board_permutations = list(itertools.permutations(player_board_selected))
             opponent_board_permutations = list(itertools.permutations(opponent_board_selected))
-            for row in range(min(player_perms, 6)):
-                for col in range(min(opponent_perms, 6)):
+            for row in range(min(player_perms, 10)):
+                for col in range(min(opponent_perms, 10)):
                     self.results_stats[row][col].sim_is_done = False
                     perm_board = self.permute_board(
                         board,
