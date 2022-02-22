@@ -10,10 +10,10 @@
    - `python3 -m virtualenv ./venv/`
    - `source ./venv/Scripts/activate`
 3. Set up the SBBBattleSim submodule
-   1. Clone the SBBBatleSim repo by running:
+   - Clone the SBBBatleSim repo by running:
       - `git submodule init`
       - `git submodule update`
-   2. Register sbbbattlesim with pip by running:
+   - Register sbbbattlesim with pip by running:
       - `pip install -e ./sbbtracker/SBBBattleSim/`
 4. Install dependencies by running:
    - `pip install -r requirements.txt`
