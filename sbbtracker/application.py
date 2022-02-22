@@ -1549,6 +1549,8 @@ class SimulationManager(QThread):
             # implement Median elimination best arm identification method per:
             #       https://eprints.whiterose.ac.uk/176732/7/Losada2021_Article_ADayAtTheRaces.pdf
             # error is at most .5
+            # multiplying by the log increases our error tolerance when there are many permutations
+            #    but reduces number of simulations run
             epsilon = (0.5 / 4) * (log(len(player_board_permutations)) or 1)
             # want to be .95% sure we are right
             delta = .05 / 2
