@@ -15,8 +15,10 @@ import time
 import uuid
 from collections import defaultdict
 from datetime import date
+from math import log
 from pathlib import Path
 from queue import Queue
+from statistics import median
 
 import matplotlib
 import requests
@@ -1388,31 +1390,33 @@ class BoardAnalysis(QWidget):
         self.player_ids = player_ids
         self.layout = QVBoxLayout(self)
 
-        self.last_brawl_tab = QSplitter(Qt.Horizontal)
+        self.last_brawl = QSplitter(Qt.Horizontal)
         # Submit analysis button
         btn_widget = QWidget()
         btn_layout = QHBoxLayout(btn_widget)
         submit_button = QPushButton("Submit")
         submit_button.clicked.connect(self.run_simulations)
         btn_layout.addWidget(submit_button)
-        self.last_brawl_tab.addWidget(btn_widget)
+        self.last_brawl.addWidget(btn_widget)
         # Submit analysis tab
         self.player_board = SelectableBoardComp()
-        self.opponent_board = SelectableBoardComp()
-        self.last_brawl_tab.addWidget(self.player_board)
-        self.last_brawl_tab.addWidget(self.opponent_board)
+        self.opponent_board = BoardComp(scale=0.5)
+        self.last_brawl.addWidget(self.player_board)
+        self.last_brawl.addWidget(self.opponent_board)
 
         # Simulation results tab
         self.sim_results = QWidget()
+        self.simulated_stats = BoardAnalysisSimulationResults(self.sim_results)
+        self.results_board = BoardAnalysisOverlay(self.sim_results)
 
         # Put it all together
-        analysis_tabs = QTabWidget(self)
-        analysis_tabs.addTab(self.last_brawl_tab, "Last Braws")
-        analysis_tabs.addTab(self.sim_results, "Analysis Results")
-        self.layout.addWidget(analysis_tabs)
+        self.layout.addWidget(self.last_brawl)
+        self.layout.addWidget(self.sim_results)
 
         self.analysis_queue = Queue()
-        self.simulation_manager = SimulationManager(self.analysis_queue, self.sim_results)
+        self.simulation_manager = SimulationManager(
+            self.analysis_queue, self.simulated_stats, self.results_board,
+        )
         self.simulation_manager.start()
 
 
@@ -1436,149 +1440,199 @@ class BoardAnalysis(QWidget):
             for slot, button in enumerate(self.player_board.buttons)
             if button.isChecked()
         ]
-        opponent_board_selected = [
-            str(slot)
-            for slot, button in enumerate(self.opponent_board.buttons)
-            if button.isChecked()
-        ]
         board = {
             "player": self.player_board.composition,
             "opponent": self.opponent_board.composition,
         }
         self.analysis_queue.put(
-            (board, player_board_selected, opponent_board_selected)
+            (board, player_board_selected)
         )
+        # clear board results:
+        self.simulated_stats.reset_chances()
         # reset buttons
         self.player_board.reset_buttons()
-        self.opponent_board.reset_buttons()
+        # self.opponent_board.reset_buttons()
+
+class ActiveCondition:
+    def __init__(self, permutation, selected, board):
+        # win, tie, loss, win_dmg, loss_dmg
+        self.running_stats = [0, 0, 0, 0, 0]
+        self.accumulated_runs = 0
+
+        self.permutation = permutation
+        self.board = permute_board(
+            board,
+            selected,
+            permutation,
+        )
+
+    def update_reward(self, win, tie, loss, win_dmg, loss_dmg, num_simulations):
+        # print(f"{[win, tie, loss, win_dmg, loss_dmg]=}")
+        # print(f"{list(map(type, [win, tie, loss, win_dmg, loss_dmg]))}")
+        win = float(win[:-1]) / 100
+        tie = float(tie[:-1]) / 100
+        loss = float(loss[:-1]) / 100
+        win_dmg = float(win_dmg)
+        loss_dmg = float(loss_dmg)
+        for idx, stat_update in enumerate(
+            [win, tie, loss, win_dmg, loss_dmg]
+        ):
+            self.running_stats[idx] = (
+                (
+                    (stat_update*num_simulations) + (self.running_stats[idx]*self.accumulated_runs)
+                    # ----------------------------------------------------------------
+                ) / (num_simulations + self.accumulated_runs)
+            )
+        self.accumulated_runs += num_simulations
+        self.win, self.tie, self.loss, self.win_dmg, self.loss_dmg = self.running_stats
+
+    def chances(self):
+        return (
+            f"{self.win*100:.2f}%",
+            f"{self.tie*100:.2f}%",
+            f"{self.loss*100:.2f}%",
+            f"{self.win_dmg}",
+            f"{self.loss_dmg}",
+        )
+
 
 class SimulationManager(QThread):
     # Maybe have good errors?
     # end_simulation = Signal(str, str, str, str, str)
     # error_simulation = Signal(str)
 
-    def __init__(self, analysis_queue, sim_results_page):
+    def __init__(self, analysis_queue, simulated_stats, results_board):
         super(SimulationManager, self).__init__()
         self.analysis_queue = analysis_queue
 
         # initialize simulation queue and results
-        self.results_stats = []
-        self.results_boards = []
-        self.board_queues = []
-        self.simulations = []
-        for row in range(10):
-            col_stats = []
-            col_boards = []
-            col_queues = []
+        self.simulated_stats = simulated_stats
+        self.results_board = results_board
+        self.queue = Queue()
 
-            for col in range(10):
-                simulated_stats = BoardAnalysisSimulationResults(sim_results_page, (row, col))
-                col_stats.append(simulated_stats)
+        self.simulation = SimulationThread(self.queue)
+        self.simulation.end_simulation.connect(self.update_chances)
+        self.simulation.error_simulation.connect(self.sim_error)
+        self.simulation.start()
 
-                simulated_board = BoardAnalysisOverlay(sim_results_page, (row, col))
-                col_boards.append(simulated_board)
+    def sim_error(self, *args, **kwargs):
+        self.active_conditions.remove(self.active_condition)
 
-                queue = Queue()
-                col_queues.append(queue)
+    def update_chances(self, win, tie, loss, win_dmg, loss_dmg):
+        self.active_condition.update_reward(win, tie, loss, win_dmg, loss_dmg, self.num_simulations)
+        self.sim_is_done = True
 
-                simulation = SimulationThread(queue)
+    def eliminate(self):
+        mean_win = median([cond.win for cond in self.active_conditions])
+        to_remove = []
+        for active_condition in self.active_conditions:
+            if active_condition.win < mean_win:
+                to_remove.append(active_condition)
 
-                simulation.end_simulation.connect(simulated_stats.update_chances)
-                simulation.error_simulation.connect(simulated_stats.show_error)
-                # need to know when simulation ends to move to next one
-                simulation.end_simulation.connect(simulated_stats.sim_end)
-                simulation.error_simulation.connect(simulated_stats.sim_end)
-                simulation.start()
-                self.simulations.append(simulation)
+        for active_condition in to_remove:
+            self.active_conditions.remove(active_condition)
 
-            self.results_stats.append(col_stats)
-            self.results_boards.append(col_boards)
-            self.board_queues.append(col_queues)
+    def best_board(self):
+        max_win = max(cond.win for cond in self.active_conditions)
+        return next(cond for cond in self.active_conditions if cond.win == max_win)
+
+    def stop_condition(self):
+        if len(self.active_conditions) == 1:
+            return True
+        elif len(set(cond.win for cond in self.active_conditions)) == 1:
+            self.all_boards_equal = True
+            return True
+        else:
+            return False
+
 
     def run(self):
+        num_threads = settings.get(settings.number_threads, 3)
+        self.all_boards_equal = False
         while True:
-            board, player_board_selected, opponent_board_selected = self.analysis_queue.get()
-
-            player_perms = 1
-            for num in range(2, len(player_board_selected) + 1):
-                player_perms *= num
-            opponent_perms = 1
-            for num in range(2, len(opponent_board_selected) + 1):
-                opponent_perms *= num
-            if player_perms > 6 or opponent_perms > 6:
-                # TODO: make this display
-                print("only running first 36 permutations")
-
+            board, player_board_selected = self.analysis_queue.get()
             playerid = "player"
-            num_simulations = settings.get(settings.number_simulations, 1000)
-            num_threads = settings.get(settings.number_threads, 3)
-
             player_board_permutations = list(itertools.permutations(player_board_selected))
-            opponent_board_permutations = list(itertools.permutations(opponent_board_selected))
-            for row in range(min(player_perms, 10)):
-                for col in range(min(opponent_perms, 10)):
-                    self.results_stats[row][col].sim_is_done = False
-                    perm_board = self.permute_board(
-                        board,
-                        player_board_selected,
-                        player_board_permutations[row],
-                        opponent_board_selected,
-                        opponent_board_permutations[col]
-                    )
-                    self.results_boards[row][col].update_comps(perm_board["player"], perm_board["opponent"])
-                    self.board_queues[row][col].put(
+            self.active_conditions = [
+                ActiveCondition(permutation, player_board_selected, board)
+                for permutation in player_board_permutations
+            ]
+
+            # implement Median elimination best arm identification method per:
+            #       https://eprints.whiterose.ac.uk/176732/7/Losada2021_Article_ADayAtTheRaces.pdf
+            # error is at most .5
+            epsilon = 0.5 # / 4
+            # want to be .95% sure we are right
+            delta = .05 # / 2
+            # set max number of loops
+            N = 10
+            n = 0
+            while n == 0 or (not self.stop_condition() and n < N):
+                n += 1
+                print(f"running round: {n}")
+                self.num_simulations = int(
+                    (1/(epsilon/2)**2)*log(3/delta)
+                )
+                print(f"running {len(self.active_conditions)} permutations")
+                print(f"{self.num_simulations} times each")
+                for active_condition in self.active_conditions:
+                    self.active_condition = active_condition
+                    self.sim_is_done = False
+                    self.queue.put(
                         # TODO: if ambrosia, error/warn
                         (
-                            perm_board,
+                            self.active_condition.board,
                             playerid,
-                            num_simulations,
+                            self.num_simulations,
                             num_threads,
                         )
                     )
-                    while not self.results_stats[row][col].sim_is_done:
-                        time.sleep(3)
-
-
-    @staticmethod
-    def permute_board(
-        board,
-        player_board_selected,
-        player_board_permuted,
-        opponent_board_selected,
-        opponent_board_permuted
-    ):
-        # don't permute in place
-        board = copy.deepcopy(board)
-        player_permute_map = {
-            orig: perm
-            for orig, perm in zip(
-                player_board_selected, player_board_permuted
+                    while not self.sim_is_done:
+                        time.sleep(1)
+                self.eliminate()
+                epsilon = (3/4)*epsilon
+                delta = delta/2
+            # done, now post results:
+            best_permutation = self.best_board()
+            if self.all_boards_equal:
+                self.results_board.show_error()
+            else:
+                self.results_board.update_comps(
+                    best_permutation.board["player"],
+                    best_permutation.board["opponent"],
+                )
+            self.simulated_stats.update_chances(
+                *best_permutation.chances(),
             )
-        }
-        # TODO add a layer unapply support buffs (before) and re-apply (after) permuting
-        for character in board["player"]:
-            if character.zone == "Character" and character.slot in player_permute_map:
-                character.slot = player_permute_map[character.slot]
 
-        opponent_permute_map = {
-            orig: perm
-            for orig, perm in zip(
-                opponent_board_selected, opponent_board_permuted
-            )
-        }
-        for character in board["opponent"]:
-            if character.zone == "Character" and character.slot in opponent_permute_map:
-                character.slot = opponent_permute_map[character.slot]
 
-        return board
+
+def permute_board(
+    board,
+    player_board_selected,
+    player_board_permuted,
+):
+    # don't permute in place
+    board = copy.deepcopy(board)
+    player_permute_map = {
+        orig: perm
+        for orig, perm in zip(
+            player_board_selected, player_board_permuted
+        )
+    }
+    # TODO add a layer unapply support buffs (before) and re-apply (after) permuting
+    for character in board["player"]:
+        if character.zone == "Character" and character.slot in player_permute_map:
+            character.slot = player_permute_map[character.slot]
+
+    return board
 
 
 class BoardAnalysisOverlay(QWidget):
     simluation_update = Signal(str, str, str, str, str)
 
-    def __init__(self, parent, pos):
+    def __init__(self, parent):
         super().__init__()
-        row, col = pos
         self.setAttribute(Qt.WA_TranslucentBackground, True)
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.SubWindow)
         self.setWindowTitle("SBBTrackerOverlay")
@@ -1593,6 +1647,10 @@ class BoardAnalysisOverlay(QWidget):
         self.main_frame.move(300, 700)
         self.layout = QHBoxLayout(self.main_frame)
         self.layout.addWidget(self.simulated_board)
+        self.msg = QLabel("all boards equal")
+        self.layout.addWidget(self.simulated_board)
+        self.layout.addWidget(self.msg)
+        self.msg.setVisible(False)
 
         self.visible = True
         self.scale_factor = 1
@@ -1607,7 +1665,7 @@ class BoardAnalysisOverlay(QWidget):
         self.update_comp_scaling()
         self.enable_hover()
 
-        self.hover_region.move(420*row, 85*col)
+        self.hover_region.move(420, 85)
         size = QSize(210, 80)
         self.hover_region.resize(size)
         self.hover_region.background.setFixedSize(size)
@@ -1634,10 +1692,12 @@ class BoardAnalysisOverlay(QWidget):
             self.stream_overlay.update_round(round_num)
 
     def update_comps(self, player_board, opponent_board):
+        self.simulated_board.setVisible(True)
+        self.msg.setVisible(False)
         self.player_board.composition = player_board
-        self.player_board.last_seen = None
+        self.player_board.last_seen = 1
         self.opponent_board.composition = opponent_board
-        self.opponent_board.last_seen = None
+        self.opponent_board.last_seen = 1
         self.update()
 
     def update_comp_scaling(self):
@@ -1657,14 +1717,18 @@ class BoardAnalysisOverlay(QWidget):
         else:
             self.setWindowFlags(Qt.SubWindow)
 
+    def show_error(self):
+        self.simulated_board.setVisible(False)
+        self.msg.setVisible(True)
+        self.update()
+
 
 class BoardAnalysisSimulationResults(QWidget):
-    def __init__(self, parent, pos):
+    def __init__(self, parent):
         super().__init__(parent)
         self.sim_is_done = True
         self.parent = parent
-        row, col = pos
-        self.move(row*420, col*85)
+        self.move(420, 85)
 
         self.layout = QStackedLayout(self)
         background = QFrame(self)
