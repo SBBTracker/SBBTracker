@@ -814,7 +814,6 @@ class SBBTracker(QMainWindow):
         title = f"{real_hero_name}"
         if player.health <= 0:
             self.comp_tabs.tabBar().setTabTextColor(index, "red")
-            print(self.comp_tabs.styleSheet())
             title += " *DEAD*"
         self.comp_tabs.tabBar().setTabText(index, title)
         comp = self.get_comp(index)
