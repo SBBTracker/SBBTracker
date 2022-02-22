@@ -3,7 +3,7 @@ import logging
 import shutil
 from tempfile import NamedTemporaryFile
 
-import paths
+from sbbtracker import paths
 
 settings_file = paths.sbbtracker_folder.joinpath("settings.json")
 

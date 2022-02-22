@@ -8,7 +8,7 @@ from os.path import exists
 from queue import Queue
 
 from pygtail import Pygtail
-from paths import logfile, offsetfile
+from sbbtracker.paths import logfile, offsetfile
 
 
 VERYLARGE = 2 ** 20

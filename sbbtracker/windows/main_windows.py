@@ -127,8 +127,8 @@ def upload_data(payload):
 
 
 class SimulationThread(QThread):
-    end_simulation = Signal(str, str, str, str, str)
-    error_simulation = Signal(str)
+    end_simulation = Signal(str, str, str, str, str, int)
+    error_simulation = Signal(str, int)
 
     def __init__(self, comp_queue):
         super(SimulationThread, self).__init__()
@@ -136,7 +136,7 @@ class SimulationThread(QThread):
 
     def run(self):
         while True:
-            board, playerid, num_simulations, num_threads = self.comp_queue.get()
+            board, playerid, num_simulations, num_threads, round_number = self.comp_queue.get()
             simulation_stats = None
 
             if playerid is None:
@@ -149,14 +149,14 @@ class SimulationThread(QThread):
                     simulation_stats = simulate(simulator_board, t=num_threads, k=int(num_simulations / num_threads),
                                                 timeout=30)
                 except SBBBSCrocException:
-                    self.error_simulation.emit("Captain Croc not supported")
+                    self.error_simulation.emit("Captain Croc not supported", round_number)
                 except concurrent.futures.TimeoutError:
-                    self.error_simulation.emit("Simulation timed out!")
+                    self.error_simulation.emit("Simulation timed out!", round_number)
                 except Exception:
                     logging.exception("Error in simulation!")
                     with open(paths.sbbtracker_folder.joinpath("error_board.json"), "w") as file:
                         json.dump(from_stated, file, default=lambda o: o.__dict__)
-                    self.error_simulation.emit("Error in simulation!")
+                    self.error_simulation.emit("Error in simulation!", round_number)
 
                 logging.debug(from_stated)
 
@@ -186,9 +186,9 @@ class SimulationThread(QThread):
                     win_dmg_string = str(round(np.mean(win_damages), 1) if win_percent > 0 else 0)
                     loss_dmg_string = str(round(np.mean(loss_damages), 1) if loss_percent > 0 else 0)
 
-                    self.end_simulation.emit(win_string, tie_string, loss_string, win_dmg_string, loss_dmg_string)
+                    self.end_simulation.emit(win_string, tie_string, loss_string, win_dmg_string, loss_dmg_string, round_number)
             else:
-                self.error_simulation.emit("Couldn't get player id (try reattaching)")
+                self.error_simulation.emit("Couldn't get player id (try reattaching)", round_number)
             time.sleep(1)
 
 
@@ -639,6 +639,7 @@ class SBBTracker(QMainWindow):
         self.player_ids = []
         self.most_recent_combat = None
         self.in_matchmaking = False
+        self.sim_results = {}
 
         self.overlay = OverlayWindow(self)
         self.streamer_overlay = StreamerOverlayWindow(self)
@@ -753,8 +754,10 @@ class SBBTracker(QMainWindow):
         self.simulation = SimulationThread(self.board_queue)
         self.simulation.end_simulation.connect(self.overlay.simulation_stats.update_chances)
         self.simulation.end_simulation.connect(self.streamer_overlay.simulation_stats.update_chances)
+        self.simulation.end_simulation.connect(self.end_simulation)
         self.simulation.error_simulation.connect(self.overlay.simulation_stats.show_error)
         self.simulation.error_simulation.connect(self.streamer_overlay.simulation_stats.show_error)
+        self.simulation.error_simulation.connect(self.simulation_error)
 
         self.sbb_watcher_thread = SBBWindowCheckThread()
         self.sbb_watcher_thread.changed_foreground.connect(self.overlay.visible_in_bg)
@@ -775,6 +778,7 @@ class SBBTracker(QMainWindow):
     def new_game(self, matchmaking):
         self.in_matchmaking = matchmaking
         self.player_ids.clear()
+        self.sim_results.clear()
         self.overlay.enable_hovers()
         self.overlay.turn_display.setVisible(settings.get(settings.enable_turn_display))
         self.streamer_overlay.turn_display.setVisible(settings.get(settings.enable_turn_display))
@@ -848,17 +852,22 @@ class SBBTracker(QMainWindow):
         if settings.get(settings.enable_sim):
             if self.board_queue.qsize() == 0:
                 self.board_queue.put((state, self.player_ids[0], settings.get(settings.number_simulations, 1000),
-                                      settings.get(settings.number_threads, 3)))
+                                      settings.get(settings.number_threads, 3), round_number))
 
     def update_stats(self, starting_hero: str, player, session_id: str, match_data):
         if settings.get(settings.upload_data) and self.in_matchmaking and session_id not in self.player_stats.df['SessionId'].values:
             # upload only matchmade games
+            for round_num in self.sim_results:
+                index = round_num - 1
+                if index< len(match_data["combat-info"]):
+                    match_data["combat-info"][index]["sim-results"] = self.sim_results[round_num]
             upload_data(match_data)
         if settings.get(settings.save_stats, True) and (
                 not settings.get(settings.matchmaking_only) or self.in_matchmaking):
             place = player.place if int(player.health) <= 0 else "1"
             self.player_stats.update_stats(starting_hero, asset_utils.get_card_name(player.heroid),
                                            place, player.mmr, session_id)
+            self.player_stats.save_combats(match_data["combat-info"], session_id)
             self.match_history.update_history_table()
             self.match_history.update_stats_table()
             if settings.get(settings.streamable_score_list):
@@ -872,6 +881,12 @@ class SBBTracker(QMainWindow):
         places = self.overlay.places
         places.remove(index)
         places.insert(new_place - 1, index)
+
+    def end_simulation(self, win, tie, loss, win_dmg, loss_dmg, round_num):
+        self.sim_results[round_num] = {"win": win, "tie": tie, "loss": loss, "win_dmg": win_dmg, "loss_dmg": loss_dmg}
+
+    def simulation_error(self, error, round_num):
+        self.sim_results[round_num] = {"error": error}
 
     def show_overlay(self):
         if settings.get(settings.enable_overlay):

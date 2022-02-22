@@ -441,7 +441,7 @@ class SimulatorStats(MovableWidget):
         self.displayable = False
         self.layout.setCurrentIndex(0)
 
-    def update_chances(self, win, tie, loss, win_dmg, loss_dmg):
+    def update_chances(self, win, tie, loss, win_dmg, loss_dmg, round_num):
         self.win_dmg = win_dmg
         self.win = win
         self.loss = loss
@@ -451,7 +451,7 @@ class SimulatorStats(MovableWidget):
             self.update_labels()
         self.displayable = False
 
-    def show_error(self, msg: str):
+    def show_error(self, msg: str, round_num):
         self.error_msg.setText(msg)
         self.layout.setCurrentIndex(1)
 
