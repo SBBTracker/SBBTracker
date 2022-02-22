@@ -1467,32 +1467,20 @@ class ActiveCondition:
         )
 
     def update_reward(self, win, tie, loss, win_dmg, loss_dmg, num_simulations):
-        # print(f"{[win, tie, loss, win_dmg, loss_dmg]=}")
-        # print(f"{list(map(type, [win, tie, loss, win_dmg, loss_dmg]))}")
-        win = float(win[:-1]) / 100
-        tie = float(tie[:-1]) / 100
-        loss = float(loss[:-1]) / 100
-        win_dmg = float(win_dmg)
-        loss_dmg = float(loss_dmg)
-        for idx, stat_update in enumerate(
-            [win, tie, loss, win_dmg, loss_dmg]
-        ):
-            self.running_stats[idx] = (
-                (
-                    (stat_update*num_simulations) + (self.running_stats[idx]*self.accumulated_runs)
-                    # ----------------------------------------------------------------
-                ) / (num_simulations + self.accumulated_runs)
-            )
-        self.accumulated_runs += num_simulations
-        self.win, self.tie, self.loss, self.win_dmg, self.loss_dmg = self.running_stats
+        self.win = float(win[:-1]) / 100
+        self.tie = float(tie[:-1]) / 100
+        self.loss = float(loss[:-1]) / 100
+        self.win_dmg = float(win_dmg)
+        self.loss_dmg = float(loss_dmg)
+        self.num_simulations = num_simulations
 
     def chances(self):
         return (
             f"{self.win*100:.2f}%",
             f"{self.tie*100:.2f}%",
             f"{self.loss*100:.2f}%",
-            f"{self.win_dmg}",
-            f"{self.loss_dmg}",
+            f"{self.win_dmg:.2f}",
+            f"{self.loss_dmg:.2f}",
         )
 
 
@@ -1561,12 +1549,13 @@ class SimulationManager(QThread):
             # implement Median elimination best arm identification method per:
             #       https://eprints.whiterose.ac.uk/176732/7/Losada2021_Article_ADayAtTheRaces.pdf
             # error is at most .5
-            epsilon = 0.5 # / 4
+            epsilon = (0.5 / 4) * (log(len(player_board_permutations)) or 1)
             # want to be .95% sure we are right
-            delta = .05 # / 2
+            delta = .05 / 2
             # set max number of loops
             N = 10
             n = 0
+            print("starting BAI (best arrangement identification")
             while n == 0 or (not self.stop_condition() and n < N):
                 n += 1
                 print(f"running round: {n}")
@@ -1695,9 +1684,11 @@ class BoardAnalysisOverlay(QWidget):
         self.simulated_board.setVisible(True)
         self.msg.setVisible(False)
         self.player_board.composition = player_board
-        self.player_board.last_seen = 1
+        self.player_board.last_seen = 0
+        self.player_board.current_round = 0
         self.opponent_board.composition = opponent_board
-        self.opponent_board.last_seen = 1
+        self.opponent_board.last_seen = 0
+        self.opponent_board.current_round = 0
         self.update()
 
     def update_comp_scaling(self):
