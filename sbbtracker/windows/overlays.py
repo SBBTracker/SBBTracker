@@ -372,8 +372,6 @@ class SimulatorStats(MovableWidget):
 
         self.layout = QStackedLayout(self)
         background = QFrame(self)
-        # background.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
-        # self.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
         self.layout.addWidget(background)
 
         self.win_dmg_label = QLabel("-", background)
@@ -442,11 +440,11 @@ class SimulatorStats(MovableWidget):
         self.layout.setCurrentIndex(0)
 
     def update_chances(self, win, tie, loss, win_dmg, loss_dmg, round_num):
-        self.win_dmg = win_dmg
-        self.win = win
-        self.loss = loss
-        self.tie = tie
-        self.loss_dmg = loss_dmg
+        self.win_dmg = str(win_dmg)
+        self.win = str(win) + "%"
+        self.loss = str(loss) + "%"
+        self.tie = str(tie) + "%"
+        self.loss_dmg = str(loss_dmg)
         if self.displayable:
             self.update_labels()
         self.displayable = False

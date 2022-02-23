@@ -16,6 +16,7 @@ from collections import defaultdict
 from datetime import date
 from pathlib import Path
 from queue import Queue
+from statistics import mean
 
 import matplotlib
 import requests
@@ -127,7 +128,7 @@ def upload_data(payload):
 
 
 class SimulationThread(QThread):
-    end_simulation = Signal(str, str, str, str, str, int)
+    end_simulation = Signal(float, float, float, float, float, int)
     error_simulation = Signal(str, int)
 
     def __init__(self, comp_queue):
@@ -180,13 +181,10 @@ class SimulationThread(QThread):
                     # loss_10th_percentile, loss_90th_percentile = (0, 0) if (len(loss_damages) == 0) \
                     #     else np.percentile(loss_damages, [10, 90])
 
-                    win_string = str(win_percent) + "%"
-                    tie_string = str(tie_percent) + "%"
-                    loss_string = str(loss_percent) + "%"
-                    win_dmg_string = str(round(np.mean(win_damages), 1) if win_percent > 0 else 0)
-                    loss_dmg_string = str(round(np.mean(loss_damages), 1) if loss_percent > 0 else 0)
+                    win_dmg= round(mean(win_damages), 1) if win_percent > 0 else 0
+                    loss_dmg = round(mean(loss_damages), 1) if loss_percent > 0 else 0
 
-                    self.end_simulation.emit(win_string, tie_string, loss_string, win_dmg_string, loss_dmg_string, round_number)
+                    self.end_simulation.emit(win_percent, tie_percent, loss_percent, win_dmg, loss_dmg, round_number)
             else:
                 self.error_simulation.emit("Couldn't get player id (try reattaching)", round_number)
             time.sleep(1)
@@ -859,7 +857,7 @@ class SBBTracker(QMainWindow):
             # upload only matchmade games
             for round_num in self.sim_results:
                 index = round_num - 1
-                if index< len(match_data["combat-info"]):
+                if "combat-info" in match_data and index < len(match_data["combat-info"]):
                     match_data["combat-info"][index]["sim-results"] = self.sim_results[round_num]
             upload_data(match_data)
         if settings.get(settings.save_stats, True) and (
@@ -867,7 +865,8 @@ class SBBTracker(QMainWindow):
             place = player.place if int(player.health) <= 0 else "1"
             self.player_stats.update_stats(starting_hero, asset_utils.get_card_name(player.heroid),
                                            place, player.mmr, session_id)
-            self.player_stats.save_combats(match_data["combat-info"], session_id)
+            if "combat-info" in match_data:
+                self.player_stats.save_combats(match_data["combat-info"], session_id)
             self.match_history.update_history_table()
             self.match_history.update_stats_table()
             if settings.get(settings.streamable_score_list):
@@ -883,7 +882,7 @@ class SBBTracker(QMainWindow):
         places.insert(new_place - 1, index)
 
     def end_simulation(self, win, tie, loss, win_dmg, loss_dmg, round_num):
-        self.sim_results[round_num] = {"win": win, "tie": tie, "loss": loss, "win_dmg": win_dmg, "loss_dmg": loss_dmg}
+        self.sim_results[round_num] = {"win-percent": win, "tie-percent": tie, "loss-percent": loss, "win-dmg": win_dmg, "loss-dmg": loss_dmg}
 
     def simulation_error(self, error, round_num):
         self.sim_results[round_num] = {"error": error}
