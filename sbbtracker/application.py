@@ -1533,7 +1533,6 @@ class SimulationManager(QThread):
         else:
             return False
 
-
     def run(self):
         num_threads = settings.get(settings.number_threads, 3)
         self.all_boards_equal = False
