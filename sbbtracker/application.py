@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (
 )
 from qt_material import apply_stylesheet
 
-import stats, settings, paths
+from sbbtracker import stats, settings, paths
 from sbbtracker.utils import asset_utils
 
 logging.basicConfig(filename=paths.sbbtracker_folder.joinpath("sbbtracker.log"), filemode="w",
