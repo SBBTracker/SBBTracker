@@ -1627,13 +1627,13 @@ class SimulationManager(QThread):
             for i in range(3):
                 print("starting search from new board state")
                 if current_board is None:
-                    current_board = board
+                    current_board = ActiveCondition(board)
                 else:
-                    current_board = self.randomize(board)
+                    current_board = ActiveCondition(self.randomize(board))
                 board_hash = self.hash(current_board)
                 print(f"{board_hash=}")
                 # self.active_condition will concurrently be update with its results
-                self.active_condition = ActiveCondition(current_board)
+                self.active_condition = current_board
                 self.sim_is_done = False
                 print(f"running {num_simulations} simulations")
                 self.queue.put(
@@ -1648,7 +1648,7 @@ class SimulationManager(QThread):
                 while not self.sim_is_done:
                     time.sleep(1)
 
-                print(f"Initial result was:\n  {self.active_condition..chances()}")
+                print(f"Initial result was:\n  {self.active_condition.chances()}")
                 self.simulated_boards.append(board_hash)
                 # if all options get worse/stay the same, break
                 best_boards.append(self.active_condition)
@@ -1657,10 +1657,10 @@ class SimulationManager(QThread):
                 for _ in range(7):
                     while True:
                         step_results = []
-                        moves = self.moves(self.random_slot(current_board))
+                        moves = self.moves(self.random_slot(current_board.board))
                         for move in moves:
                             print(move)
-                            new_board = self.permute_board(current_board, *move)
+                            new_board = self.permute_board(current_board.board, *move)
                             # should make this an @cachedproperty of ActiveConditon
                             board_hash = self.hash(new_board)
                             print(f"{board_hash=}")
@@ -1696,13 +1696,13 @@ class SimulationManager(QThread):
                             for condition in step_results
                             if condition.win == max_res
                         )
-                        print(f"best result was: {best_step.move=}\n  {best_step.chances()}")
-                        current_board = best_step.board
                         # if all options get worse/stay the same, break
                         if max_res <= last_res:
                             print("No step yields better result")
-                            best_boards.append(self.active_condition)
+                            best_boards.append(current_board)
                             break
+                        print(f"best result was: {best_step.move=}\n  {best_step.chances()}")
+                        current_board = best_step
                         last_res = max_res
 
             best_result = max(map(lambda condition: condition.win, best_boards))
