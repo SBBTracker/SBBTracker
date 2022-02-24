@@ -1550,9 +1550,11 @@ class SimulationManager(QThread):
 
     @staticmethod
     def random_slot(board):
-        return random.choice(
-            [character.slot for character in board["player"] if character.zone == "Character"]
-        )
+        characters = [character.slot for character in board["player"] if character.zone == "Character"]
+        if len(characters) == 7:
+            return random.choice([1, 2, 5])
+        else:
+            return random.choice(characters)
 
     @staticmethod
     def hash(board):
@@ -1614,6 +1616,7 @@ class SimulationManager(QThread):
         return new_board
 
     def run(self):
+        print("SIMULATION START")
         num_simulations = 1000 # settings.get(settings.number_threads, 3)
         num_threads = settings.get(settings.number_threads, 3)
         self.all_boards_equal = False
@@ -1630,7 +1633,7 @@ class SimulationManager(QThread):
                     current_board = ActiveCondition(board)
                 else:
                     current_board = ActiveCondition(self.randomize(board))
-                board_hash = self.hash(current_board)
+                board_hash = self.hash(current_board.board)
                 print(f"{board_hash=}")
                 # self.active_condition will concurrently be update with its results
                 self.active_condition = current_board
@@ -1648,11 +1651,19 @@ class SimulationManager(QThread):
                 while not self.sim_is_done:
                     time.sleep(1)
 
+                self.results_board.update_comps(
+                    current_board.board["player"],
+                    current_board.board["opponent"],
+                )
+                self.simulated_stats.update_chances(
+                    *current_board.chances(),
+                )
                 print(f"Initial result was:\n  {self.active_condition.chances()}")
                 self.simulated_boards.append(board_hash)
                 # if all options get worse/stay the same, break
                 best_boards.append(self.active_condition)
                 last_res = self.active_condition.win
+
 
                 for _ in range(7):
                     while True:
@@ -1705,6 +1716,14 @@ class SimulationManager(QThread):
                         current_board = best_step
                         last_res = max_res
 
+                        self.results_board.update_comps(
+                            current_board.board["player"],
+                            current_board.board["opponent"],
+                        )
+                        self.simulated_stats.update_chances(
+                            *current_board.chances(),
+                        )
+
             best_result = max(map(lambda condition: condition.win, best_boards))
             best_board = next(
                 condition
@@ -1718,6 +1737,7 @@ class SimulationManager(QThread):
             self.simulated_stats.update_chances(
                 *best_board.chances(),
             )
+            print("SIMULATION DONE")
 
 
 
