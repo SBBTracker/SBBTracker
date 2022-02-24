@@ -3,12 +3,14 @@ import concurrent.futures
 import copy
 import datetime
 import itertools
+import hashlib
 import json
 import logging
 import multiprocessing
 import operator
 import os
 import re
+import random
 import sys
 import threading
 import time
@@ -1454,25 +1456,16 @@ class BoardAnalysis(QWidget):
         # self.opponent_board.reset_buttons()
 
 class ActiveCondition:
-    def __init__(self, permutation, selected, board):
+    def __init__(self, board):
         # win, tie, loss, win_dmg, loss_dmg
-        self.running_stats = [0, 0, 0, 0, 0]
-        self.accumulated_runs = 0
+        self.board = board
 
-        self.permutation = permutation
-        self.board = permute_board(
-            board,
-            selected,
-            permutation,
-        )
-
-    def update_reward(self, win, tie, loss, win_dmg, loss_dmg, num_simulations):
+    def update_reward(self, win, tie, loss, win_dmg, loss_dmg):
         self.win = float(win[:-1]) / 100
         self.tie = float(tie[:-1]) / 100
         self.loss = float(loss[:-1]) / 100
         self.win_dmg = float(win_dmg)
         self.loss_dmg = float(loss_dmg)
-        self.num_simulations = num_simulations
 
     def chances(self):
         return (
@@ -1507,7 +1500,7 @@ class SimulationManager(QThread):
         self.active_conditions.remove(self.active_condition)
 
     def update_chances(self, win, tie, loss, win_dmg, loss_dmg):
-        self.active_condition.update_reward(win, tie, loss, win_dmg, loss_dmg, self.num_simulations)
+        self.active_condition.update_reward(win, tie, loss, win_dmg, loss_dmg)
         self.sim_is_done = True
 
     def eliminate(self):
@@ -1533,89 +1526,201 @@ class SimulationManager(QThread):
         else:
             return False
 
+    # This should move into the simulator to include supports and treasures
+    @staticmethod
+    def moves(slot):
+
+        # given a slot, what are the nearest neighbors
+        slot_dests = {
+            0: (1, 4),
+            1: (0, 2, 4, 5),
+            2: (1, 3, 5, 6),
+            3: (2, 6),
+            4: (0, 1, 5),
+            5: (1, 2, 4, 6),
+            6: (2, 3, 5),
+        }[int(slot)]
+
+        print(f"looking to move character in {slot=}")
+
+        return [
+            (str(slot), str(slot_dest))
+            for slot_dest in slot_dests
+        ]
+
+    @staticmethod
+    def random_slot(board):
+        return random.choice(
+            [character.slot for character in board["player"] if character.zone == "Character"]
+        )
+
+    @staticmethod
+    def hash(board):
+        # sort and dump to json
+        data = json.dumps(
+            dict(
+                sorted(
+                    (
+                        (k, list(map(lambda x: json.loads(str(x)), sorted(v, key=lambda x: (x.slot, x.zone)))))
+                        for k, v in board.items()
+                    )
+                )
+            )
+        )
+        # print(data)
+        return hashlib.md5(data.encode("utf-8")).hexdigest()
+
+    def randomize(self, board):
+        def permute_board(
+            board,
+            permutation,
+        ):
+            player_permute_map = {
+                orig: perm
+                for orig, perm in zip(
+                    list(range(7)), permutation
+                )
+            }
+            for character in board["player"]:
+                if character.zone == "Character" and character.slot in player_permute_map:
+                    character.slot = player_permute_map[character.slot]
+
+            return board
+
+        rand_board = permute_board(copy.deepcopy(board), np.random.permutation(8))
+        count = 0
+        while self.hash(rand_board) in self.simulated_boards and count < 10:
+            rand_board = permute_board(rand_board, np.random.permutation(8))
+            count += 1
+        return rand_board
+
+    @staticmethod
+    def permute_board(
+        board,
+        slot_orig,
+        slot_dest,
+    ):
+        # don't permute in place
+        new_board = copy.deepcopy(board)
+        permute_map = {
+            slot_orig: slot_dest,
+            slot_dest: slot_orig
+        }
+        print(f"{permute_map=}")
+        # TODO add a layer unapply support buffs (before) and re-apply (after) permuting
+        for character in new_board["player"]:
+            if character.zone == "Character" and character.slot in permute_map:
+                character.slot = permute_map[character.slot]
+        return new_board
+
     def run(self):
+        num_simulations = 1000 # settings.get(settings.number_threads, 3)
         num_threads = settings.get(settings.number_threads, 3)
         self.all_boards_equal = False
         while True:
             board, player_board_selected = self.analysis_queue.get()
             playerid = "player"
-            player_board_permutations = list(itertools.permutations(player_board_selected))
-            self.active_conditions = [
-                ActiveCondition(permutation, player_board_selected, board)
-                for permutation in player_board_permutations
-            ]
-
-            # implement Median elimination best arm identification method per:
-            #       https://eprints.whiterose.ac.uk/176732/7/Losada2021_Article_ADayAtTheRaces.pdf
-            # error is at most .5
-            # multiplying by the log increases our error tolerance when there are many permutations
-            #    but reduces number of simulations run
-            epsilon = (0.5 / 4) * (log(len(player_board_permutations)) or 1)
-            # want to be .95% sure we are right
-            delta = .05 / 2
-            # set max number of loops
-            N = 10
-            n = 0
-            print("starting BAI (best arrangement identification")
-            while n == 0 or (not self.stop_condition() and n < N):
-                n += 1
-                print(f"running round: {n}")
-                self.num_simulations = int(
-                    (1/(epsilon/2)**2)*log(3/delta)
-                )
-                print(f"running {len(self.active_conditions)} permutations")
-                print(f"{self.num_simulations} times each")
-                for active_condition in self.active_conditions:
-                    self.active_condition = active_condition
-                    self.sim_is_done = False
-                    self.queue.put(
-                        # TODO: if ambrosia, error/warn
-                        (
-                            self.active_condition.board,
-                            playerid,
-                            self.num_simulations,
-                            num_threads,
-                        )
+            # search for one local maxima
+            current_board = None
+            self.simulated_boards = []
+            best_boards = []
+            for i in range(3):
+                print("starting search from new board state")
+                if current_board is None:
+                    current_board = board
+                else:
+                    current_board = self.randomize(board)
+                board_hash = self.hash(current_board)
+                print(f"{board_hash=}")
+                # self.active_condition will concurrently be update with its results
+                self.active_condition = ActiveCondition(current_board)
+                self.sim_is_done = False
+                print(f"running {num_simulations} simulations")
+                self.queue.put(
+                    # TODO: if ambrosia, error/warn
+                    (
+                        self.active_condition.board,
+                        playerid,
+                        num_simulations,
+                        num_threads,
                     )
-                    while not self.sim_is_done:
-                        time.sleep(1)
-                self.eliminate()
-                epsilon = (3/4)*epsilon
-                delta = delta/2
-            # done, now post results:
-            best_permutation = self.best_board()
-            if self.all_boards_equal:
-                self.results_board.show_error()
-            else:
-                self.results_board.update_comps(
-                    best_permutation.board["player"],
-                    best_permutation.board["opponent"],
                 )
+                while not self.sim_is_done:
+                    time.sleep(1)
+
+                print(f"Initial result was:\n  {self.active_condition..chances()}")
+                self.simulated_boards.append(board_hash)
+                # if all options get worse/stay the same, break
+                best_boards.append(self.active_condition)
+                last_res = self.active_condition.win
+
+                for _ in range(7):
+                    while True:
+                        step_results = []
+                        moves = self.moves(self.random_slot(current_board))
+                        for move in moves:
+                            print(move)
+                            new_board = self.permute_board(current_board, *move)
+                            # should make this an @cachedproperty of ActiveConditon
+                            board_hash = self.hash(new_board)
+                            print(f"{board_hash=}")
+                            if board_hash in self.simulated_boards:
+                                continue
+                            self.active_condition = ActiveCondition(new_board)
+                            self.active_condition.move = move
+                            # self.active_condition will concurrently be update with its results
+                            step_results.append(self.active_condition)
+                            self.sim_is_done = False
+                            print(f"running {num_simulations} simulations")
+                            self.queue.put(
+                                # TODO: if ambrosia, error/warn
+                                (
+                                    self.active_condition.board,
+                                    playerid,
+                                    num_simulations,
+                                    num_threads,
+                                )
+                            )
+                            while not self.sim_is_done:
+                                time.sleep(1)
+
+                            self.simulated_boards.append(board_hash)
+
+                        if not step_results:
+                            print("all neighbors previously simulated")
+                            break
+
+                        max_res = max(map(lambda condition: condition.win, step_results))
+                        best_step = next(
+                            condition
+                            for condition in step_results
+                            if condition.win == max_res
+                        )
+                        print(f"best result was: {best_step.move=}\n  {best_step.chances()}")
+                        current_board = best_step.board
+                        # if all options get worse/stay the same, break
+                        if max_res <= last_res:
+                            print("No step yields better result")
+                            best_boards.append(self.active_condition)
+                            break
+                        last_res = max_res
+
+            best_result = max(map(lambda condition: condition.win, best_boards))
+            best_board = next(
+                condition
+                for condition in best_boards
+                if condition.win == best_result
+            )
+            self.results_board.update_comps(
+                best_board.board["player"],
+                best_board.board["opponent"],
+            )
             self.simulated_stats.update_chances(
-                *best_permutation.chances(),
+                *best_board.chances(),
             )
 
 
 
-def permute_board(
-    board,
-    player_board_selected,
-    player_board_permuted,
-):
-    # don't permute in place
-    board = copy.deepcopy(board)
-    player_permute_map = {
-        orig: perm
-        for orig, perm in zip(
-            player_board_selected, player_board_permuted
-        )
-    }
-    # TODO add a layer unapply support buffs (before) and re-apply (after) permuting
-    for character in board["player"]:
-        if character.zone == "Character" and character.slot in player_permute_map:
-            character.slot = player_permute_map[character.slot]
-
-    return board
 
 
 class BoardAnalysisOverlay(QWidget):
