@@ -1576,11 +1576,12 @@ class SimulationManager(QThread):
     def randomize(self, board):
         board = copy.deepcopy(board)
         player_permute_map = {
-            orig: perm
+            str(orig): str(perm)
             for orig, perm in zip(
                 list(range(7)), np.random.permutation(7)
             )
         }
+        print(f"Random restart: {player_permute_map=}")
         for character in board["player"]:
             if character.zone == "Character" and character.slot in player_permute_map:
                 character.slot = player_permute_map[character.slot]
@@ -1618,7 +1619,7 @@ class SimulationManager(QThread):
             current_board = None
             self.simulated_boards = []
             best_boards = []
-            for i in range(3):
+            for _ in range(3):
                 print("starting search from new board state")
                 if current_board is None:
                     current_board = ActiveCondition(board)
