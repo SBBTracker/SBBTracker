@@ -1409,11 +1409,12 @@ class BoardAnalysis(QWidget):
         # Simulation results tab
         self.sim_results = QWidget()
         self.simulated_stats = BoardAnalysisSimulationResults(self.sim_results)
-        self.results_board = BoardAnalysisOverlay(self.sim_results)
+        self.results_board = BoardComp(scale=0.5)
 
         # Put it all together
         self.layout.addWidget(self.last_brawl)
         self.layout.addWidget(self.sim_results)
+        self.layout.addWidget(self.results_board)
 
         self.analysis_queue = Queue()
         self.simulation_manager = SimulationManager(
@@ -1573,28 +1574,18 @@ class SimulationManager(QThread):
         return hashlib.md5(data.encode("utf-8")).hexdigest()
 
     def randomize(self, board):
-        def permute_board(
-            board,
-            permutation,
-        ):
-            player_permute_map = {
-                orig: perm
-                for orig, perm in zip(
-                    list(range(7)), permutation
-                )
-            }
-            for character in board["player"]:
-                if character.zone == "Character" and character.slot in player_permute_map:
-                    character.slot = player_permute_map[character.slot]
+        board = copy.deepcopy(board)
+        player_permute_map = {
+            orig: perm
+            for orig, perm in zip(
+                list(range(7)), np.random.permutation(7)
+            )
+        }
+        for character in board["player"]:
+            if character.zone == "Character" and character.slot in player_permute_map:
+                character.slot = player_permute_map[character.slot]
 
-            return board
-
-        rand_board = permute_board(copy.deepcopy(board), np.random.permutation(8))
-        count = 0
-        while self.hash(rand_board) in self.simulated_boards and count < 10:
-            rand_board = permute_board(rand_board, np.random.permutation(8))
-            count += 1
-        return rand_board
+        return board
 
     @staticmethod
     def permute_board(
@@ -1651,10 +1642,8 @@ class SimulationManager(QThread):
                 while not self.sim_is_done:
                     time.sleep(1)
 
-                self.results_board.update_comps(
-                    current_board.board["player"],
-                    current_board.board["opponent"],
-                )
+                self.results_board.composition = current_board.board["player"]
+                self.results_board.update()
                 self.simulated_stats.update_chances(
                     *current_board.chances(),
                 )
@@ -1716,10 +1705,8 @@ class SimulationManager(QThread):
                         current_board = best_step
                         last_res = max_res
 
-                        self.results_board.update_comps(
-                            current_board.board["player"],
-                            current_board.board["opponent"],
-                        )
+                        self.results_board.composition = current_board.board["player"]
+                        self.results_board.update()
                         self.simulated_stats.update_chances(
                             *current_board.chances(),
                         )
@@ -1730,10 +1717,8 @@ class SimulationManager(QThread):
                 for condition in best_boards
                 if condition.win == best_result
             )
-            self.results_board.update_comps(
-                best_board.board["player"],
-                best_board.board["opponent"],
-            )
+            self.results_board.composition = best_board.board["player"]
+            self.results_board.update()
             self.simulated_stats.update_chances(
                 *best_board.chances(),
             )
