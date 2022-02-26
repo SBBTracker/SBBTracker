@@ -65,7 +65,7 @@ logging.basicConfig(filename=paths.sbbtracker_folder.joinpath("sbbtracker.log"),
                     format='%(name)s - %(levelname)s - %(message)s', level=logging.WARNING)
 logging.getLogger().addHandler(logging.StreamHandler())
 
-from sbbbattlesim import from_state, simulate
+from sbbbattlesim import from_state, simulate, make_swap, randomize_board
 from sbbbattlesim.exceptions import SBBBSCrocException
 from sbb_window_utils import SBBWindowCheckThread
 
@@ -183,6 +183,244 @@ def upload_data(payload):
         print(resp.content)
     except:
         logging.exception("Unable to post data!")
+
+
+class SimulationManager(QThread):
+    # Maybe have good errors?
+    # end_simulation = Signal(str, str, str, str, str)
+    # error_simulation = Signal(str)
+
+    def __init__(self, analysis_queue, simulated_stats, results_board):
+        super(SimulationManager, self).__init__()
+        self.analysis_queue = analysis_queue
+
+        # initialize simulation queue and results
+        self.simulated_stats = simulated_stats
+        self.results_board = results_board
+        self.queue = Queue()
+
+        self.simulation = SimulationThread(self.queue)
+        self.simulation.end_simulation.connect(self.update_chances)
+        self.simulation.error_simulation.connect(self.sim_error)
+        self.simulation.start()
+
+    def sim_error(self, *args, **kwargs):
+        self.active_conditions.remove(self.active_condition)
+
+    def update_chances(self, win, tie, loss, win_dmg, loss_dmg):
+        self.active_condition.update_reward(win, tie, loss, win_dmg, loss_dmg)
+        self.sim_is_done = True
+
+    def eliminate(self):
+        mean_win = median([cond.win for cond in self.active_conditions])
+        to_remove = []
+        for active_condition in self.active_conditions:
+            if active_condition.win < mean_win:
+                to_remove.append(active_condition)
+
+        for active_condition in to_remove:
+            self.active_conditions.remove(active_condition)
+
+    def best_board(self):
+        max_win = max(cond.win for cond in self.active_conditions)
+        return next(cond for cond in self.active_conditions if cond.win == max_win)
+
+    def stop_condition(self):
+        if len(self.active_conditions) == 1:
+            return True
+        elif len(set(cond.win for cond in self.active_conditions)) == 1:
+            self.all_boards_equal = True
+            return True
+        else:
+            return False
+
+    # This should move into the simulator to include supports and treasures
+    @staticmethod
+    def moves(slot):
+        # given a slot, what are the nearest neighbors
+        slot_dests = {
+            0: (1, 4),
+            1: (0, 2, 4, 5),
+            2: (1, 3, 5, 6),
+            3: (2, 6),
+            4: (0, 1, 5),
+            5: (1, 2, 4, 6),
+            6: (2, 3, 5),
+        }[int(slot)]
+
+        print(f"looking to move character in {slot=}")
+
+        return [
+            (str(slot), str(slot_dest))
+            for slot_dest in slot_dests
+        ]
+
+    @staticmethod
+    def random_slot(board, last_moved_to):
+        characters = [
+            character.slot for character in board["player"]
+            if character.zone == "Character"
+            and character.slot != last_moved_to
+        ]
+        if len(characters) == 7:
+            return random.choice([1, 2, 5])
+        else:
+            return random.choice(characters)
+
+    @staticmethod
+    def hash(board):
+        # sort and dump to json
+        data = json.dumps(
+            dict(
+                sorted(
+                    (
+                        (
+                            k,
+                            list(
+                                map(
+                                    lambda x: json.loads(
+                                        str(x)),
+                                        sorted(v, key=lambda x: (x.slot, x.zone)
+                                    )
+                                )
+                            )
+                        )
+                        for k, v in board.items()
+                    )
+                )
+            )
+        )
+        # print(data)
+        return hashlib.md5(data.encode("utf-8")).hexdigest()
+
+
+    def run(self):
+        print("SIMULATION START")
+        num_simulations = 1000 # settings.get(settings.number_threads, 3)
+        num_threads = settings.get(settings.number_threads, 3)
+        self.all_boards_equal = False
+        while True:
+            board, player_board_selected = self.analysis_queue.get()
+            print(board["player"])
+            playerid = "player"
+            # search for one local maxima
+            current_board = None
+            self.simulated_boards = []
+            best_boards = []
+            for _ in range(3):
+                print("starting search from new board state")
+                if current_board is None:
+                    current_board = ActiveCondition(board)
+                else:
+                    current_board = ActiveCondition(randomize_board(board))
+                board_hash = self.hash(current_board.board)
+                print(f"{board_hash=}")
+                # self.active_condition will concurrently be update with its results
+                self.active_condition = current_board
+                self.sim_is_done = False
+                print(f"running {num_simulations} simulations")
+                self.queue.put(
+                    # TODO: if ambrosia, error/warn
+                    (
+                        self.active_condition.board,
+                        playerid,
+                        num_simulations,
+                        num_threads,
+                    )
+                )
+                while not self.sim_is_done:
+                    time.sleep(1)
+
+                self.results_board.composition = current_board.board["player"]
+                self.results_board.update()
+                self.simulated_stats.update_chances(
+                    *current_board.chances(),
+                )
+                print(f"Initial result was:\n  {self.active_condition.chances()}")
+                self.simulated_boards.append(board_hash)
+                # if all options get worse/stay the same, break
+                best_boards.append(self.active_condition)
+                last_res = self.active_condition.win
+
+                last_moved_to = None
+                for _ in range(7):
+                    random_restart = True
+                    while True:
+                        if random_restart is True:
+                            # start at a random slot
+                            moves = self.moves(self.random_slot(current_board.board, last_moved_to))
+                            random_restart = False
+                        else:
+                            # keep climbing the hill if we just made a positive step
+                            moves = self.moves(last_moved_to)
+                        step_results = []
+                        for move in moves:
+                            print(move)
+                            new_board = make_swap(current_board.board, *move)
+                            # should make this an @cachedproperty of ActiveConditon
+                            board_hash = self.hash(new_board)
+                            print(f"{board_hash=}")
+                            if board_hash in self.simulated_boards:
+                                continue
+                            self.active_condition = ActiveCondition(new_board)
+                            self.active_condition.move = move
+                            # self.active_condition will concurrently be update with its results
+                            step_results.append(self.active_condition)
+                            self.sim_is_done = False
+                            print(f"running {num_simulations} simulations")
+                            self.queue.put(
+                                # TODO: if ambrosia, error/warn
+                                (
+                                    self.active_condition.board,
+                                    playerid,
+                                    num_simulations,
+                                    num_threads,
+                                )
+                            )
+                            while not self.sim_is_done:
+                                time.sleep(1)
+
+                            self.simulated_boards.append(board_hash)
+
+                        if not step_results:
+                            print("all neighbors previously simulated")
+                            break
+
+                        max_res = max(map(lambda condition: condition.win, step_results))
+                        best_step = next(
+                            condition
+                            for condition in step_results
+                            if condition.win == max_res
+                        )
+                        # if all options get worse/stay the same, do a random restart
+                        if max_res <= last_res:
+                            print("No step yields better result")
+                            best_boards.append(current_board)
+                            break
+                        print(f"best result was: {best_step.move=}\n  {best_step.chances()}")
+                        current_board = best_step
+                        last_moved_to = best_step.move[-1]
+                        last_res = max_res
+
+                        self.results_board.composition = current_board.board["player"]
+                        self.results_board.update()
+                        self.simulated_stats.update_chances(
+                            *current_board.chances(),
+                        )
+
+            best_result = max(map(lambda condition: condition.win, best_boards))
+            best_board = next(
+                condition
+                for condition in best_boards
+                if condition.win == best_result
+            )
+            # move is (from, to)
+            self.results_board.composition = best_board.board["player"]
+            self.results_board.update()
+            self.simulated_stats.update_chances(
+                *best_board.chances(),
+            )
+            print("SIMULATION DONE")
 
 
 class SimulationThread(QThread):
@@ -1476,255 +1714,6 @@ class ActiveCondition:
             f"{self.win_dmg:.2f}",
             f"{self.loss_dmg:.2f}",
         )
-
-
-class SimulationManager(QThread):
-    # Maybe have good errors?
-    # end_simulation = Signal(str, str, str, str, str)
-    # error_simulation = Signal(str)
-
-    def __init__(self, analysis_queue, simulated_stats, results_board):
-        super(SimulationManager, self).__init__()
-        self.analysis_queue = analysis_queue
-
-        # initialize simulation queue and results
-        self.simulated_stats = simulated_stats
-        self.results_board = results_board
-        self.queue = Queue()
-
-        self.simulation = SimulationThread(self.queue)
-        self.simulation.end_simulation.connect(self.update_chances)
-        self.simulation.error_simulation.connect(self.sim_error)
-        self.simulation.start()
-
-    def sim_error(self, *args, **kwargs):
-        self.active_conditions.remove(self.active_condition)
-
-    def update_chances(self, win, tie, loss, win_dmg, loss_dmg):
-        self.active_condition.update_reward(win, tie, loss, win_dmg, loss_dmg)
-        self.sim_is_done = True
-
-    def eliminate(self):
-        mean_win = median([cond.win for cond in self.active_conditions])
-        to_remove = []
-        for active_condition in self.active_conditions:
-            if active_condition.win < mean_win:
-                to_remove.append(active_condition)
-
-        for active_condition in to_remove:
-            self.active_conditions.remove(active_condition)
-
-    def best_board(self):
-        max_win = max(cond.win for cond in self.active_conditions)
-        return next(cond for cond in self.active_conditions if cond.win == max_win)
-
-    def stop_condition(self):
-        if len(self.active_conditions) == 1:
-            return True
-        elif len(set(cond.win for cond in self.active_conditions)) == 1:
-            self.all_boards_equal = True
-            return True
-        else:
-            return False
-
-    # This should move into the simulator to include supports and treasures
-    @staticmethod
-    def moves(slot):
-
-        # given a slot, what are the nearest neighbors
-        slot_dests = {
-            0: (1, 4),
-            1: (0, 2, 4, 5),
-            2: (1, 3, 5, 6),
-            3: (2, 6),
-            4: (0, 1, 5),
-            5: (1, 2, 4, 6),
-            6: (2, 3, 5),
-        }[int(slot)]
-
-        print(f"looking to move character in {slot=}")
-
-        return [
-            (str(slot), str(slot_dest))
-            for slot_dest in slot_dests
-        ]
-
-    @staticmethod
-    def random_slot(board):
-        characters = [character.slot for character in board["player"] if character.zone == "Character"]
-        if len(characters) == 7:
-            return random.choice([1, 2, 5])
-        else:
-            return random.choice(characters)
-
-    @staticmethod
-    def hash(board):
-        # sort and dump to json
-        data = json.dumps(
-            dict(
-                sorted(
-                    (
-                        (k, list(map(lambda x: json.loads(str(x)), sorted(v, key=lambda x: (x.slot, x.zone)))))
-                        for k, v in board.items()
-                    )
-                )
-            )
-        )
-        # print(data)
-        return hashlib.md5(data.encode("utf-8")).hexdigest()
-
-    def randomize(self, board):
-        board = copy.deepcopy(board)
-        player_permute_map = {
-            str(orig): str(perm)
-            for orig, perm in zip(
-                list(range(7)), np.random.permutation(7)
-            )
-        }
-        print(f"Random restart: {player_permute_map=}")
-        for character in board["player"]:
-            if character.zone == "Character" and character.slot in player_permute_map:
-                character.slot = player_permute_map[character.slot]
-
-        return board
-
-    @staticmethod
-    def permute_board(
-        board,
-        slot_orig,
-        slot_dest,
-    ):
-        # don't permute in place
-        new_board = copy.deepcopy(board)
-        permute_map = {
-            slot_orig: slot_dest,
-            slot_dest: slot_orig
-        }
-        print(f"{permute_map=}")
-        # TODO add a layer unapply support buffs (before) and re-apply (after) permuting
-        for character in new_board["player"]:
-            if character.zone == "Character" and character.slot in permute_map:
-                character.slot = permute_map[character.slot]
-        return new_board
-
-    def run(self):
-        print("SIMULATION START")
-        num_simulations = 1000 # settings.get(settings.number_threads, 3)
-        num_threads = settings.get(settings.number_threads, 3)
-        self.all_boards_equal = False
-        while True:
-            board, player_board_selected = self.analysis_queue.get()
-            playerid = "player"
-            # search for one local maxima
-            current_board = None
-            self.simulated_boards = []
-            best_boards = []
-            for _ in range(3):
-                print("starting search from new board state")
-                if current_board is None:
-                    current_board = ActiveCondition(board)
-                else:
-                    current_board = ActiveCondition(self.randomize(board))
-                board_hash = self.hash(current_board.board)
-                print(f"{board_hash=}")
-                # self.active_condition will concurrently be update with its results
-                self.active_condition = current_board
-                self.sim_is_done = False
-                print(f"running {num_simulations} simulations")
-                self.queue.put(
-                    # TODO: if ambrosia, error/warn
-                    (
-                        self.active_condition.board,
-                        playerid,
-                        num_simulations,
-                        num_threads,
-                    )
-                )
-                while not self.sim_is_done:
-                    time.sleep(1)
-
-                self.results_board.composition = current_board.board["player"]
-                self.results_board.update()
-                self.simulated_stats.update_chances(
-                    *current_board.chances(),
-                )
-                print(f"Initial result was:\n  {self.active_condition.chances()}")
-                self.simulated_boards.append(board_hash)
-                # if all options get worse/stay the same, break
-                best_boards.append(self.active_condition)
-                last_res = self.active_condition.win
-
-
-                for _ in range(7):
-                    while True:
-                        step_results = []
-                        moves = self.moves(self.random_slot(current_board.board))
-                        for move in moves:
-                            print(move)
-                            new_board = self.permute_board(current_board.board, *move)
-                            # should make this an @cachedproperty of ActiveConditon
-                            board_hash = self.hash(new_board)
-                            print(f"{board_hash=}")
-                            if board_hash in self.simulated_boards:
-                                continue
-                            self.active_condition = ActiveCondition(new_board)
-                            self.active_condition.move = move
-                            # self.active_condition will concurrently be update with its results
-                            step_results.append(self.active_condition)
-                            self.sim_is_done = False
-                            print(f"running {num_simulations} simulations")
-                            self.queue.put(
-                                # TODO: if ambrosia, error/warn
-                                (
-                                    self.active_condition.board,
-                                    playerid,
-                                    num_simulations,
-                                    num_threads,
-                                )
-                            )
-                            while not self.sim_is_done:
-                                time.sleep(1)
-
-                            self.simulated_boards.append(board_hash)
-
-                        if not step_results:
-                            print("all neighbors previously simulated")
-                            break
-
-                        max_res = max(map(lambda condition: condition.win, step_results))
-                        best_step = next(
-                            condition
-                            for condition in step_results
-                            if condition.win == max_res
-                        )
-                        # if all options get worse/stay the same, break
-                        if max_res <= last_res:
-                            print("No step yields better result")
-                            best_boards.append(current_board)
-                            break
-                        print(f"best result was: {best_step.move=}\n  {best_step.chances()}")
-                        current_board = best_step
-                        last_res = max_res
-
-                        self.results_board.composition = current_board.board["player"]
-                        self.results_board.update()
-                        self.simulated_stats.update_chances(
-                            *current_board.chances(),
-                        )
-
-            best_result = max(map(lambda condition: condition.win, best_boards))
-            best_board = next(
-                condition
-                for condition in best_boards
-                if condition.win == best_result
-            )
-            self.results_board.composition = best_board.board["player"]
-            self.results_board.update()
-            self.simulated_stats.update_chances(
-                *best_board.chances(),
-            )
-            print("SIMULATION DONE")
-
 
 
 
