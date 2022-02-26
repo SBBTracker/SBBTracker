@@ -51,24 +51,24 @@ def apply_permutation(board, permute_map):
             character, position=permute_map[charater.positon]
         )
 
+    new_player_state = board_stated.p1.to_state()
+    new_player_board = []
 
-    board["player"] =
+    new_player_state["hero"]["zone"] = "Hero"
+    new_player_board.append(Action.from_state(new_player_state["hero"]))
 
-    # TODO pass level from original to rearranged board
-    # When doing this, apply ZONE
+    for character in new_player_state["character"]:
+        treasure["zone"] = "Character"
+        new_player_board.append(Action.from_state(character))
 
-    [
-        Action.from_state(state)
-        for state in board_stated.p1.to_state()
-        for card in state.values()
-        `]
-        {
-            'characters': characters,
-            'treasures': treasures,
-            'hero': hero,
-            'spells': spells,
-            'level': level,
-            'hand': hand
-        }
+    for treasure in new_player_state["treasures"]:
+        treasure["zone"] = "Treasure"
+        new_player_board.append(Action.from_state(treasure))
+
+    for spell in new_player_state["spells"]:
+        treasure["zone"] = "Spells"
+        new_player_board.append(Action.from_state(spell))
+
+    board["player"] = new_player_board
     return board
 
