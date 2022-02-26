@@ -78,7 +78,7 @@ def parse_list(line, delimiter):
     line : str
         The current line of text being operated on
     delimiter : str
-        The delimiter we're expecting to see in the 
+        The delimiter we're expecting to see in the
         line separating list elements
 
     Returns
@@ -109,7 +109,7 @@ def process_line(line, ifs, dt=None, path=[]):
     Log lines are kind of like flattened YAML, except they have mistakes
     and have random newlines inside of them and are all around
     a fantastic time. We handle those edge cases here.
-    
+
     Parameters
     ----------
     line : str
@@ -218,7 +218,7 @@ def process_line(line, ifs, dt=None, path=[]):
 
 def parse(ifs):
     """
-    Parse the log file into workable dictionaries. A nice function to 
+    Parse the log file into workable dictionaries. A nice function to
     separate the business logic from the parsing logic
 
     Parameters
@@ -331,6 +331,57 @@ class Action:
 
     def __repr__(self):
         return json.dumps({k: getattr(self, k) for k in ['task', *self.attrs]}, sort_keys=True, indent=4)
+
+    @classmethod
+    def from_state(cls, state):
+        card = cls(info=None)
+        card.slot = state['slot']
+        card.zone = state['zone']
+        # card.playerid = state['player']
+        card.content_id = state['content_id']
+        print(f"{card.content_id=}")
+
+        card.task = "GetRoundGather"
+        card.action_type = "GLG.Transport.Actions.ActionCreateCard"
+        card.counter = "0"
+        card.attrs = ["slot", "zone", "content_id", "task", "action_type", "counter"] # playerid
+
+        if state["zone"] == "Hero":
+            pass
+            # card.heroid =
+            # card.health =
+            # card.level = info['Level']
+        elif state["zone"] == "Character":
+            card.cardattack = state['attack']
+            card.cardhealth = state['health']
+            card.is_golden = state['golden']
+            card.cost = state['cost']
+            card.subtypes = state['tribes']
+            # whats this?
+            # card.counter = state['Counter']
+            card.attrs.extend(
+                [
+                    'cardattack',
+                    'cardhealth',
+                    'is_golden',
+                    'slot',
+                    'zone',
+                    'cost',
+                    'subtypes',
+                    'counter',
+                    'content_id',
+                ]
+            )
+        elif state["zone"] == "Treasure":
+            pass
+
+        # card.timestamp = info["Action"]["Timestamp"]
+        # card.attrs.append("timestamp")
+        # card.attrs.append("action_type")
+        return card
+
+
+
 
 
 class Update:

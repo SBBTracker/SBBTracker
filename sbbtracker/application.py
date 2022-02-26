@@ -59,13 +59,13 @@ from PySide6.QtWidgets import (
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from qt_material import apply_stylesheet
 
-import asset_utils, graphs, log_parser, stats, updater, version, settings, paths
+import asset_utils, graphs, log_parser, stats, updater, version, settings, paths, rearrange
 
 logging.basicConfig(filename=paths.sbbtracker_folder.joinpath("sbbtracker.log"), filemode="w",
                     format='%(name)s - %(levelname)s - %(message)s', level=logging.WARNING)
 logging.getLogger().addHandler(logging.StreamHandler())
 
-from sbbbattlesim import from_state, simulate, make_swap, randomize_board
+from sbbbattlesim import from_state, simulate
 from sbbbattlesim.exceptions import SBBBSCrocException
 from sbb_window_utils import SBBWindowCheckThread
 
@@ -301,8 +301,8 @@ class SimulationManager(QThread):
         self.all_boards_equal = False
         while True:
             board, player_board_selected = self.analysis_queue.get()
-            print(type(board))
-            print(type(board["player"]))
+            print(board["player"])
+            print(list(map(type, board["player"])))
             playerid = "player"
             # search for one local maxima
             current_board = None
@@ -313,7 +313,7 @@ class SimulationManager(QThread):
                 if current_board is None:
                     current_board = ActiveCondition(board)
                 else:
-                    current_board = ActiveCondition(randomize_board(board))
+                    current_board = ActiveCondition(rearrange.randomize_board(board))
                 board_hash = self.hash(current_board.board)
                 print(f"{board_hash=}")
                 # self.active_condition will concurrently be update with its results
@@ -357,7 +357,7 @@ class SimulationManager(QThread):
                         step_results = []
                         for move in moves:
                             print(move)
-                            new_board = make_swap(current_board.board, *move)
+                            new_board = rearrange.make_swap(current_board.board, *move)
                             # should make this an @cachedproperty of ActiveConditon
                             board_hash = self.hash(new_board)
                             print(f"{board_hash=}")
