@@ -10,6 +10,8 @@ from queue import Queue
 from pygtail import Pygtail
 from paths import logfile, offsetfile
 
+from asset_utils import reverse_template_id
+
 
 VERYLARGE = 2 ** 20
 NOTFOUND = -1
@@ -335,53 +337,55 @@ class Action:
     @classmethod
     def from_state(cls, state):
         card = cls(info=None)
-        card.slot = state['slot']
+        template_id = reverse_template_id(
+            state['content_id'], is_golden=state.get("golden", False)
+        )
         card.zone = state['zone']
-        # card.playerid = state['player']
-        card.content_id = state['content_id']
-        print(f"{card.content_id=}")
 
-        card.task = "GetRoundGather"
+        card.task = ""
         card.action_type = "GLG.Transport.Actions.ActionCreateCard"
-        card.counter = "0"
-        card.attrs = ["slot", "zone", "content_id", "task", "action_type", "counter"] # playerid
+        card.attrs = ["zone", "task", "action_type"] # playerid
 
         if state["zone"] == "Hero":
-            pass
-            # card.heroid =
-            # card.health =
-            # card.level = info['Level']
-        elif state["zone"] == "Character":
-            card.cardattack = state['attack']
-            card.cardhealth = state['health']
-            card.is_golden = state['golden']
-            card.cost = state['cost']
-            card.subtypes = state['tribes']
-            # whats this?
-            # card.counter = state['Counter']
+            card.displayname = ""
+            card.playerid = state["playerid"]
+            card.health = "-1"
+            card.heroid = template_id
+            card.place = "-1"
+            card.level = "-1"
+            card.experience = "-1"
+            card.slot = "0"
             card.attrs.extend(
                 [
+                    'displayname', 'playerid', 'health', 'heroid', 'place', 'level', 'experience', 'slot',
+                ]
+            )
+
+        elif state["zone"] in ("Character", "Treasure", "Spell"):
+            card.content_id = template_id
+            card.cardattack = state.get('attack', '0')
+            card.cardhealth = state.get('health', '0')
+            card.is_golden = state.get('golden', False)
+            card.cost = state.get('cost', '-1') # TODO see if this will always be there
+            card.subtypes = state.get('tribes', []) # TODO see if this will always be there
+            card.playerid = state["playerid"]
+            card.slot = state.get('slot', '0')
+            card.counter = state.get('counter', '-1')
+
+            card.attrs.extend(
+                [
+                    'content_id',
                     'cardattack',
                     'cardhealth',
                     'is_golden',
-                    'slot',
-                    'zone',
                     'cost',
                     'subtypes',
+                    'playerid',
+                    'slot',
                     'counter',
-                    'content_id',
                 ]
             )
-        elif state["zone"] == "Treasure":
-            pass
-
-        # card.timestamp = info["Action"]["Timestamp"]
-        # card.attrs.append("timestamp")
-        # card.attrs.append("action_type")
         return card
-
-
-
 
 
 class Update:

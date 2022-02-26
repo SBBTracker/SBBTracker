@@ -251,7 +251,7 @@ class SimulationManager(QThread):
         print(f"looking to move character in {slot=}")
 
         return [
-            (str(slot), str(slot_dest))
+            (slot, slot_dest)
             for slot_dest in slot_dests
         ]
 

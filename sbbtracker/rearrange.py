@@ -30,7 +30,7 @@ def randomize_board(board):
     return apply_permutation(
         board,
         permute_map={
-            str(orig): str(perm)
+            orig: perm
             for orig, perm in zip(
                 list(range(7)), np.random.permutation(7)
             )
@@ -42,15 +42,33 @@ def apply_permutation(board, permute_map):
     # don't permute in place
     board = copy.deepcopy(board)
     board_stated = Board(from_state(board))
-    for character in board_stated.p1.valid_characters():
-        for action in character._action_history:
-            if action.temp:
-                action.roll_back()
+    characters = board_stated.p1.valid_characters()
+    board_stated.p1.despawn(*characters, kill=False)
 
     print(f"{permute_map=}")
-    board_stated.p1.rearrange(permute_map)
-    board_stated.p1.board.register(PlayerOnSetup, source=board_stated.p1, priority=0)
-    board["player"] = [Action.from_state(state) for state in board_stated.p1.to_state()]
+    for character in characters:
+        board_stated.p1.spawn(
+            character, position=permute_map[charater.positon]
+        )
 
+
+    board["player"] =
+
+    # TODO pass level from original to rearranged board
+    # When doing this, apply ZONE
+
+    [
+        Action.from_state(state)
+        for state in board_stated.p1.to_state()
+        for card in state.values()
+        `]
+        {
+            'characters': characters,
+            'treasures': treasures,
+            'hero': hero,
+            'spells': spells,
+            'level': level,
+            'hand': hand
+        }
     return board
 
