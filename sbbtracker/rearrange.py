@@ -2,8 +2,11 @@ import copy
 
 import numpy as np
 
+from sbbbattlesim.board import Board
 from sbbbattlesim.characters import registry as character_registry
 from sbbbattlesim.heroes import registry as hero_registry
+from sbbbattlesim.player import PlayerOnSetup
+from sbbbattlesim.simulate import from_state
 from sbbbattlesim.treasures import registry as treasure_registry
 
 
@@ -12,49 +15,63 @@ def make_swap(
     slot_orig,
     slot_dest,
 ):
-    # don't permute in place
-    board = copy.deepcopy(board)
-    board["player"] = apply_buffs(board["player"], remove=True)
-    permute_map = {
-        slot_orig: slot_dest,
-        slot_dest: slot_orig
-    }
-    print(f"{permute_map=}")
-    # TODO add a layer unapply support buffs (before) and re-apply (after) permuting
-    for character in board["player"]:
-        if character.zone == "Character" and character.slot in permute_map:
-            character.slot = permute_map[character.slot]
-    board["player"] = apply_buffs(board["player"])
-    return board
+    return apply_permutation(
+        board,
+        permute_map = {
+            slot_orig: slot_dest,
+            slot_dest: slot_orig
+        }
+    )
 
 
 def randomize_board(board):
-    board = copy.deepcopy(board)
-    board["player"] = apply_buffs(board["player"], remove=True)
-    player_permute_map = {
-        str(orig): str(perm)
-        for orig, perm in zip(
-            list(range(7)), np.random.permutation(7)
-        )
-    }
-    print(f"Random restart: {player_permute_map=}")
-    for character in board["player"]:
-        if character.zone == "Character" and character.slot in player_permute_map:
-            character.slot = player_permute_map[character.slot]
+    return apply_permutation(
+        board,
+        permute_map={
+            str(orig): str(perm)
+            for orig, perm in zip(
+                list(range(7)), np.random.permutation(7)
+            )
+        }
+    )
 
-    board["player"] = apply_buffs(board["player"])
+
+def apply_permutation(board, permute_map):
+    # don't permute in place
+    board = copy.deepcopy(board)
+    board_state = Board(from_state(board))
+    for character in board_state.p1.valid_characters():
+        for action in character._action_history:
+            if action.temp:
+                action.roll_back()
+
+    print(f"{permute_map=}")
+    temp_characters = {i: None for i in range(1, 8)}
+    for slot, character in board_state.p1._characters.items():
+        if str(slot) in permute_map:
+            temp_characters[int(permute_map[str(slot)])] = character
+    board_state.p1._characters = temp_characters
+
+    board_state.p1.board.register(PlayerOnSetup, source=board_state.p1, priority=0)
+    board["player"] = [
+        card for card in board["player"] if card.zone != "Character"
+    ] + list(board_state.p1._characters.values())
     return board
 
 
+
+
+
+# Unused hackery
 def apply_buffs(board, remove=False):
+    board_data = from_state(board)
     apply_or_remove = -1 if remove else 1
     hero = next(character.content_id for character in board if character.zone == "Hero")
 
     # TREASURES
     treasures = [
-        treasure_registry[character.content_id]
-        for character in board
-        if character.zone == "Treasure"
+        treasure_registry[treasure.content_id](**treasure)
+        for treasure in board_data["player"]["treasures"]
     ]
     auras = [treasure for treasure in treasures if hasattr(treasure, "aura")]
     # mimic + celestial tiger
@@ -97,9 +114,8 @@ def apply_buffs(board, remove=False):
         treasure_multiplier = 1
 
     characters = {
-        character.slot: character_registry[character.content_id]
-        for character in board
-        if character.zone == "Character"
+        character.slot: character_registry[character.content_id](**character)
+        for character in board_data["player"]["characters"]
     }
     print(characters['1']._action_history)
     for slot, character in characters.items():

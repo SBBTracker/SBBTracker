@@ -301,7 +301,8 @@ class SimulationManager(QThread):
         self.all_boards_equal = False
         while True:
             board, player_board_selected = self.analysis_queue.get()
-            print(board["player"])
+            print(type(board))
+            print(type(board["player"]))
             playerid = "player"
             # search for one local maxima
             current_board = None
