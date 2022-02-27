@@ -59,7 +59,7 @@ from PySide6.QtWidgets import (
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from qt_material import apply_stylesheet
 
-import asset_utils, graphs, log_parser, stats, updater, version, settings, paths, rearrange
+import asset_utils, graphs, log_parser, stats, updater, version, settings, paths, rearrange, animated_toggle
 
 logging.basicConfig(filename=paths.sbbtracker_folder.joinpath("sbbtracker.log"), filemode="w",
                     format='%(name)s - %(levelname)s - %(message)s', level=logging.WARNING)
@@ -68,8 +68,6 @@ logging.getLogger().addHandler(logging.StreamHandler())
 from sbbbattlesim import from_state, simulate
 from sbbbattlesim.exceptions import SBBBSCrocException
 from sbb_window_utils import SBBWindowCheckThread
-
-from sbbtracker.animated_toggle import AnimatedToggle
 
 DEBUG = False
 
@@ -300,7 +298,7 @@ class SimulationManager(QThread):
         num_threads = settings.get(settings.number_threads, 3)
         self.all_boards_equal = False
         while True:
-            board, player_board_selected = self.analysis_queue.get()
+            board = self.analysis_queue.get()
             print(board["player"])
             print(list(map(type, board["player"])))
             playerid = "player"
@@ -313,7 +311,10 @@ class SimulationManager(QThread):
                 if current_board is None:
                     current_board = ActiveCondition(board)
                 else:
-                    current_board = ActiveCondition(rearrange.randomize_board(board))
+                    print("RANDOMIZING BOARD")
+                    current_board = ActiveCondition(
+                        rearrange.randomize_board(board)
+                    )
                 board_hash = self.hash(current_board.board)
                 print(f"{board_hash=}")
                 # self.active_condition will concurrently be update with its results
@@ -356,8 +357,15 @@ class SimulationManager(QThread):
                             moves = self.moves(last_moved_to)
                         step_results = []
                         for move in moves:
-                            print(move)
-                            new_board = rearrange.make_swap(current_board.board, *move)
+                            new_board = rearrange.make_swap(
+                                current_board.board, *move
+                            )
+
+                            # TEMPORARY ###########
+                            self.results_board.composition = new_board["player"]
+                            self.results_board.update()
+                            # #####################
+
                             # should make this an @cachedproperty of ActiveConditon
                             board_hash = self.hash(new_board)
                             print(f"{board_hash=}")
@@ -1397,43 +1405,6 @@ class BoardComp(QWidget):
         painter.drawText(10, 25, last_seen_text)
 
 
-class SelectableBoardComp(BoardComp):
-    """BoardComp with clickable characters and a submit button"""
-    def __init__(self):
-        super().__init__()
-        self.buttons = []
-        for i in range(7):
-            button = AnimatedToggle(self)
-            button.setChecked(False)
-            self.buttons.append(button)
-            card_loc = get_image_location(i)
-            # button.setGeometry(0, 0, 60, 120)
-            # / 2.0 b/c used by board_analysis tab
-            button.move(card_loc[0]/2.0 + 15, card_loc[1]/2.0 + 40)
-
-    def reset_buttons(self):
-        for button in self.buttons:
-            button.setChecked(False)
-
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.scale(self.scale/2.0, self.scale/2.0)
-        if self.composition is not None:
-            for action in self.composition:
-                if action.zone != "Hero":
-                    #  skip hero because we handle it elsewhere
-                    #  spells broke
-                    slot = action.slot
-                    zone = action.zone
-                    position = 10 if zone == 'Spell' else (7 + int(slot)) if zone == "Treasure" else slot
-                    self.update_card(painter, position, action.content_id, action.cardhealth,
-                                     action.cardattack, action.is_golden)
-
-
-        else:
-            painter.eraseRect(QRect(0, 0, 1350, 820))
-
-
 class MatchHistory(QWidget):
     def __init__(self, parent, player_stats: stats.PlayerStats):
         super().__init__()
@@ -1640,7 +1611,7 @@ class BoardAnalysis(QWidget):
         btn_layout.addWidget(submit_button)
         self.last_brawl.addWidget(btn_widget)
         # Submit analysis tab
-        self.player_board = SelectableBoardComp()
+        self.player_board = BoardComp(scale=0.5)
         self.opponent_board = BoardComp(scale=0.5)
         self.last_brawl.addWidget(self.player_board)
         self.last_brawl.addWidget(self.opponent_board)
@@ -1677,23 +1648,15 @@ class BoardAnalysis(QWidget):
         self.update()
 
     def run_simulations(self):
-        player_board_selected = [
-            str(slot)
-            for slot, button in enumerate(self.player_board.buttons)
-            if button.isChecked()
-        ]
         board = {
             "player": self.player_board.composition,
             "opponent": self.opponent_board.composition,
         }
         self.analysis_queue.put(
-            (board, player_board_selected)
+            board
         )
         # clear board results:
         self.simulated_stats.reset_chances()
-        # reset buttons
-        self.player_board.reset_buttons()
-        # self.opponent_board.reset_buttons()
 
 class ActiveCondition:
     def __init__(self, board):

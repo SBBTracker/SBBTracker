@@ -340,16 +340,19 @@ class Action:
         template_id = reverse_template_id(
             state['content_id'], golden=state.get("golden", False)
         )
-        card.zone = state['zone']
 
+        card.content_id = template_id
+        card.zone = state['zone']
         card.task = ""
         card.action_type = "GLG.Transport.Actions.ActionCreateCard"
-        card.attrs = ["zone", "task", "action_type"] # playerid
+        card.counter = state.get('counter', '-1')
+        card.playerid = state["playerid"]
+
+        card.attrs = ["content_id", "zone", "task", "action_type", "counter", "playerid"]
 
         if state["zone"] == "Hero":
             card.displayname = ""
-            card.playerid = state["playerid"]
-            card.health = "-1"
+            card.health = 1 # player health is cast to an int
             card.heroid = template_id
             card.place = "-1"
             card.level = "-1"
@@ -357,32 +360,26 @@ class Action:
             card.slot = "0"
             card.attrs.extend(
                 [
-                    'displayname', 'playerid', 'health', 'heroid', 'place', 'level', 'experience', 'slot',
+                    'displayname', 'health', 'heroid', 'place', 'level', 'experience', 'slot',
                 ]
             )
 
         elif state["zone"] in ("Character", "Treasure", "Spell"):
-            card.content_id = template_id
-            card.cardattack = state.get('attack', '0')
-            card.cardhealth = state.get('health', '0')
-            card.is_golden = state.get('golden', False)
-            card.cost = state.get('cost', '-1') # TODO see if this will always be there
-            card.subtypes = state.get('tribes', []) # TODO see if this will always be there
-            card.playerid = state["playerid"]
+            card.cardattack = str(state.get('cardattack', '0'))
+            card.cardhealth = str(state.get('cardhealth', '0'))
+            card.is_golden = state.get('is_golden', False)
+            card.cost = str(state.get('cost', '-1')) # TODO see if this will always be there
+            card.subtypes = state.get('subtypes', []) # TODO see if this will always be there
             card.slot = state.get('slot', '0')
-            card.counter = state.get('counter', '-1')
 
             card.attrs.extend(
                 [
-                    'content_id',
                     'cardattack',
                     'cardhealth',
                     'is_golden',
                     'cost',
                     'subtypes',
-                    'playerid',
                     'slot',
-                    'counter',
                 ]
             )
         return card

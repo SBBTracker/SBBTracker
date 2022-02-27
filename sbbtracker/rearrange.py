@@ -3,6 +3,7 @@ import copy
 import numpy as np
 
 from log_parser import Action
+from asset_utils import replace_template_ids
 
 from sbbbattlesim.board import Board
 from sbbbattlesim.characters import registry as character_registry
@@ -20,8 +21,10 @@ def make_swap(
     return apply_permutation(
         board,
         permute_map = {
-            slot_orig: slot_dest,
-            slot_dest: slot_orig
+            # in the UI/ logs the slot is 0-6
+            # in the sim the "position" is 1-7
+            slot_orig+1: slot_dest+1,
+            slot_dest+1: slot_orig+1,
         }
     )
 
@@ -32,34 +35,47 @@ def randomize_board(board):
         permute_map={
             orig: perm
             for orig, perm in zip(
-                list(range(7)), np.random.permutation(7)
+                list(range(1, 8)), np.random.permutation(list(range(1, 8)))
             )
         }
     )
 
 
 def apply_permutation(board, permute_map):
+    print("APPLY PERMUTATION")
     # don't permute in place
-    board = copy.deepcopy(board)
-    board_stated = Board(from_state(board))
+    board_stated = Board(
+        from_state(
+            copy.deepcopy(
+                replace_template_ids(
+                    board
+                )
+            )
+        )
+    )
+
+    board_stated.p1.reset_board()
     characters = board_stated.p1.valid_characters()
+    # reverse to de-apply support buffs before killing the front row characters?
     board_stated.p1.despawn(*characters, kill=False)
 
     print(f"{permute_map=}")
-    for character in characters:
+    for character in reversed(characters):
+        print(f"{character.position=}")
         board_stated.p1.spawn(
             character,
             position=permute_map.get(character.position, character.position),
         )
 
     new_player_state = board_stated.p1.to_state()
-    new_player_board = []
+    assert board_stated.p1.id == "player"
 
+    new_player_board = []
     new_player_state["hero"]["zone"] = "Hero"
     new_player_board.append(Action.from_state(new_player_state["hero"]))
 
-    for character in new_player_state["character"]:
-        treasure["zone"] = "Character"
+    for character in new_player_state["characters"]:
+        character["zone"] = "Character"
         new_player_board.append(Action.from_state(character))
 
     for treasure in new_player_state["treasures"]:
@@ -67,9 +83,11 @@ def apply_permutation(board, permute_map):
         new_player_board.append(Action.from_state(treasure))
 
     for spell in new_player_state["spells"]:
-        treasure["zone"] = "Spells"
+        spell["zone"] = "Spell"
         new_player_board.append(Action.from_state(spell))
 
-    board["player"] = new_player_board
-    return board
+    return {
+        "player": new_player_board,
+        "opponent": board["opponent"],
+    }
 

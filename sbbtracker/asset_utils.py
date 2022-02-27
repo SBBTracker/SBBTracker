@@ -75,7 +75,7 @@ def replace_template_ids(state):
 
 
 def reverse_template_id(content_id, golden=False):
-    template_id = int(template_id_lookup[content_id])
+    template_id = int(template_id_lookup[content_id]["TemplateId"])
     if golden:
         template_id += 1
     return str(template_id)
