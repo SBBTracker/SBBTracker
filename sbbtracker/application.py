@@ -360,13 +360,6 @@ class SimulationManager(QThread):
                             new_board = rearrange.make_swap(
                                 current_board.board, *move
                             )
-
-                            # TEMPORARY ###########
-                            self.results_board.composition = new_board["player"]
-                            self.results_board.update()
-                            # #####################
-
-                            # should make this an @cachedproperty of ActiveConditon
                             board_hash = self.hash(new_board)
                             print(f"{board_hash=}")
                             if board_hash in self.simulated_boards:
