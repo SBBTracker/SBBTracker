@@ -48,7 +48,8 @@ def apply_permutation(board, permute_map):
     print(f"{permute_map=}")
     for character in characters:
         board_stated.p1.spawn(
-            character, position=permute_map[charater.positon]
+            character,
+            position=permute_map.get(character.position, character.position),
         )
 
     new_player_state = board_stated.p1.to_state()

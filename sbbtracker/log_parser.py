@@ -338,7 +338,7 @@ class Action:
     def from_state(cls, state):
         card = cls(info=None)
         template_id = reverse_template_id(
-            state['content_id'], is_golden=state.get("golden", False)
+            state['content_id'], golden=state.get("golden", False)
         )
         card.zone = state['zone']
 
