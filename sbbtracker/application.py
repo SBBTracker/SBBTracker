@@ -256,14 +256,11 @@ class SimulationManager(QThread):
     @staticmethod
     def random_slot(board, last_moved_to):
         characters = [
-            character.slot for character in board["player"]
+            int(character.slot) for character in board["player"]
             if character.zone == "Character"
             and character.slot != last_moved_to
         ]
-        if len(characters) == 7:
-            return random.choice([1, 2, 5])
-        else:
-            return random.choice(characters)
+        return random.choice(characters)
 
     @staticmethod
     def hash(board):
@@ -288,12 +285,10 @@ class SimulationManager(QThread):
                 )
             )
         )
-        # print(data)
         return hashlib.md5(data.encode("utf-8")).hexdigest()
 
 
     def run(self):
-        print("SIMULATION START")
         num_simulations = 1000 # settings.get(settings.number_threads, 3)
         num_threads = settings.get(settings.number_threads, 3)
         self.all_boards_equal = False
@@ -307,11 +302,11 @@ class SimulationManager(QThread):
             self.simulated_boards = []
             best_boards = []
             for _ in range(3):
-                print("starting search from new board state")
                 if current_board is None:
+                    print("starting search from player board state")
                     current_board = ActiveCondition(board)
                 else:
-                    print("RANDOMIZING BOARD")
+                    print("starting search from random board state")
                     current_board = ActiveCondition(
                         rearrange.randomize_board(board)
                     )
@@ -350,7 +345,9 @@ class SimulationManager(QThread):
                     while True:
                         if random_restart is True:
                             # start at a random slot
-                            moves = self.moves(self.random_slot(current_board.board, last_moved_to))
+                            moves = self.moves(
+                                self.random_slot(current_board.board, last_moved_to)
+                            )
                             random_restart = False
                         else:
                             # keep climbing the hill if we just made a positive step
@@ -360,6 +357,13 @@ class SimulationManager(QThread):
                             new_board = rearrange.make_swap(
                                 current_board.board, *move
                             )
+
+                            # TEMPORARY ###########
+                            self.results_board.composition = new_board["player"]
+                            self.results_board.update()
+                            # #####################
+
+                            # should make this an @cachedproperty of ActiveConditon
                             board_hash = self.hash(new_board)
                             print(f"{board_hash=}")
                             if board_hash in self.simulated_boards:

@@ -53,15 +53,12 @@ def apply_permutation(board, permute_map):
             )
         )
     )
-
-    board_stated.p1.reset_board()
+    board_stated("OnSetup")
     characters = board_stated.p1.valid_characters()
-    # reverse to de-apply support buffs before killing the front row characters?
     board_stated.p1.despawn(*characters, kill=False)
 
     print(f"{permute_map=}")
-    for character in reversed(characters):
-        print(f"{character.position=}")
+    for character in characters:
         board_stated.p1.spawn(
             character,
             position=permute_map.get(character.position, character.position),
