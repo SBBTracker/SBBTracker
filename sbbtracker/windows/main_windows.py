@@ -25,6 +25,7 @@ from sbbtracker import graphs, paths, settings, stats, updater, version
 from sbbtracker.utils.sbb_logic_utils import round_to_xp
 from sbbtracker.windows.constants import default_bg_color, primary_color
 from sbbtracker.windows.overlays import BoardComp, OverlayWindow, StreamableMatchDisplay, StreamerOverlayWindow
+from sbbtracker.windows.shop_display import ShopDisplay
 
 matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
@@ -198,6 +199,7 @@ class LogThread(QThread):
     player_info_update = Signal(graphs.LivePlayerStates)
     health_update = Signal(object)
     new_game = Signal(bool)
+    update_card = Signal(object)
     end_combat = Signal()
 
     def run(self):
@@ -279,6 +281,8 @@ class LogThread(QThread):
                     self.stats_update.emit(asset_utils.get_card_name(current_player.heroid), state, session_id, match_data)
             elif job == log_parser.JOB_HEALTHUPDATE:
                 self.health_update.emit(state)
+            elif job == log_parser.JOB_CARDUPDATE:
+                self.update_card.emit(state)
 
 
 class ImportThread(QThread):
@@ -495,8 +499,10 @@ and Lunco
         advanced_layout = QFormLayout(advanced_tab)
         enable_export_comp_checkbox = SettingsCheckbox(settings.export_comp_button)
         show_id_mode = SettingsCheckbox(settings.show_ids)
+        show_id_window = SettingsCheckbox(settings.show_id_window)
         advanced_layout.addRow("Enable export last comp button", enable_export_comp_checkbox)
         advanced_layout.addRow("Hide art and show template ids", show_id_mode)
+        advanced_layout.addRow("Enable ID window", show_id_window)
 
         streaming_layout = QFormLayout(streaming_tab)
         enable_stream_overlay = QCheckBox()
@@ -563,6 +569,7 @@ and Lunco
         settings.save()
         self.hide()
 
+        self.main_window.shop_display.show() if settings.get(settings.show_id_window) else self.main_window.shop_display.hide()
         # self.main_window.overlay.update_monitor()
         self.main_window.overlay.update_comp_scaling()
         self.main_window.streamer_overlay.update_comp_scaling()
@@ -638,6 +645,9 @@ class SBBTracker(QMainWindow):
         self.most_recent_combat = None
         self.in_matchmaking = False
         self.sim_results = {}
+        self.shop_display = ShopDisplay()
+        if settings.get(settings.show_id_window):
+            self.shop_display.show()
 
         self.overlay = OverlayWindow(self)
         self.streamer_overlay = StreamerOverlayWindow(self)
@@ -747,6 +757,7 @@ class SBBTracker(QMainWindow):
         self.log_updates.new_game.connect(self.new_game)
         self.log_updates.health_update.connect(self.update_health)
         self.log_updates.end_combat.connect(self.end_combat)
+        self.log_updates.update_card.connect(self.shop_display.update_card)
 
         self.board_queue = Queue()
         self.simulation = SimulationThread(self.board_queue)
@@ -777,6 +788,7 @@ class SBBTracker(QMainWindow):
         self.in_matchmaking = matchmaking
         self.player_ids.clear()
         self.sim_results.clear()
+        self.shop_display.clear()
         self.overlay.enable_hovers()
         self.overlay.turn_display.setVisible(settings.get(settings.enable_turn_display))
         self.streamer_overlay.turn_display.setVisible(settings.get(settings.enable_turn_display))
