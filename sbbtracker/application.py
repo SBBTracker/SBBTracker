@@ -88,6 +88,10 @@ Things that are currently collected:
 This may include more game-related information as we improve 
 our ability to collect it.
 
+This info may be shared as part of the public dataset. 
+
+For a full privacy policy, please visit sbbtracker.com/privacy.
+
 You may change your selection at any time at Settings > Data > Upload Matches""")
         settings.set_(settings.upload_data, reply == QMessageBox.Yes)
         settings.save()
