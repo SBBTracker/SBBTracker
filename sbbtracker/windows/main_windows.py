@@ -149,7 +149,7 @@ class SimulationThread(QThread):
             if all([from_stated[player_id]['level'] != 0 for player_id in from_stated]):
                 try:
                     simulation_stats = simulate(simulator_board, t=num_threads, k=int(num_simulations / num_threads),
-                                                timeout=30)
+                                                timeout=60)
                 except SBBBSCrocException:
                     self.error_simulation.emit("Captain Croc not supported", round_number)
                 except concurrent.futures.TimeoutError:
