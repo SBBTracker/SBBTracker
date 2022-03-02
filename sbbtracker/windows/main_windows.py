@@ -834,6 +834,7 @@ class SBBTracker(QMainWindow):
         comp.player = player
         comp.current_round = round_number
         self.overlay.update_player(index, player.health, f"{player.level}.{player.experience}", round_number, player.place)
+        self.update()
 
     def update_comp(self, state, round_number):
         for player_id in state:
@@ -855,6 +856,7 @@ class SBBTracker(QMainWindow):
             comp.last_seen = round_number
             self.overlay.update_comp(index, board, round_number)
             self.streamer_overlay.update_comp(index, board, round_number)
+            self.update()
 
         self.overlay.simulation_stats.reset_chances()
         self.streamer_overlay.simulation_stats.reset_chances()
