@@ -1,3 +1,4 @@
+import json
 import logging
 import math
 import os.path
@@ -9,11 +10,11 @@ from tempfile import NamedTemporaryFile
 import pandas as pd
 from construct import GreedyRange
 
-import asset_utils
-import log_parser
-import paths
-from record_parser import STRUCT_ACTION, id_to_action_name
-from paths import backup_dir, statsfile, stats_format
+from sbbtracker.utils import asset_utils
+from sbbtracker.parsers import log_parser
+import sbbtracker.paths as paths
+from sbbtracker.parsers.record_parser import STRUCT_ACTION, id_to_action_name
+from sbbtracker.paths import backup_dir, statsfile, stats_format
 
 
 headings = ["Hero", "# Matches", "Avg Place", "Top 4", "Wins", "Net MMR"]
@@ -218,6 +219,11 @@ class PlayerStats:
             if progress_handler:
                 progress_handler(i, len(sorted_by_recent) - 1)
                 i += 1
+
+    def save_combats(self, combat_info, session_id):
+        match_file = paths.matches_dir.joinpath(f"{session_id}.json")
+        with open(match_file, 'w') as f:
+            json.dump(combat_info, f)
 
 
 def extract_endgame_stats_from_record_file(filename):

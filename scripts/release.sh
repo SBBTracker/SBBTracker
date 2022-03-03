@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+./scripts/test.sh
+if [[ $? != 0 ]]; then
+  exit $?
+fi
+
 . venv/Scripts/activate
 bumpversion $1
 rm -rf ./dist
