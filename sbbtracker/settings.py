@@ -3,7 +3,7 @@ import logging
 import shutil
 from tempfile import NamedTemporaryFile
 
-import paths
+from sbbtracker import paths
 
 settings_file = paths.sbbtracker_folder.joinpath("settings.json")
 
@@ -58,7 +58,6 @@ simulator_position = Setting("simulator-position", (0, 0))
 turn_indicator_position = Setting("turn-indicator-position", (0, 0))
 number_simulations = Setting("number-simulations", 1000)
 number_threads = Setting("number-threads", 3)
-export_comp_button = Setting("export-comp-button", False)
 turn_display_font_size = Setting("turn-display-font-size", 25)
 # streaming
 streaming_mode = Setting("streaming-mode", False)
@@ -66,6 +65,9 @@ stream_overlay_color = Setting("stream-overlay-color", "#FF00FF")
 streamable_score_list = Setting("streamable-score-list", False)
 streamable_score_max_len = Setting("streamable-score-max-len", 20)
 streamable_scores = Setting("streamable-scores", [])
+# advanced
+export_comp_button = Setting("export-comp-button", False)
+show_id_window = Setting("show-id-window", False)
 
 
 def get(setting: Setting, default=None):
