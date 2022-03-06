@@ -423,6 +423,7 @@ and Lunco
         backup_button = QPushButton("Backup Stats")
         backup_button.clicked.connect(self.backup)
         reimport_button = QPushButton("Reimport Stats")
+        reimport_button.setDisabled(True)
         reimport_button.clicked.connect(self.import_stats)
 
         enable_upload = SettingsCheckbox(settings.upload_data)
@@ -430,6 +431,7 @@ and Lunco
         data_layout.addRow(self.last_backed_up, backup_button)
         data_layout.addWidget(export_button)
         data_layout.addWidget(delete_button)
+        data_layout.addWidget(QLabel("Reimporting is temporarily disabled."))
         data_layout.addWidget(reimport_button)
         data_layout.addRow("Upload matches to sbbtracker.com", enable_upload)
         data_layout.addWidget(QLabel("Match uploads include your steam name, sbb id, board comps,"
