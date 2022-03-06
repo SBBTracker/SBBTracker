@@ -8,7 +8,7 @@ try:
     from ctypes import windll
 except:
     pass
-from paths import os_name
+from sbbtracker.paths import os_name
 
 
 def get_sbb_window():
@@ -37,10 +37,13 @@ def get_sbb_rect():
     window = get_sbb_window()
     scale = get_sbb_scale()
     if window != 0:
-        rect = GetClientRect(get_sbb_window())
-        (left, top) = ClientToScreen(window, (rect[0], rect[1]))
-        (right, bottom) = ClientToScreen(window, (rect[2], rect[3]))
-        return left, top, right, bottom, scale
+        try:
+            rect = GetClientRect(get_sbb_window())
+            (left, top) = ClientToScreen(window, (rect[0], rect[1]))
+            (right, bottom) = ClientToScreen(window, (rect[2], rect[3]))
+            return left, top, right, bottom, scale
+        except:
+            pass
     else:
         return -1, -1, -1, -1, scale
 

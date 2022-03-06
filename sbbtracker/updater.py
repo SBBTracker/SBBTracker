@@ -11,7 +11,7 @@ import requests
 from PySide6.QtCore import QObject, QThread, Signal
 from packaging import version as vs
 
-from version import __version__
+from sbbtracker.version import __version__
 
 os_name = platform.system()
 

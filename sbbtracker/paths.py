@@ -29,6 +29,10 @@ offsetfile = sbbtracker_folder.joinpath("logfile.offset")
 if not offsetfile.exists():
     offsetfile.touch()
 
+matches_dir = sbbtracker_folder.joinpath("matches")
+if not matches_dir.exists():
+    matches_dir.mkdir()
+
 
 # Storybook Brawl paths
 if os_name == 'Linux':

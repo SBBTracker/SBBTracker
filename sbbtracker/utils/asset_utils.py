@@ -1,12 +1,22 @@
 import copy
 import json
 import logging
+import sys
+import os
 from pathlib import Path
 
+if getattr(sys, 'frozen', False):
+    # If the application is run as a bundle, the PyInstaller bootloader
+    # extends the sys module by a flag frozen=True and sets the app
+    # path into variable _MEIPASS'.
+    application_path = Path(sys._MEIPASS)
+    print(application_path)
+else:
+    application_path = Path(__file__).parent.parent
 
 
 def get_asset(asset_name: str):
-    return str(Path(__file__).parent.joinpath(f"../assets/{asset_name}"))
+    return str(application_path.joinpath(f"../assets/{asset_name}"))
 
 
 with open(get_asset("template-ids.json"), "r") as json_file:
@@ -50,14 +60,14 @@ def get_card_path(content_id: str, is_golden: bool):
     :param is_golden: if the card is golden or not
     :return: the path card art if it exists, otherwise path to the blank resource
     """
-    cards_path = Path(__file__).parent.joinpath("../cards/")
+    cards_path = application_path.joinpath("../cards/")
     # what the fuck is this
     actually_is_golden = is_golden if isinstance(is_golden, bool) else is_golden == "True"
     input_content_id = get_card_art_name(content_id, actually_is_golden)
     asset_name = input_content_id
     path = cards_path.joinpath(asset_name.replace("'", "_") + ".png")
     if not path.exists() or asset_name == "empty":
-        path = Path("../assets/").joinpath("Empty.png")
+        path = Path("../../assets/").joinpath("Empty.png")
     return str(path)
 
 

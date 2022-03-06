@@ -8,9 +8,9 @@ from os.path import exists
 from queue import Queue
 
 from pygtail import Pygtail
-from paths import logfile, offsetfile
+from sbbtracker.paths import logfile, offsetfile
 
-from asset_utils import reverse_template_id
+from sbbtracker.utils.asset_utils import reverse_template_id
 
 
 VERYLARGE = 2 ** 20
@@ -48,6 +48,7 @@ EVENT_UPDATETURNTIMER = 'GLG.Transport.Actions.ActionUpdateTurnTimer'
 EVENT_SPELL = 'Spell'
 
 TASK_ADDPLAYER = "AddPlayer"
+TASK_UPDATECARD = "UpdateCard"
 TASK_GATHERIDS = "GatherIDs"
 TASK_GETROUND = "GetRound"
 TASK_GETROUNDGATHER = "GetRoundGather"
@@ -67,6 +68,7 @@ JOB_ENDGAME = "StateEndGame"
 JOB_ENDCOMBAT = "EndCombat"
 JOB_HEALTHUPDATE = "HealthUpdate"
 JOB_MATCHMAKING = "StateMatchmaking"
+JOB_CARDUPDATE = "CardUpdate"
 
 
 def parse_list(line, delimiter):
@@ -280,14 +282,16 @@ class Action:
                     self.playerid = info["PlayerData"].replace("Id ", "")
                     self.attrs.append('mmr')
 
+            # elif self.action_type == EVENT_PRESENTHERODISCOVER:
+
             elif self.action_type == EVENT_ENTERBRAWLPHASE:
                 self.task = TASK_GATHERIDS
                 self.player1 = info['Action']['FirstPlayerId']
                 self.player2 = info['Action']['SecondPlayerId']
                 self.attrs = ['player1', 'player2']
 
-            elif self.action_type == EVENT_CREATECARD:
-                self.task = TASK_GETROUNDGATHER
+            elif self.action_type == EVENT_CREATECARD or self.action_type == EVENT_UPDATECARD:
+                self.task = TASK_GETROUNDGATHER if self.action_type == EVENT_CREATECARD else TASK_UPDATECARD
                 cardinfo = info['Action']['Card']['[ClientCardCard]']['CardTemplate']['Card']['Delta']['[CardDelta]']
 
                 self.playerid = cardinfo['PlayerId']
@@ -302,7 +306,6 @@ class Action:
 
                 self.content_id = info['Action']['Card']['[ClientCardCard]']['CardTemplate']['Card']['CardTemplateId']
                 self.attrs = ['cardattack', 'cardhealth', 'is_golden', 'slot', 'zone', 'cost', 'subtypes', 'counter', 'content_id']
-
 
             elif self.action_type in [EVENT_BRAWLCOMPLETE, EVENT_SUMMONCHARACTER, EVENT_ATTACK, EVENT_DEALDAMAGE]:
                 self.task = TASK_ENDROUNDGATHER
@@ -465,6 +468,8 @@ def run(queue: Queue, log=logfile):
                 queue.put(Update(JOB_ENDCOMBAT, action))
             elif action.task == TASK_MATCHMAKING:
                 queue.put(Update(JOB_MATCHMAKING, action))
+            elif not inbrawl and action.task == TASK_UPDATECARD:
+                queue.put(Update(JOB_CARDUPDATE, action))
             else:
                 pass
 

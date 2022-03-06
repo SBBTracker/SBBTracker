@@ -2,8 +2,8 @@ import copy
 
 import numpy as np
 
-from log_parser import Action
-from asset_utils import replace_template_ids
+from sbbtracker.parsers.log_parser import Action
+from sbbtracker.utils.asset_utils import replace_template_ids
 
 from sbbbattlesim.board import Board
 from sbbbattlesim.characters import registry as character_registry

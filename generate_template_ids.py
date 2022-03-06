@@ -15,7 +15,7 @@ if not os.path.exists(args.input_csv):
 
 output_dt = dict()
 with open(args.input_csv) as csvfile:
-    reader = csv.DictReader(csvfile)
+    reader = csv.DictReader(csvfile, dialect='excel-tab')
     for row in reader:
         sbb_id = row['Id']
         name = row['Name']
