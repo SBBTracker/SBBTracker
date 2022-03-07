@@ -224,7 +224,7 @@ class LogThread(QThread):
             state = update.state
             if job == log_parser.JOB_MATCHMAKING:
                 matchmaking = True
-            elif job == log_parser.JOB_NEWGAME:
+            elif job == log_parser.JOB_NEWGAME and state.session_id != session_id:
                 states.clear()
                 match_data.clear()
                 current_player = None
