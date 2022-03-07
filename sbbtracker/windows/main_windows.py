@@ -881,8 +881,8 @@ class SBBTracker(QMainWindow):
             place = player.place if int(player.health) <= 0 else "1"
             self.player_stats.update_stats(starting_hero, asset_utils.get_card_name(player.heroid),
                                            place, player.mmr, session_id)
-            if "combat-info" in match_data:
-                self.player_stats.save_combats(match_data["combat-info"], session_id)
+            if match_data:
+                self.player_stats.save_match_info(match_data, session_id)
             self.match_history.update_history_table()
             self.match_history.update_stats_table()
             if settings.get(settings.streamable_score_list):
