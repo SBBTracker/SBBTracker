@@ -224,7 +224,7 @@ class LogThread(QThread):
             state = update.state
             if job == log_parser.JOB_MATCHMAKING:
                 matchmaking = True
-            elif job == log_parser.JOB_NEWGAME:
+            elif job == log_parser.JOB_NEWGAME and state.session_id != session_id:
                 states.clear()
                 match_data.clear()
                 current_player = None
@@ -881,8 +881,8 @@ class SBBTracker(QMainWindow):
             place = player.place if int(player.health) <= 0 else "1"
             self.player_stats.update_stats(starting_hero, asset_utils.get_card_name(player.heroid),
                                            place, player.mmr, session_id)
-            if "combat-info" in match_data:
-                self.player_stats.save_combats(match_data["combat-info"], session_id)
+            if match_data:
+                self.player_stats.save_match_info(match_data, session_id)
             self.match_history.update_history_table()
             self.match_history.update_stats_table()
             if settings.get(settings.streamable_score_list):
@@ -918,8 +918,7 @@ class SBBTracker(QMainWindow):
     def export_last_comp(self):
         if self.most_recent_combat:
             with open(paths.sbbtracker_folder.joinpath("last_combat.json"), "w") as file:
-                # json.dump(from_state(asset_utils.replace_template_ids(self.most_recent_combat)),
-                json.dump(self.most_recent_combat,
+                json.dump(from_state(asset_utils.replace_template_ids(self.most_recent_combat)),
                           file, default=lambda o: o.__dict__)
 
     def open_url(self, url_string: str):

@@ -3,6 +3,7 @@ import json
 import logging
 import sys
 import os
+from collections import namedtuple
 from pathlib import Path
 
 if getattr(sys, 'frozen', False):

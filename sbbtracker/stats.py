@@ -220,10 +220,10 @@ class PlayerStats:
                 progress_handler(i, len(sorted_by_recent) - 1)
                 i += 1
 
-    def save_combats(self, combat_info, session_id):
+    def save_match_info(self, match_info, session_id):
         match_file = paths.matches_dir.joinpath(f"{session_id}.json")
         with open(match_file, 'w') as f:
-            json.dump(combat_info, f)
+            json.dump(match_info, f)
 
 
 def extract_endgame_stats_from_record_file(filename):
