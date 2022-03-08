@@ -918,8 +918,7 @@ class SBBTracker(QMainWindow):
     def export_last_comp(self):
         if self.most_recent_combat:
             with open(paths.sbbtracker_folder.joinpath("last_combat.json"), "w") as file:
-                # json.dump(from_state(asset_utils.replace_template_ids(self.most_recent_combat)),
-                json.dump(self.most_recent_combat,
+                json.dump(from_state(asset_utils.replace_template_ids(self.most_recent_combat)),
                           file, default=lambda o: o.__dict__)
 
     def open_url(self, url_string: str):
