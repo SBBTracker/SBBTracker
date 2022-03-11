@@ -1,5 +1,6 @@
 import operator
 
+from PySide6 import QtGui
 from PySide6.QtCore import QPoint, QRect, QSize, Qt, Signal
 from PySide6.QtGui import QFont, QGuiApplication, QPainter, QPixmap
 from PySide6.QtWidgets import (
@@ -287,8 +288,10 @@ class OverlayWindow(QMainWindow):
             widget.setStyleSheet(style)
 
         alpha = (100 - settings.get(settings.simulator_transparency, 0)) / 100
-        style = f"background-color: rgba({default_bg_color_rgb}, {alpha}); font-size: 17px"
+        scale = settings.get(settings.simulator_scale) / 100
+        style = f"background-color: rgba({default_bg_color_rgb}, {alpha}); font-size: {17*scale}px"
         self.simulation_stats.setStyleSheet(style)
+        self.simulation_stats.resize(400 * scale, 75 * scale)
 
     def toggle_transparency(self):
         if settings.get(settings.streaming_mode):
@@ -336,9 +339,8 @@ class SimStatWidget(QFrame):
         layout.addWidget(value, alignment=Qt.AlignHCenter)
         layout.setSpacing(20)
         title.setAttribute(Qt.WA_TranslucentBackground)
-        title.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
+        title.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         value.setAttribute(Qt.WA_TranslucentBackground)
-        self.setFixedWidth(80)
         self.setStyleSheet("background-color: rgba(0,0,0,0%);")
 
 
@@ -425,6 +427,8 @@ class SimulatorStats(MovableWidget):
         label_layout.setRowStretch(1, 1)
         label_layout.setContentsMargins(0, 0, 0, 0)
 
+        self.label_layout = label_layout
+
     def reset_chances(self):
         self.win_dmg = "-"
         self.win = "-"
@@ -460,6 +464,14 @@ class SimulatorStats(MovableWidget):
         self.tie_label.setText(self.tie)
         self.loss_dmg_label.setText(self.loss_dmg)
         self.displayable = True
+
+    def resizeEvent(self, event:QtGui.QResizeEvent):
+        w = event.size().width()
+        h = event.size().height()
+
+        for child in self.label_layout.findChildren(SimStatWidget):
+            child.setMinimumWidth(80 * 400 / w)
+            child.setMinimumHeight(h)
 
 
 class TurnDisplay(MovableWidget):

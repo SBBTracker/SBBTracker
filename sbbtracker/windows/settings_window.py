@@ -1,5 +1,6 @@
 import re
 
+import PySide6
 from PySide6.QtCore import QThread, Signal
 from PySide6.QtGui import QIcon, QIntValidator, Qt
 from PySide6.QtWidgets import QCheckBox, QComboBox, QFormLayout, QFrame, QHBoxLayout, QLabel, QLineEdit, QMainWindow, \
@@ -25,11 +26,19 @@ class ImportThread(QThread):
         self.player_stats.import_matches(self.update_progress.emit)
 
 
+class NoScrollSlider(QSlider):
+    def __init__(self, *args):
+        super().__init__(*args)
+
+    def wheelEvent(self, e:PySide6.QtGui.QWheelEvent):
+        pass
+
+
 class SliderCombo(QWidget):
     def __init__(self, minimum, maximum, default, step=1):
         super().__init__()
         slider_editor = QHBoxLayout(self)
-        self.slider = QSlider(Qt.Horizontal)
+        self.slider = NoScrollSlider(Qt.Horizontal)
         self.editor = QLineEdit()
         self.slider.setMaximum(maximum)
         self.slider.setMinimum(minimum)
@@ -212,6 +221,7 @@ and Lunco
         self.num_sims_silder = SliderCombo(100, 10000, settings.get(settings.number_simulations, 1000))
         self.num_threads_slider = SliderCombo(1, 4, settings.get(settings.number_threads))
         self.simulator_transparency_slider = SliderCombo(0, 100, settings.get(settings.simulator_transparency))
+        self.simulator_scale_slider = SliderCombo(80, 120, settings.get(settings.simulator_scale))
         enable_comps = SettingsCheckbox(settings.enable_comps)
         enable_comps.setEnabled(enable_overlay_checkbox.checkState())
 
@@ -220,6 +230,7 @@ and Lunco
         simulator_section.addRow("Number of threads", self.num_threads_slider)
         simulator_section.addRow(QLabel("More threads = faster simulation but takes more computing power"))
         simulator_section.addRow("Adjust simulator transparency", self.simulator_transparency_slider)
+        simulator_section.addRow("Simulator scale", self.simulator_scale_slider)
         overlay_layout.addWidget(simulator_section)
         # Comps
         comps_section = SettingSection("Board Comps")
@@ -307,6 +318,7 @@ and Lunco
         settings.set_(settings.live_palette, self.graph_color_chooser.currentText())
         settings.set_(settings.boardcomp_transparency, self.comp_transparency_slider.get_value())
         settings.set_(settings.simulator_transparency, self.simulator_transparency_slider.get_value())
+        settings.set_(settings.simulator_scale, max(self.simulator_scale_slider.get_value(), 80))
         settings.set_(settings.number_threads, self.num_threads_slider.get_value())
         settings.set_(settings.number_simulations, self.num_sims_silder.get_value())
         settings.set_(settings.stream_overlay_color, self.stream_overlay_color.editor.text())
