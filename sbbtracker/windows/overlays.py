@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
 )
 
 from sbbtracker import settings
+from sbbtracker.languages import tr
 from sbbtracker.utils import asset_utils, sbb_logic_utils
 from sbbtracker.utils.sbb_logic_utils import round_to_xp
 from sbbtracker.windows.board_comps import BoardComp
@@ -145,7 +146,7 @@ class OverlayWindow(QMainWindow):
         self.set_transparency()
         self.update_comp_scaling()
 
-        self.show_button = QPushButton("Show Tracker", main_widget)
+        self.show_button = QPushButton(tr("Show Tracker"), main_widget)
         self.show_button.clicked.connect(self.show_hide_main_window)
         self.show_button.move(40, 40)
         self.show_button.resize(self.show_button.sizeHint().width(), self.show_button.sizeHint().height())
@@ -158,10 +159,10 @@ class OverlayWindow(QMainWindow):
     def show_hide_main_window(self):
         if self.show_hide:
             self.main_window.setWindowState(Qt.WindowState.WindowActive)
-            self.show_button.setText("Hide Tracker")
+            self.show_button.setText(tr("Hide Tracker"))
         else:
             self.main_window.showMinimized()
-            self.show_button.setText("Show Tracker")
+            self.show_button.setText(tr("Show Tracker"))
         self.show_hide = not self.show_hide
 
     def visible_in_bg(self, visible):
@@ -491,7 +492,7 @@ class TurnDisplay(MovableWidget):
         layout = QHBoxLayout(self)
         frame = QFrame(self)
         frame_layout = QHBoxLayout(frame)
-        self.label = QLabel("Turn 0 (0.0)", frame)
+        self.label = QLabel("Turn {0} ({1})".format(0, 0.0), frame)
         self.label.setStyleSheet("background-color: rgba(0,0,0,0%);")
         self.label.setFont(QFont("Roboto", int(settings.get(settings.turn_display_font_size))))
         layout.addWidget(frame)
@@ -530,7 +531,7 @@ class StreamableMatchDisplay(QMainWindow):
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnBottomHint)
         self.setWindowTitle("SBBTracker Scores")
         self.scores = settings.get(settings.streamable_scores)
-        self.label = QLabel("Scores:")
+        self.label = QLabel(tr("Scores:"))
         self.label.setStyleSheet("QLabel { font-size: 50px; background-color: #00FFFF;}")
         self.setCentralWidget(self.label)
         self.update_label()
@@ -541,7 +542,7 @@ class StreamableMatchDisplay(QMainWindow):
         self.update_label()
 
     def update_label(self):
-        display_text = "Scores: "
+        display_text = tr("Scores:") + " "
         max_scores = settings.get(settings.streamable_score_max_len)
         for i in range(0, len(self.scores)):
             score = self.scores[i]

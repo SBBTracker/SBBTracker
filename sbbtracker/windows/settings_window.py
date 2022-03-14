@@ -11,6 +11,7 @@ from PySide6.QtWidgets import QCheckBox, QComboBox, QFormLayout, QFrame, QHBoxLa
     QWidget
 
 from sbbtracker import graphs, languages, settings, stats, version
+from sbbtracker.languages import tr
 from sbbtracker.utils import asset_utils
 from sbbtracker.windows.constants import primary_color
 
@@ -117,8 +118,8 @@ class SettingsWindow(QMainWindow):
         advanced_tab = QWidget()
         streaming_tab = QWidget()
         settings_tabs = QTabWidget()
-        settings_tabs.addTab(general_settings, "General")
-        settings_tabs.addTab(data_tab, "Data")
+        settings_tabs.addTab(general_settings, tr("General"))
+        settings_tabs.addTab(data_tab, tr("Data"))
         settings_tabs.addTab(overlay_settings_scroll, "Overlay")
         settings_tabs.addTab(advanced_tab, "Advanced")
         settings_tabs.addTab(streaming_tab, "Streaming")
@@ -169,20 +170,20 @@ and Lunco
 
         save_stats_checkbox.stateChanged.connect(lambda state: matchmaking_only_checkbox.setEnabled(bool(state)))
 
-        general_layout.addRow("Language", language_select)
-        general_layout.addRow("Save match results", save_stats_checkbox)
-        general_layout.addRow("Ignore practice and group lobbies", matchmaking_only_checkbox)
-        general_layout.addRow("Graph color palette", self.graph_color_chooser)
+        general_layout.addRow(tr("Language"), language_select)
+        general_layout.addRow(tr("Save match results"), save_stats_checkbox)
+        general_layout.addRow(tr("Ignore practice and group lobbies"), matchmaking_only_checkbox)
+        general_layout.addRow(tr("Graph color palette"), self.graph_color_chooser)
 
         data_layout = QFormLayout(data_tab)
-        export_button = QPushButton("Export Stats")
+        export_button = QPushButton(tr("Export Stats"))
         export_button.clicked.connect(main_window.export_csv)
-        delete_button = QPushButton("Delete Stats")
+        delete_button = QPushButton(tr("Delete Stats"))
         delete_button.clicked.connect(lambda: main_window.delete_stats(self))
-        self.last_backed_up = QLabel(f"Last backed up on: {stats.most_recent_backup_date()}")
-        backup_button = QPushButton("Backup Stats")
+        self.last_backed_up = QLabel(tr("Last backup date") + f":{stats.most_recent_backup_date()}")
+        backup_button = QPushButton(tr("Backup Stats"))
         backup_button.clicked.connect(self.backup)
-        reimport_button = QPushButton("Reimport Stats")
+        reimport_button = QPushButton(tr("Reimport Stats"))
         reimport_button.setDisabled(True)
         reimport_button.clicked.connect(self.import_stats)
 
@@ -191,16 +192,15 @@ and Lunco
         data_layout.addRow(self.last_backed_up, backup_button)
         data_layout.addWidget(export_button)
         data_layout.addWidget(delete_button)
-        data_layout.addWidget(QLabel("Reimporting is temporarily disabled."))
+        data_layout.addWidget(QLabel(tr("Reimporting is temporarily disabled")))
         data_layout.addWidget(reimport_button)
-        data_layout.addRow("Upload matches to sbbtracker.com", enable_upload)
-        data_layout.addWidget(QLabel("Match uploads include your steam name, sbb id, board comps,"
-                                     "placement, and change in mmr."))
+        data_layout.addRow(tr("Upload matches to sbbtracker.com"), enable_upload)
+        data_layout.addWidget(QLabel(tr("Match uploads include your steam name, sbb id, board comps,placement, and change in mmr.")))
 
         overlay_layout = QVBoxLayout(overlay_settings)
 
         # General Overlay
-        general_overlay_section = SettingSection("General")
+        general_overlay_section = SettingSection(tr("General"))
 
         hide_overlay_in_bg_checkbox = SettingsCheckbox(settings.hide_overlay_in_bg)
 
@@ -215,13 +215,13 @@ and Lunco
         windows_scaling.setEnabled(enable_overlay_checkbox.checkState())
         enable_overlay_checkbox.stateChanged.connect(lambda state: windows_scaling.setEnabled(bool(state)))
 
-        general_overlay_section.addRow("Enable overlay (does not work in fullscreen)", enable_overlay_checkbox)
-        general_overlay_section.addRow("Hide if SBB in background (restart to take effect)", hide_overlay_in_bg_checkbox)
-        general_overlay_section.addRow("Enable \"Show Tracker\" button", show_tracker_button_checkbox)
-        general_overlay_section.addRow("Ignore windows scaling (Windows 8 compat)", windows_scaling)
+        general_overlay_section.addRow(tr("Enable overlay"), enable_overlay_checkbox)
+        general_overlay_section.addRow(tr("Hide if SBB in background (restart to take effect)"), hide_overlay_in_bg_checkbox)
+        general_overlay_section.addRow(tr("Enable 'Show Tracker' button"), show_tracker_button_checkbox)
+        general_overlay_section.addRow(tr("Ignore windows scaling (Windows 8 compatability)"), windows_scaling)
         overlay_layout.addWidget(general_overlay_section)
         # Simulator
-        simulator_section = SettingSection("Simulator")
+        simulator_section = SettingSection(tr("Simulator"))
         enable_sim_checkbox = SettingsCheckbox(settings.enable_sim)
         enable_sim_checkbox.setEnabled(enable_overlay_checkbox.checkState())
         enable_overlay_checkbox.stateChanged.connect(lambda state: enable_sim_checkbox.setEnabled(bool(state)))
@@ -233,24 +233,24 @@ and Lunco
         enable_comps = SettingsCheckbox(settings.enable_comps)
         enable_comps.setEnabled(enable_overlay_checkbox.checkState())
 
-        simulator_section.addRow("Enable simulator", enable_sim_checkbox)
-        simulator_section.addRow("Number of simulations", self.num_sims_silder)
-        simulator_section.addRow("Number of threads", self.num_threads_slider)
-        simulator_section.addRow(QLabel("More threads = faster simulation but takes more computing power"))
-        simulator_section.addRow("Adjust simulator transparency", self.simulator_transparency_slider)
-        simulator_section.addRow("Simulator scale", self.simulator_scale_slider)
+        simulator_section.addRow(tr("Enable simulator"), enable_sim_checkbox)
+        simulator_section.addRow(tr("Number of simulations"), self.num_sims_silder)
+        simulator_section.addRow(tr("Number of threads"), self.num_threads_slider)
+        simulator_section.addRow(QLabel(tr("More threads = faster simulation but takes more computing power")))
+        simulator_section.addRow(tr("Adjust simulator transparency"), self.simulator_transparency_slider)
+        simulator_section.addRow(tr("Simulator scale"), self.simulator_scale_slider)
         overlay_layout.addWidget(simulator_section)
         # Comps
-        comps_section = SettingSection("Board Comps")
+        comps_section = SettingSection(tr("Board Comps"))
         enable_overlay_checkbox.stateChanged.connect(lambda state: enable_comps.setEnabled(bool(state)))
         self.comp_transparency_slider = SliderCombo(0, 100, settings.get(settings.boardcomp_transparency))
         self.overlay_comps_scaling = SliderCombo(50, 200, settings.get(settings.overlay_comps_scaling))
-        comps_section.addRow("Enable board comps", enable_comps)
-        comps_section.addRow("Board comps scaling", self.overlay_comps_scaling)
-        comps_section.addRow("Adjust comps transparency", self.comp_transparency_slider)
+        comps_section.addRow(tr("Enable board comps"), enable_comps)
+        comps_section.addRow(tr("Board comps scaling"), self.overlay_comps_scaling)
+        comps_section.addRow(tr("Adjust comps transparency"), self.comp_transparency_slider)
         overlay_layout.addWidget(comps_section)
         # Turn Display
-        turn_section = SettingSection("Turn Display")
+        turn_section = SettingSection(tr("Turn Display"))
         enable_turn_display = SettingsCheckbox(settings.enable_turn_display)
         enable_turn_display.setEnabled(enable_overlay_checkbox.checkState())
         enable_overlay_checkbox.stateChanged.connect(lambda state: enable_turn_display.setEnabled(bool(state)))
@@ -262,18 +262,18 @@ and Lunco
             lambda text: settings.set_(settings.turn_display_font_size, text) if text != '' else None)
 
         self.turn_transparency = SliderCombo(0, 100, settings.get(settings.turn_display_transparency))
-        turn_section.addRow("Enable turn display", enable_turn_display)
-        turn_section.addRow("Turn font size (restart to resize)", turn_display_font)
-        turn_section.addRow("Turn transparency", self.turn_transparency)
+        turn_section.addRow(tr("Enable turn display"), enable_turn_display)
+        turn_section.addRow(tr("Turn font size (restart to resize)"), turn_display_font)
+        turn_section.addRow(tr("Turn transparency"), self.turn_transparency)
         overlay_layout.addWidget(turn_section)
 
         advanced_layout = QFormLayout(advanced_tab)
         enable_export_comp_checkbox = SettingsCheckbox(settings.export_comp_button)
         show_id_mode = SettingsCheckbox(settings.show_ids)
         show_id_window = SettingsCheckbox(settings.show_id_window)
-        advanced_layout.addRow("Enable export last comp button", enable_export_comp_checkbox)
-        advanced_layout.addRow("Hide art and show template ids", show_id_mode)
-        advanced_layout.addRow("Enable ID window", show_id_window)
+        advanced_layout.addRow(tr("Enable export last comp button"), enable_export_comp_checkbox)
+        advanced_layout.addRow(tr("Hide art and show template ids"), show_id_mode)
+        advanced_layout.addRow(tr("Enable ID window"), show_id_window)
 
         streaming_layout = QFormLayout(streaming_tab)
         enable_stream_overlay = QCheckBox()
@@ -290,29 +290,29 @@ and Lunco
         self.max_scores.setText(str(settings.get(settings.streamable_score_max_len)))
         self.max_scores.setValidator(QIntValidator(1, 50))
 
-        reset_scores = QPushButton("Reset")
+        reset_scores = QPushButton(tr("Reset"))
         reset_scores.clicked.connect(main_window.streamable_scores.reset)
 
-        streaming_layout.addRow("Show capturable score window", streamable_score)
-        streaming_layout.addRow("Number of scores per line", self.max_scores)
-        streaming_layout.addRow("Reset scores", reset_scores)
-        streaming_layout.addRow(QLabel("Chroma-key filter #00FFFF to hide the scores background"))
+        streaming_layout.addRow(tr("Show capturable score window"), streamable_score)
+        streaming_layout.addRow(tr("Number of scores per line"), self.max_scores)
+        streaming_layout.addRow(tr("Reset scores"), reset_scores)
+        streaming_layout.addRow(QLabel(tr("Chroma-key filter #00FFFF to hide the scores background")))
         streaming_layout.addRow(QLabel(""))
         streaming_layout.addRow("Show capturable overlay window", enable_stream_overlay)
         streaming_layout.addRow("Background color", self.stream_overlay_color)
         streaming_layout.addRow(QLabel("Enabling this will add a copy of the overlay behind your other windows."))
         streaming_wiki_link = QLabel(
             "<a href=\"https://github.com/SBBTracker/SBBTracker/wiki/Streaming-Settings-Guide\" style=\"color: "
-            f"{primary_color};\">Wiki guide here</a>")
+            f"{primary_color};\">{tr('Wiki guide here')}</a>")
         streaming_wiki_link.setTextFormat(Qt.RichText)
         streaming_wiki_link.setTextInteractionFlags(Qt.TextBrowserInteraction)
         streaming_wiki_link.setOpenExternalLinks(True)
         streaming_layout.addRow(streaming_wiki_link)
 
         save_close_layout = QHBoxLayout()
-        self.save_button = QPushButton("Save")
+        self.save_button = QPushButton(tr("Save"))
         self.save_button.clicked.connect(self.save)
-        close_button = QPushButton("Cancel")
+        close_button = QPushButton(tr("Cancel"))
         close_button.clicked.connect(self.hide)
         save_close_layout.addStretch()
         save_close_layout.addWidget(self.save_button)
@@ -364,7 +364,7 @@ and Lunco
         self.main_window.export_comp_action.setVisible(settings.get(settings.export_comp_button))
 
     def import_stats(self):
-        message = """
+        message = tr("""
 Would you like to import your old games? This is done by 
 reading the record files generated by the game. This will 
 import games going back to Dec 14 2021 (assuming you have not
@@ -381,12 +381,12 @@ The importer may take a long time to complete. Please be patient.
 
 
 
-"""
-        reply = QMessageBox.question(self, "Reimport Stats?", message)
+""")
+        reply = QMessageBox.question(self, tr("Reimport Stats?"), message)
         if reply == QMessageBox.Yes:
             self.import_thread = ImportThread(self.main_window.player_stats)
-            self.progress = QProgressDialog("Import progress", "Cancel", 0, 100, self)
-            self.progress.setWindowTitle("Importer")
+            self.progress = QProgressDialog(tr("Import progress"), tr("Cancel"), 0, 100, self)
+            self.progress.setWindowTitle(tr("Importer"))
             self.import_thread.update_progress.connect(self.handle_import_progress)
             self.import_thread.start()
             self.progress.canceled.connect(self.import_thread.terminate)
@@ -395,7 +395,7 @@ The importer may take a long time to complete. Please be patient.
 
     def backup(self):
         stats.backup_stats(force=True)
-        self.last_backed_up.setText(f"Last backed up on: {stats.most_recent_backup_date()}")
+        self.last_backed_up.setText(tr("Last backup date") + f": {stats.most_recent_backup_date()}")
 
     def handle_import_progress(self, num, totalsize):
         import_percent = num * 100 / totalsize

@@ -5,12 +5,14 @@ import matplotlib
 import numpy as np
 import pandas as pd
 
+from sbbtracker.languages import tr
+
 matplotlib.use("Qt5Agg")
 from matplotlib import pyplot as plt
 from matplotlib.ticker import MaxNLocator
 
-matches_per_hero = "Matches per Hero"
-mmr_change = "MMR Graph"
+matches_per_hero = tr("Matches per Hero")
+mmr_change = tr("MMR Graph")
 color_palettes = {
     'paired':  ['#a6cee3', '#1f78b4', '#b2df8a', '#33a02c', '#fb9a99', '#e31a1c', '#fdbf6f', '#ff7f00'],
     'set':     ['#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00', '#ffff33', '#a65628', '#f781bf'],
@@ -151,9 +153,9 @@ def mmr_graph(df: pd.DataFrame, ax, mmr_range):
     timeseries = range(1, len(data) + 1)
     plt.axhline(y=0, color='w', linewidth=2.0)
     ax.plot(timeseries, data, linewidth=3.0)
-    ax.set_ylabel("Cumulative MMR")
-    ax.set_xlabel("Games")
-    ax.set_title(f"Cumulative MMR over last {mmr_range} games")
+    ax.set_ylabel(tr("Cumulative MMR"))
+    ax.set_xlabel(tr("Games"))
+    ax.set_title(tr("Cumulative MMR over last {0} games").format(mmr_range))
     # ax.set_xticks(range(1, 21))
 
     return plt.gcf()

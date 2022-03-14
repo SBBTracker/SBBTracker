@@ -5,6 +5,7 @@ from PySide6.QtGui import QBrush, QColor, QFont, QFontMetrics, QPainter, QPainte
 from PySide6.QtWidgets import QWidget
 
 from sbbtracker import paths, settings
+from sbbtracker.languages import tr
 from sbbtracker.utils import asset_utils
 
 art_dim = (161, 204)
@@ -162,15 +163,14 @@ class BoardComp(QWidget):
         last_seen_text = ""
         if self.last_seen is not None:
             if self.last_seen == 0:
-                last_seen_text = "Last seen just now"
+                last_seen_text = tr("Last seen just now")
             elif self.last_seen > 0:
-                last_seen_text = f"Last seen {self.current_round - self.last_seen}"
                 if self.current_round - self.last_seen == 1:
-                    last_seen_text += " turn ago"
+                    last_seen_text += tr("Last seen 1 turn ago")
                 else:
-                    last_seen_text += " turns ago"
+                    last_seen_text += tr("Last seen {0} turns ago").format(self.current_round - self.last_seen)
         else:
-            last_seen_text = "Not yet seen"
+            last_seen_text = tr("Not yet seen")
         painter.setPen(QPen(QColor("white"), 1))
         seen_font = QFont("Roboto")
         seen_font.setPixelSize(20)

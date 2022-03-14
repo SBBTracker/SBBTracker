@@ -151,7 +151,7 @@ class SimulationThread(QThread):
                     logging.exception("Error in simulation!")
                     with open(paths.sbbtracker_folder.joinpath("error_board.json"), "w") as file:
                         json.dump(from_stated, file, default=lambda o: o.__dict__)
-                    self.error_simulation.emit("Error in simulation!", round_number)
+                    self.error_simulation.emit(tr("Error in simulation!"), round_number)
 
                 logging.debug(from_stated)
 
@@ -180,7 +180,7 @@ class SimulationThread(QThread):
 
                     self.end_simulation.emit(win_percent, tie_percent, loss_percent, win_dmg, loss_dmg, round_number)
             else:
-                self.error_simulation.emit("Couldn't get player id (try reattaching)", round_number)
+                self.error_simulation.emit(tr("Couldn't get player id (try reattaching)"), round_number)
             time.sleep(1)
 
 
@@ -284,7 +284,7 @@ class SBBTracker(QMainWindow):
 
         self.setWindowTitle("SBBTracker")
         self.comps = [BoardComp() for _ in range(0, 8)]
-        self.round_indicator = QLabel("Waiting for match to start...")
+        self.round_indicator = QLabel(tr("Waiting for match to start..."))
         self.round_indicator.setFont(round_font)
         self.player_stats = stats.PlayerStats()
         self.player_ids = []
@@ -309,7 +309,7 @@ class SBBTracker(QMainWindow):
         for index in range(len(self.comps)):
             self.comp_tabs.addTab(self.comps[index], f"Player{index}")
 
-        self.reset_button = QPushButton("Reattach to Storybook Brawl")
+        self.reset_button = QPushButton(tr("Reattach to Storybook Brawl"))
         self.reset_button.setMaximumWidth(self.reset_button.fontMetrics().boundingRect("Reattach to Storybook Brawl")
                                           .width() * 2)
         self.reset_button.clicked.connect(self.reattach_to_log)
@@ -328,35 +328,35 @@ class SBBTracker(QMainWindow):
         self.stats_graph = StatsGraph(self.player_stats)
 
         main_tabs = QTabWidget()
-        main_tabs.addTab(comps_widget, "Board Comps")
-        main_tabs.addTab(self.live_graphs, "Live Graphs")
-        main_tabs.addTab(self.match_history, "Match History")
-        main_tabs.addTab(self.stats_graph, "Stats Graphs")
+        main_tabs.addTab(comps_widget, tr("Board Comps"))
+        main_tabs.addTab(self.live_graphs, tr("Live Graphs"))
+        main_tabs.addTab(self.match_history, tr("Match History"))
+        main_tabs.addTab(self.stats_graph, tr("Stats Graphs"))
 
         toolbar = QToolBar(self)
         toolbar.setMinimumHeight(40)
         toolbar.setStyleSheet("QToolBar {border-bottom: none; border-top: none;}")
-        discord_action = QAction(QPixmap(asset_utils.get_asset("icons/discord.png")), "&Join our Discord", self)
+        discord_action = QAction(QPixmap(asset_utils.get_asset("icons/discord.png")), "&"+tr("Join our Discord"), self)
         # toolbar.insertAction(toolbar.minimize, discord_action)
         toolbar.addAction(discord_action)
         discord_action.triggered.connect(self.open_discord)
 
-        bug_action = QAction(QPixmap(asset_utils.get_asset("icons/bug_report.png")), "&Report a bug", self)
+        bug_action = QAction(QPixmap(asset_utils.get_asset("icons/bug_report.png")), "&"+tr("Report a bug"), self)
         toolbar.insertAction(discord_action, bug_action)
         bug_action.triggered.connect(self.open_issues)
 
         self.settings_window = SettingsWindow(self)
-        settings_action = QAction(QPixmap(asset_utils.get_asset("icons/settings.png")), "&Settings", self)
+        settings_action = QAction(QPixmap(asset_utils.get_asset("icons/settings.png")), "&"+tr("Settings"), self)
         toolbar.insertAction(bug_action, settings_action)
         settings_action.triggered.connect(self.settings_window.show)
 
         self.export_comp_action = QAction(QPixmap(asset_utils.get_asset("icons/file-export.png")),
-                                          "&Export last combat", self)
+                                          "&"+tr("Export last combat"), self)
         toolbar.insertAction(bug_action, self.export_comp_action)
         self.export_comp_action.triggered.connect(self.export_last_comp)
         self.export_comp_action.setVisible(settings.get(settings.export_comp_button))
 
-        patch_notes_action = QAction(QPixmap(asset_utils.get_asset("icons/information.png")), "&Patch Notes", self)
+        patch_notes_action = QAction(QPixmap(asset_utils.get_asset("icons/information.png")), "&"+tr("Patch Notes"), self)
         toolbar.insertAction(self.export_comp_action, patch_notes_action)
         patch_notes_action.triggered.connect(self.show_patch_notes)
 
@@ -366,13 +366,13 @@ class SBBTracker(QMainWindow):
         self.update_banner.setMinimumHeight(40)
         self.update_banner.setStyleSheet(
             f"QToolBar {{border-bottom: none; border-top: none; background: {primary_color};}}")
-        update_text = QLabel("    An update is available! Would you like to install?    ")
+        update_text = QLabel(tr("    An update is available! Would you like to install?    "))
         update_text.setStyleSheet(f"QLabel {{ color : {default_bg_color}; }}")
         self.update_banner.addWidget(update_text)
 
-        yes_update = QAction("&Yes", self)
+        yes_update = QAction("&"+tr("Yes"), self)
         yes_update.triggered.connect(self.install_update)
-        no_update = QAction("&Remind me later", self)
+        no_update = QAction("&"+tr("Remind me later"), self)
         no_update.triggered.connect(self.update_banner.hide)
         self.update_banner.addAction(yes_update)
         self.update_banner.addAction(no_update)
@@ -474,7 +474,7 @@ class SBBTracker(QMainWindow):
         title = f"{real_hero_name}"
         if player.health <= 0:
             self.comp_tabs.tabBar().setTabTextColor(index, "red")
-            title += " *DEAD*"
+            title += tr(" *DEAD*")
         self.comp_tabs.tabBar().setTabText(index, title)
         comp = self.get_comp(index)
         comp.player = player
@@ -568,7 +568,7 @@ class SBBTracker(QMainWindow):
     def open_url(self, url_string: str):
         url = QUrl(url_string)
         if not QDesktopServices.openUrl(url):
-            QMessageBox.warning(self, 'Open Url', 'Could not open url')
+            QMessageBox.warning(self, tr('Open Url'), tr('Could not open url'))
 
     def open_discord(self):
         self.open_url('https://discord.com/invite/2AJctfj239')
@@ -600,10 +600,10 @@ class SBBTracker(QMainWindow):
     def install_update(self):
         if paths.os_name == "Windows":
             dialog = QDialog(self)
-            dialog.setWindowTitle("Updater")
+            dialog.setWindowTitle(tr("Updater"))
             dialog_layout = QVBoxLayout(dialog)
             self.download_progress = QProgressBar(dialog)
-            dialog_layout.addWidget(QLabel("Downloading update..."))
+            dialog_layout.addWidget(QLabel(tr("Downloading update...")))
             dialog_layout.addWidget(self.download_progress)
             dialog.show()
             dialog.update()
@@ -634,7 +634,7 @@ class SBBTracker(QMainWindow):
             self.player_stats.export(Path(filepath))
 
     def delete_stats(self, window):
-        reply = QMessageBox.question(window, "Delete all Stats", "Do you want to delete *ALL* saved stats?")
+        reply = QMessageBox.question(window, tr("Delete all Stats"), tr("Do you want to delete *ALL* saved stats?"))
         if reply == QMessageBox.Yes:
             self.player_stats.delete()
             self.match_history.update_history_table()
@@ -669,9 +669,10 @@ class MatchHistory(QWidget):
         self.display_starting_hero = 0
         self.filter_ = settings.get(settings.filter_)
         if self.filter_ not in default_dates:
-            self.filter_ = "All Matches"
+            self.filter_ = tr("All Matches")
             settings.set_(settings.filter_, self.filter_)
-        self.match_history_table.setHorizontalHeaderLabels(["Starting Hero", "Ending Hero", "Place", "+/- MMR"])
+        self.match_history_table.setHorizontalHeaderLabels([tr("Starting Hero"), tr("Ending Hero"), tr("Place"),
+                                                            tr("+/- MMR")])
         self.match_history_table.setColumnWidth(0, 140)
         self.match_history_table.setColumnWidth(1, 140)
         self.match_history_table.setColumnWidth(2, 80)
@@ -683,7 +684,7 @@ class MatchHistory(QWidget):
 
         def history_menu(position):
             menu = QMenu()
-            delete_action = menu.addAction("Delete")
+            delete_action = menu.addAction(tr("Delete"))
             action = menu.exec(self.match_history_table.mapToGlobal(position))
             if action == delete_action:
                 self.player_stats.delete_entry(self.match_history_table.itemAt(position).row() +
@@ -720,7 +721,7 @@ class MatchHistory(QWidget):
         stats_widget = QWidget()
         stats_layout = QVBoxLayout(stats_widget)
         self.stats_table = QTableWidget(asset_utils.get_num_heroes() + 1, 6)
-        self.stats_table.setHorizontalHeaderLabels(stats.headings)
+        self.stats_table.setHorizontalHeaderLabels([tr(heading) for heading in stats.headings])
         self.stats_table.setColumnWidth(0, 130)
         self.stats_table.setColumnWidth(1, 115)
         self.stats_table.setColumnWidth(2, 115)
@@ -743,7 +744,7 @@ QTabBar::tab:right{
 
         filter_widget = QWidget()
         self.toggle_hero = QComboBox()
-        hero_types = ["Starting Heroes", "Ending Heroes"]
+        hero_types = [tr("Starting Heroes"), tr("Ending Heroes")]
         self.toggle_hero.activated.connect(self.toggle_heroes)
         self.toggle_hero.addItems(hero_types)
         self.filter_combo = QComboBox()
@@ -828,8 +829,8 @@ class LiveGraphs(QWidget):
         self.xp_ax = self.xp_canvas.figure.subplots()
 
         graphs_tabs = QTabWidget(self)
-        graphs_tabs.addTab(self.health_canvas, "Health Graph")
-        graphs_tabs.addTab(self.xp_canvas, "XP Graph")
+        graphs_tabs.addTab(self.health_canvas, tr("Health Graph"))
+        graphs_tabs.addTab(self.xp_canvas, tr("XP Graph"))
         self.layout.addWidget(graphs_tabs)
 
     def set_color_palette(self, palette):
@@ -870,7 +871,7 @@ class StatsGraph(QWidget):
         self.mmr_range.setMaximumWidth(200)
         self.mmr_range.addItems(["25", "50", "100"])
         self.mmr_range.activated.connect(self.update_mmr_range)
-        self.range_label = QLabel("Num Matches");
+        self.range_label = QLabel(tr("Num Matches"));
 
 
         self.range = 25
