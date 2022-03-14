@@ -1,17 +1,14 @@
+import concurrent.futures
 import calendar
 import concurrent.futures
 import datetime
 import json
 import logging
-import multiprocessing
-import operator
 import os
-import re
 import sys
 import threading
 import time
 import uuid
-import calendar
 from collections import defaultdict
 from datetime import date
 from pathlib import Path
@@ -22,6 +19,7 @@ import matplotlib
 import requests
 
 from sbbtracker import graphs, paths, settings, stats, updater, version
+from sbbtracker.languages import tr
 from sbbtracker.utils.sbb_logic_utils import round_to_xp
 from sbbtracker.windows.constants import default_bg_color, primary_color
 from sbbtracker.windows.overlays import BoardComp, OverlayWindow, StreamableMatchDisplay, StreamerOverlayWindow
@@ -30,26 +28,17 @@ from sbbtracker.windows.shop_display import ShopDisplay
 
 matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
-import numpy as np
 
-from PySide6.QtCore import QPoint, QRect, QSize, QThread, QUrl, Qt, Signal
-from PySide6.QtGui import QAction, QBrush, QColor, QDesktopServices, QFont, QFontMetrics, \
-    QGuiApplication, \
-    QIcon, \
-    QIntValidator, \
-    QPainter, QPainterPath, \
-    QPen, \
+from PySide6.QtCore import QSize, QThread, QUrl, Qt, Signal
+from PySide6.QtGui import QAction, QDesktopServices, QFont, QIcon, \
     QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView, QApplication,
-    QCheckBox, QComboBox, QDialog, QFileDialog, QFormLayout, QFrame,
-    QGridLayout, QHBoxLayout,
+    QComboBox, QDialog, QFileDialog, QHBoxLayout,
     QHeaderView,
     QLabel,
-    QLayout, QLineEdit, QMainWindow,
-    QMenu, QMessageBox, QProgressBar, QProgressDialog, QPushButton, QScrollArea, QSizePolicy, QSlider, QSplashScreen,
-    QStackedLayout,
-    QTabWidget,
+    QMainWindow,
+    QMenu, QMessageBox, QProgressBar, QPushButton, QSizePolicy, QTabWidget,
     QTableWidget,
     QTableWidgetItem,
     QToolBar,
@@ -77,15 +66,15 @@ def update_table(table: QTableWidget, data: list[list]):
             table.setItem(row, column, QTableWidgetItem(str(datum)))
 
 
-all_matches = "All Matches"
-latest_patch = "Latest Patch (68.9)"
-prev_patch = "Previous Patch (67.5)"
-today_ = "Today"
-yesterday = "Yesterday"
-last_7 = "Last 7 days"
-last_30 = "Last 30 days"
-this_month = "This month"
-last_month = "Last month"
+all_matches = tr("All Matches")
+latest_patch = tr("Latest Patch") + " (68.9)"
+prev_patch = tr("Previous Patch") + " (67.5)"
+today_ = tr("Today")
+yesterday = tr("Yesterday")
+last_7 = tr("Last 7 days")
+last_30 = tr("Last 30 days")
+this_month = tr("This month")
+last_month = tr("Last month")
 
 default_dates = [all_matches, latest_patch, prev_patch, today_, yesterday, last_7, last_30, this_month, last_month]
 
@@ -155,9 +144,9 @@ class SimulationThread(QThread):
                     simulation_stats = simulate(simulator_board, t=num_threads, k=int(num_simulations / num_threads),
                                                 timeout=60)
                 except SBBBSCrocException:
-                    self.error_simulation.emit("Captain Croc not supported", round_number)
+                    self.error_simulation.emit(tr("Captain Croc not supported"), round_number)
                 except concurrent.futures.TimeoutError:
-                    self.error_simulation.emit("Simulation timed out!", round_number)
+                    self.error_simulation.emit(tr("Simulation timed out!"), round_number)
                 except Exception:
                     logging.exception("Error in simulation!")
                     with open(paths.sbbtracker_folder.joinpath("error_board.json"), "w") as file:

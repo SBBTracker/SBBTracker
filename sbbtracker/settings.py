@@ -36,10 +36,10 @@ api_key = Setting("api-key", "")
 prompt_data_collection = Setting("prompt-data-collection", True)
 streamer_overlay_size = Setting("streamer-overlay-size", (0, 0))
 # general
+language = Setting("lang", "en")
 live_palette = Setting("live-palette", "paired")
 matchmaking_only = Setting("matchmaking-only", False)
 save_stats = Setting("save-stats", True)
-show_ids = Setting("show-ids", False)
 #data
 upload_data = Setting("upload-data", False)
 # overlay
@@ -69,6 +69,7 @@ streamable_score_max_len = Setting("streamable-score-max-len", 20)
 streamable_scores = Setting("streamable-scores", [])
 # advanced
 export_comp_button = Setting("export-comp-button", False)
+show_ids = Setting("show-ids", False)
 show_id_window = Setting("show-id-window", False)
 
 

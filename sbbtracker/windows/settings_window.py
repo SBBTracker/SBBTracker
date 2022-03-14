@@ -10,7 +10,7 @@ from PySide6.QtWidgets import QCheckBox, QComboBox, QFormLayout, QFrame, QHBoxLa
     QVBoxLayout, \
     QWidget
 
-from sbbtracker import graphs, settings, stats, version
+from sbbtracker import graphs, languages, settings, stats, version
 from sbbtracker.utils import asset_utils
 from sbbtracker.windows.constants import primary_color
 
@@ -149,6 +149,13 @@ and Lunco
 
         general_layout = QFormLayout(general_settings)
 
+        language_select = QComboBox()
+        language_select.addItems(languages.available_languages.keys())
+        lang_index = language_select.findText(settings.get(settings.language))
+        language_select.setCurrentIndex(lang_index)
+        language_select.activated.connect(lambda _: settings.set_(settings.language,
+                                                                  languages.available_languages[language_select.currentText()]))
+
         save_stats_checkbox = SettingsCheckbox(settings.save_stats)
 
         self.graph_color_chooser = QComboBox()
@@ -162,6 +169,7 @@ and Lunco
 
         save_stats_checkbox.stateChanged.connect(lambda state: matchmaking_only_checkbox.setEnabled(bool(state)))
 
+        general_layout.addRow("Language", language_select)
         general_layout.addRow("Save match results", save_stats_checkbox)
         general_layout.addRow("Ignore practice and group lobbies", matchmaking_only_checkbox)
         general_layout.addRow("Graph color palette", self.graph_color_chooser)
