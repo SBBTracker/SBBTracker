@@ -70,6 +70,8 @@ class LivePlayerStates:
     def to_json(self):
         return json.dumps(self.json_friendly(), separators=(',', ':'))
 
+# live graphs
+
 
 def live_health_graph(states: LivePlayerStates, ax, palette):
     players = states.get_ids()
@@ -120,6 +122,8 @@ def xp_graph(states: LivePlayerStates, ax, palette):
     ax.yaxis.set_major_locator(MaxNLocator(integer=True))
     return plt.gcf()
 
+# static graphs
+
 
 def hero_freq_graph(df: pd.DataFrame, ax):
     if len(df.index) > 0:
@@ -135,28 +139,28 @@ def hero_freq_graph(df: pd.DataFrame, ax):
             ind = range(max(matches) + 1)
             ax.invert_yaxis()
             ax.grid(axis='y')
-            ax.set_xticks(ind)
+            # ax.set_xticks(ind)
             ax.set_title("Matches per Hero")
 
     return plt.gcf()
 
 
-def mmr_graph(df: pd.DataFrame, ax):
-    mmrs = df["+/-MMR"].tail(20).values.astype(int)
+def mmr_graph(df: pd.DataFrame, ax, mmr_range):
+    mmrs = df["+/-MMR"].tail(mmr_range).values.astype(int)
     data = np.cumsum(mmrs)
     timeseries = range(1, len(data) + 1)
     plt.axhline(y=0, color='w', linewidth=2.0)
     ax.plot(timeseries, data, linewidth=3.0)
     ax.set_ylabel("Cumulative MMR")
     ax.set_xlabel("Games")
-    ax.set_title("Cumulative MMR over last 20 games")
-    ax.set_xticks(range(1, 21))
+    ax.set_title(f"Cumulative MMR over last {mmr_range} games")
+    # ax.set_xticks(range(1, 21))
 
     return plt.gcf()
 
 
-def stats_graph(df: pd.DataFrame, graph_type: str, ax):
+def stats_graph(df: pd.DataFrame, graph_type: str, ax, mmr_range=25):
     if graph_type == mmr_change:
-        return mmr_graph(df, ax)
+        return mmr_graph(df, ax, mmr_range)
     elif graph_type == matches_per_hero:
         return hero_freq_graph(df, ax)

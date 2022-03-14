@@ -874,10 +874,25 @@ class StatsGraph(QWidget):
         self.graph_selection.setMaximumWidth(200)
         self.graph_selection.addItems([graphs.matches_per_hero, graphs.mmr_change])
         self.graph_selection.activated.connect(self.update_graph)
+
         self.selection = graphs.mmr_change
 
+        self.mmr_range = QComboBox()
+        self.mmr_range.setMaximumWidth(200)
+        self.mmr_range.addItems(["25", "50", "100"])
+        self.mmr_range.activated.connect(self.update_mmr_range)
+        self.range_label = QLabel("Num Matches");
+
+
+        self.range = 25
+
         self.layout = QVBoxLayout(self)
-        self.layout.addWidget(self.graph_selection)
+        combo_layout = QHBoxLayout(self)
+        combo_layout.addWidget(self.graph_selection, alignment=Qt.AlignLeft)
+        combo_layout.addWidget(self.range_label, alignment=Qt.AlignRight)
+        combo_layout.addWidget(self.mmr_range, alignment=Qt.AlignLeft)
+        combo_layout.addStretch()
+        self.layout.addLayout(combo_layout)
         self.layout.addWidget(self.canvas)
 
         self.update_graph()
@@ -885,5 +900,11 @@ class StatsGraph(QWidget):
     def update_graph(self):
         self.selection = self.graph_selection.currentText()
         self.ax.cla()
-        self.figure = graphs.stats_graph(self.player_stats.df, self.selection, self.ax)
+        self.mmr_range.setVisible(self.selection == graphs.mmr_change)
+        self.range_label.setVisible(self.selection == graphs.mmr_change)
+        self.figure = graphs.stats_graph(self.player_stats.df, self.selection, self.ax, self.range)
         self.canvas.draw()
+
+    def update_mmr_range(self):
+        self.range = int(self.mmr_range.currentText())
+        self.update_graph()
