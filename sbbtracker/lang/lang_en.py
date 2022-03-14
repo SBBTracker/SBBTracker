@@ -4,7 +4,8 @@
 #     "This is text is in English": "Dieser Text ist auf Deutsch"
 #       ^ original text                translated text ^
 #
-#  If you see {0}, {1}, keep it in the translated sentance
+#  If you see {0}, {1}, keep it in the translated sentence
+
 lang = {
     "All Matches": "",
     "Latest Patch": "",
