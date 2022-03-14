@@ -253,8 +253,10 @@ and Lunco
         turn_display_font.textChanged.connect(
             lambda text: settings.set_(settings.turn_display_font_size, text) if text != '' else None)
 
+        self.turn_transparency = SliderCombo(0, 100, settings.get(settings.turn_display_transparency))
         turn_section.addRow("Enable turn display", enable_turn_display)
         turn_section.addRow("Turn font size (restart to resize)", turn_display_font)
+        turn_section.addRow("Turn transparency", self.turn_transparency)
         overlay_layout.addWidget(turn_section)
 
         advanced_layout = QFormLayout(advanced_tab)
@@ -319,10 +321,11 @@ and Lunco
         settings.set_(settings.boardcomp_transparency, self.comp_transparency_slider.get_value())
         settings.set_(settings.simulator_transparency, self.simulator_transparency_slider.get_value())
         settings.set_(settings.simulator_scale, max(self.simulator_scale_slider.get_value(), 80))
-        settings.set_(settings.number_threads, self.num_threads_slider.get_value())
+        settings.set_(settings.number_threads, max(self.num_threads_slider.get_value(), 4))
         settings.set_(settings.number_simulations, self.num_sims_silder.get_value())
         settings.set_(settings.stream_overlay_color, self.stream_overlay_color.editor.text())
         settings.set_(settings.overlay_comps_scaling, self.overlay_comps_scaling.get_value())
+        settings.set_(settings.turn_display_transparency, self.turn_transparency.get_value())
 
         max_scores_val = self.max_scores.text()
         if max_scores_val and int(max_scores_val) > 0:
@@ -332,7 +335,6 @@ and Lunco
         self.hide()
 
         self.main_window.shop_display.show() if settings.get(settings.show_id_window) else self.main_window.shop_display.hide()
-        # self.main_window.overlay.update_monitor()
         self.main_window.overlay.update_comp_scaling()
         self.main_window.streamer_overlay.update_comp_scaling()
         self.main_window.overlay.set_transparency()

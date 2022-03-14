@@ -289,9 +289,13 @@ class OverlayWindow(QMainWindow):
 
         alpha = (100 - settings.get(settings.simulator_transparency, 0)) / 100
         scale = settings.get(settings.simulator_scale) / 100
-        style = f"background-color: rgba({default_bg_color_rgb}, {alpha}); font-size: {17*scale}px"
+        style = f"background-color: rgba({default_bg_color_rgb}, {alpha});"
+        self.simulation_stats.resize(400 * scale, 80 * scale)
         self.simulation_stats.setStyleSheet(style)
-        self.simulation_stats.resize(400 * scale, 75 * scale)
+
+        alpha = (100 - settings.get(settings.turn_display_transparency, 0)) / 100
+        style = f"background-color: rgba({default_bg_color_rgb}, {alpha}); font-size: {settings.get(settings.turn_display_font_size)}px"
+        self.turn_display.setStyleSheet(style)
 
     def toggle_transparency(self):
         if settings.get(settings.streaming_mode):
@@ -333,6 +337,7 @@ class SimStatWidget(QFrame):
         super().__init__(parent)
         self.title = title
         self.value = value
+        self.setObjectName("SimStatWidget")
 
         layout = QVBoxLayout(self)
         layout.addWidget(title, alignment=Qt.AlignHCenter)
@@ -413,11 +418,11 @@ class SimulatorStats(MovableWidget):
         self.error_msg.setObjectName("sim-error")
         self.error_msg.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
-        label_layout.addWidget(SimStatWidget(self, win_dmg_title, self.win_dmg_label), 0, 0)
-        label_layout.addWidget(SimStatWidget(self, win_percent_title, self.win_label), 0, 1)
-        label_layout.addWidget(SimStatWidget(self, tie_title, self.tie_label), 0, 2)
-        label_layout.addWidget(SimStatWidget(self, loss_percent_title, self.loss_label), 0, 3)
-        label_layout.addWidget(SimStatWidget(self, loss_dmg_title, self.loss_dmg_label), 0, 4)
+        label_layout.addWidget(SimStatWidget(background, win_dmg_title, self.win_dmg_label), 0, 0)
+        label_layout.addWidget(SimStatWidget(background, win_percent_title, self.win_label), 0, 1)
+        label_layout.addWidget(SimStatWidget(background, tie_title, self.tie_label), 0, 2)
+        label_layout.addWidget(SimStatWidget(background, loss_percent_title, self.loss_label), 0, 3)
+        label_layout.addWidget(SimStatWidget(background, loss_dmg_title, self.loss_dmg_label), 0, 4)
 
         self.layout.addWidget(self.error_widget)
         self.error_widget.setMinimumSize(background.minimumSize())
@@ -427,7 +432,9 @@ class SimulatorStats(MovableWidget):
         label_layout.setRowStretch(1, 1)
         label_layout.setContentsMargins(0, 0, 0, 0)
 
-        self.label_layout = label_layout
+        self.background = background
+        self.labels = [self.tie_label, self.win_label, self.loss_label, self.win_dmg_label, self.loss_dmg_label,
+                       tie_title, win_dmg_title, win_percent_title, loss_percent_title, loss_dmg_title]
 
     def reset_chances(self):
         self.win_dmg = "-"
@@ -465,23 +472,27 @@ class SimulatorStats(MovableWidget):
         self.loss_dmg_label.setText(self.loss_dmg)
         self.displayable = True
 
-    def resizeEvent(self, event:QtGui.QResizeEvent):
+    def resizeEvent(self, event: QtGui.QResizeEvent):
         w = event.size().width()
         h = event.size().height()
-
-        for child in self.label_layout.findChildren(SimStatWidget):
-            child.setMinimumWidth(80 * 400 / w)
-            child.setMinimumHeight(h)
+        for child in self.background.children():
+            if type(child) is SimStatWidget:
+                child.setFixedWidth(int(80 * w / 400))
+                child.setFixedHeight(h)
+        for label in self.labels:
+            label.setFont(QFont("Roboto", 12*settings.get(settings.simulator_scale)/100))
 
 
 class TurnDisplay(MovableWidget):
     def __init__(self, parent):
         super().__init__(parent, settings.turn_indicator_position)
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setStyleSheet("background-color: rgba(0,0,0,0%);")
         layout = QHBoxLayout(self)
         frame = QFrame(self)
         frame_layout = QHBoxLayout(frame)
         self.label = QLabel("Turn 0 (0.0)", frame)
-        frame.setStyleSheet(f"QFrame {{ background-color: {default_bg_color}}};")
+        self.label.setStyleSheet("background-color: rgba(0,0,0,0%);")
         self.label.setFont(QFont("Roboto", int(settings.get(settings.turn_display_font_size))))
         layout.addWidget(frame)
         frame_layout.addWidget(self.label, Qt.AlignVCenter)

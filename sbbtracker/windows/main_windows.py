@@ -81,12 +81,13 @@ all_matches = "All Matches"
 latest_patch = "Latest Patch (68.9)"
 prev_patch = "Previous Patch (67.5)"
 today_ = "Today"
+yesterday = "Yesterday"
 last_7 = "Last 7 days"
 last_30 = "Last 30 days"
 this_month = "This month"
 last_month = "Last month"
 
-default_dates = [all_matches, latest_patch, prev_patch, today_, last_7, last_30, this_month, last_month]
+default_dates = [all_matches, latest_patch, prev_patch, today_, yesterday, last_7, last_30, this_month, last_month]
 
 
 def get_date_range(key):
@@ -105,6 +106,8 @@ def get_date_range(key):
         return "2022-02-14", "2022-03-02"
     elif key == today_:
         return today.isoformat(), today.isoformat()
+    elif key == yesterday:
+        return (today - datetime.timedelta(1)).isoformat(), (today - datetime.timedelta(1)).isoformat()
     elif key == last_7:
         return (today - datetime.timedelta(days=7)).isoformat(), today.isoformat()
     elif key == last_30:
