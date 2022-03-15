@@ -152,8 +152,9 @@ and Lunco
 
         language_select = QComboBox()
         language_select.addItems(languages.available_languages.keys())
-        lang_index = language_select.findText(settings.get(settings.language))
-        language_select.setCurrentIndex(lang_index)
+        current_lang = {v: k for k, v in languages.available_languages.items()}[settings.get(settings.language)]
+        lang_index = language_select.findText(current_lang)
+        language_select.setCurrentIndex(lang_index if lang_index != -1 else 0)
         language_select.activated.connect(lambda _: settings.set_(settings.language,
                                                                   languages.available_languages[language_select.currentText()]))
 
