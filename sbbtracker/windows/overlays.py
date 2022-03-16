@@ -2,7 +2,7 @@ import operator
 
 from PySide6 import QtGui
 from PySide6.QtCore import QPoint, QRect, QSize, Qt, Signal
-from PySide6.QtGui import QFont, QGuiApplication, QPainter, QPixmap
+from PySide6.QtGui import QColor, QFont, QGuiApplication, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QFrame,
     QGridLayout, QHBoxLayout,
@@ -78,8 +78,8 @@ class OverlayBoardComp(BoardComp):
 
     def get_image_location(self, position: int):
         if 7 <= position <= 9:
-            x = (161 * (position - 7))
-            y = 440
+            x = (161 * (position - 7)) + 20
+            y = 440 + 10
         else:
             x, y = super().get_image_location(position)
         return x, y
@@ -90,6 +90,7 @@ class OverlayBoardComp(BoardComp):
     def draw_history(self, painter: QPainter):
         border = QRect(18, 40, 265, 390)
         painter.drawRoundedRect(border, 25, 25)
+        painter.setPen(QPen(QColor("white"), 2))
         for i in reversed(range(0, len(self.xps))):
             self.draw_xp(painter, (30, 50 + 130*(len(self.xps) - 1 - i)), self.xps[i])
             self.draw_health(painter, (140, 45 + 130*(len(self.healths)-1-i)), self.healths[i])
@@ -97,6 +98,7 @@ class OverlayBoardComp(BoardComp):
     def paintEvent(self, event):
         super().paintEvent(event)
         painter = QPainter(self)
+        painter.setRenderHints(QPainter.Antialiasing | QPainter.TextAntialiasing)
         painter.scale(self.scale, self.scale)
         self.draw_history(painter)
 

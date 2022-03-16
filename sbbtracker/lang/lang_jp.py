@@ -26,7 +26,7 @@ lang = {
     "Live Graphs": "ライブグラフ",
     "Match History": "ゲーム結果",
     "Stats Graphs": "統計グラフ",
-    "Join our Discord": "Discodrd はこちら",
+    "Join our Discord": "Discord はこちら",
     "Report a bug": "バグを報告する",
     "Settings": "設定",
     "Export last combat": "最後の戦闘データを出力",
