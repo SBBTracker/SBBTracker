@@ -387,7 +387,7 @@ class SBBTracker(QMainWindow):
         main_layout.addWidget(main_tabs)
 
         self.setCentralWidget(main_widget)
-        self.setMinimumSize(QSize(1200, 800))
+        self.setMinimumSize(QSize(1200, 820))
         self.setBaseSize(QSize(1400, 900))
         self.github_updates = updater.UpdateCheckThread()
         self.github_updates.github_update.connect(self.handle_update)

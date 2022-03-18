@@ -79,7 +79,7 @@ class OverlayBoardComp(BoardComp):
     def get_image_location(self, position: int):
         if 7 <= position <= 9:
             x = (161 * (position - 7)) + 20
-            y = 440 + 10
+            y = 440 + 15
         else:
             x, y = super().get_image_location(position)
         return x, y
@@ -89,8 +89,8 @@ class OverlayBoardComp(BoardComp):
 
     def draw_history(self, painter: QPainter):
         border = QRect(18, 40, 265, 390)
-        painter.drawRoundedRect(border, 25, 25)
         painter.setPen(QPen(QColor("white"), 2))
+        painter.drawRoundedRect(border, 25, 25)
         for i in reversed(range(0, len(self.xps))):
             self.draw_xp(painter, (30, 50 + 130*(len(self.xps) - 1 - i)), self.xps[i])
             self.draw_health(painter, (140, 45 + 130*(len(self.healths)-1-i)), self.healths[i])
@@ -137,7 +137,7 @@ class OverlayWindow(QMainWindow):
         self.comp_widgets = [QFrame(main_widget) for _ in range(0, 8)]
         self.places = list(range(0, 8))
         self.new_places = list(range(0, 8))
-        self.base_comp_size = QSize(1020, 650)
+        self.base_comp_size = QSize(1020, 665)
         for index in range(len(self.comps)):
             comp = self.comps[index]
             widget = self.comp_widgets[index]
@@ -262,6 +262,7 @@ class OverlayWindow(QMainWindow):
             turn_pos = QPoint(*settings.get(settings.turn_indicator_position, (self.sbb_rect.top() - 300, 0)))
             if not self.centralWidget().geometry().contains(turn_pos):
                 turn_pos = QPoint(0, 0)
+            # overlay_pos =
             self.turn_display.move(turn_pos * self.dpi_scale)
             self.turn_display.label.setFont(QFont("Roboto", int(settings.get(settings.turn_display_font_size))))
             self.turn_display.update()

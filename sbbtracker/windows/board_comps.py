@@ -14,17 +14,33 @@ health_loc = (137, 181)
 # 287 x 384
 xp_loc = (220, 10)
 hero_health_loc = (210, 280)
+hero_quest_loc = (230, 134)
 display_font_family = "Impact" if paths.os_name == "Windows" else "Ubuntu Bold"
+
+
+def draw_text(painter, location, text, font):
+    path = QPainterPath()
+    path.addText(QPoint(*location), font, text)
+    painter.setPen(QPen(QColor("black"), 2))
+    painter.setBrush(QBrush("white"))
+    painter.drawPath(path)
 
 
 class BoardComp(QWidget):
     def __init__(self):
         super().__init__()
         self.composition = None
+
         self.golden_overlay = QPixmap(asset_utils.get_asset("golden_overlay.png"))
         self.neutral_border = QPixmap(asset_utils.get_asset("neutral_border.png"))
         self.good_border = QPixmap(asset_utils.get_asset("good_border.png"))
         self.evil_border = QPixmap(asset_utils.get_asset("evil_border.png"))
+        self.heart_pixmap = QPixmap(asset_utils.get_asset("hero_health.png"))
+        self.xp_orb_pixmap = QPixmap(asset_utils.get_asset("xp_orb.png"))
+        self.quest_pixmap = QPixmap(asset_utils.get_asset("quest_scroll.png"))
+        self.attack_orb_pixmap = QPixmap(asset_utils.get_asset("attack_orb.png"))
+        self.health_orb_pixmap = QPixmap(asset_utils.get_asset("health_orb.png"))
+
         self.last_seen = None
         self.current_round = 0
         self.player = None
@@ -54,7 +70,7 @@ class BoardComp(QWidget):
         else:
             x = 0
             y = 0
-        return x, y + 5
+        return x, y + 20
 
     def update_card_stats(self, painter: QPainter, slot: int, health: str, attack: str):
         card_location = self.get_image_location(slot)
@@ -68,23 +84,15 @@ class BoardComp(QWidget):
         health_text_center = tuple(map(operator.sub, health_center, (metrics.horizontalAdvance(health) / 2 - 2, -7)))
         if attack:
             if slot < 7:
-                painter.drawPixmap(QPoint(*att_circle_center), QPixmap(asset_utils.get_asset("attack_orb.png")))
-                path = QPainterPath()
-                path.addText(QPoint(*att_text_center), self.number_display_font, attack)
-                painter.setPen(QPen(QColor("black"), 2))
-                painter.setBrush(QBrush("white"))
-                painter.drawPath(path)
+                painter.drawPixmap(QPoint(*att_circle_center), self.attack_orb_pixmap)
+                draw_text(painter, att_text_center, attack, self.number_display_font)
         if health:
             if slot < 7 or slot == 11:
-                painter.drawPixmap(QPoint(*health_circle_center), QPixmap(asset_utils.get_asset("health_orb.png")))
-                path = QPainterPath()
-                path.addText(QPoint(*health_text_center), self.number_display_font, health)
-                painter.setPen(QPen(QColor("black"), 2))
-                painter.setBrush(QBrush("white"))
-                painter.drawPath(path)
+                painter.drawPixmap(QPoint(*health_circle_center), self.health_orb_pixmap)
+                draw_text(painter, health_text_center, health, self.number_display_font)
 
     def update_card(self, painter: QPainter, slot, content_id: str, health: str,
-                    attack: str, is_golden, tribes):
+                    attack: str, is_golden, tribes, counter):
         card_loc = self.get_image_location(int(slot))
         actually_is_golden = is_golden if isinstance(is_golden, bool) else is_golden == "True"
         path = asset_utils.get_card_path(content_id, actually_is_golden)
@@ -104,6 +112,9 @@ class BoardComp(QWidget):
         if 7 > int(slot) or int(slot) > 9:
             painter.drawPixmap(card_loc[0], card_loc[1], border)
         self.update_card_stats(painter, int(slot), str(health), str(attack))
+        if int(counter) > 0:
+            quest_loc = tuple(map(operator.add, card_loc, (120, -20)))
+            self.draw_quest(painter, counter, quest_loc, .20)
 
     def draw_xp(self, painter: QPainter, location=None, xp=None):
         if xp is None:
@@ -112,16 +123,11 @@ class BoardComp(QWidget):
         xp_center = location if location is not None else tuple(map(operator.add, xp_loc, card_loc))
         xp_font = QFont(display_font_family, 35, weight=QFont.ExtraBold)
         metrics = QFontMetrics(xp_font)
-        xp_orb_pixmap = QPixmap(asset_utils.get_asset("xp_orb.png"))
         xp_text_center = tuple(map(operator.sub, xp_center,
-                                   (metrics.horizontalAdvance(xp) / 2 - xp_orb_pixmap.width() * 1/2,
-                                    -xp_orb_pixmap.height() * 2/3)))
-        painter.drawPixmap(QPoint(*xp_center), xp_orb_pixmap)
-        path = QPainterPath()
-        path.addText(QPoint(*xp_text_center), xp_font, xp)
-        painter.setPen(QPen(QColor("black"), 2))
-        painter.setBrush(QBrush("white"))
-        painter.drawPath(path)
+                                   (metrics.horizontalAdvance(xp) / 2 - self.xp_orb_pixmap.width() / 2,
+                                    -metrics.boundingRect(xp).height() / 3 - self.xp_orb_pixmap.height() / 2)))
+        painter.drawPixmap(QPoint(*xp_center), self.xp_orb_pixmap)
+        draw_text(painter, xp_text_center, str(xp), xp_font)
 
     def draw_health(self, painter: QPainter, location=None, health=None):
         if health is None:
@@ -130,15 +136,23 @@ class BoardComp(QWidget):
         health_center = location if location is not None else tuple(map(operator.add, hero_health_loc, card_loc))
         health_font = QFont(display_font_family, 40, weight=QFont.ExtraBold)
         metrics = QFontMetrics(health_font)
-        heart_pixmap = QPixmap(asset_utils.get_asset("hero_health.png"))
         health_text_center = tuple(map(operator.sub, health_center, (metrics.horizontalAdvance(str(health)) / 2 -
-                                       heart_pixmap.width() * 11/21, -heart_pixmap.height() * 23/36)))
-        painter.drawPixmap(QPoint(*health_center), heart_pixmap)
-        path = QPainterPath()
-        path.addText(QPoint(*health_text_center), health_font, str(health))
-        painter.setPen(QPen(QColor("black"), 2))
-        painter.setBrush(QBrush("white"))
-        painter.drawPath(path)
+                                       self.heart_pixmap.width() / 2,
+                                       -metrics.boundingRect(str(health)).height() / 3 - self.heart_pixmap.height() / 2 + 3)))
+        painter.drawPixmap(QPoint(*health_center), self.heart_pixmap)
+        draw_text(painter, health_text_center, str(health), health_font)
+
+    def draw_quest(self, painter: QPainter, counter, location, scale):
+        card_loc = self.get_image_location(11)
+        quest_center = location if location is not None else tuple(map(operator.add, xp_loc, card_loc))
+        quest_font = QFont(display_font_family, int(170 * scale), weight=QFont.ExtraBold)
+        metrics = QFontMetrics(quest_font)
+        pixmap = self.quest_pixmap.scaled(self.quest_pixmap.size() * scale)
+        quest_text_center = tuple(map(operator.sub, quest_center,
+                                   (metrics.horizontalAdvance(counter) / 2 - pixmap.width() * 1 / 2,
+                                    -metrics.boundingRect(counter).height() / 3 - pixmap.height() / 2)))
+        painter.drawPixmap(QPoint(*quest_center), pixmap)
+        draw_text(painter, quest_text_center, str(counter), quest_font)
 
     def draw_hero(self, painter: QPainter):
         if self.player:
@@ -166,7 +180,11 @@ class BoardComp(QWidget):
                     zone = action.zone
                     position = 10 if zone == 'Spell' else (7 + int(slot)) if zone == "Treasure" else slot
                     self.update_card(painter, position, action.content_id, action.cardhealth,
-                                     action.cardattack, action.is_golden, action.subtypes)
+                                     action.cardattack, action.is_golden, action.subtypes, action.counter)
+                elif action.zone == "Hero" and int(action.counter) > 0:
+                    hero_loc = self.get_image_location(11)
+                    quest_loc = tuple(map(operator.add, hero_loc, hero_quest_loc))
+                    self.draw_quest(painter, action.counter, quest_loc, .30)
         else:
             painter.eraseRect(QRect(0, 0, 1350, 820))
             self.draw_hero(painter)
