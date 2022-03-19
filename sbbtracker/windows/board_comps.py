@@ -27,8 +27,8 @@ def draw_text(painter, location, text, font):
 
 
 class BoardComp(QWidget):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent):
+        super().__init__(parent)
         self.composition = None
 
         self.golden_overlay = QPixmap(asset_utils.get_asset("golden_overlay.png"))
@@ -113,7 +113,7 @@ class BoardComp(QWidget):
             painter.drawPixmap(card_loc[0], card_loc[1], border)
         self.update_card_stats(painter, int(slot), str(health), str(attack))
         if int(counter) > 0:
-            quest_loc = tuple(map(operator.add, card_loc, (120, -20)))
+            quest_loc = tuple(map(operator.add, card_loc, (120, -10)))
             self.draw_quest(painter, counter, quest_loc, .20)
 
     def draw_xp(self, painter: QPainter, location=None, xp=None):
@@ -170,7 +170,7 @@ class BoardComp(QWidget):
         painter = QPainter(self)
         painter.setRenderHints(QPainter.Antialiasing | QPainter.TextAntialiasing | QPainter.SmoothPixmapTransform)
         painter.scale(self.scale, self.scale)
-        self.draw_hero(painter)
+        painter.eraseRect(QRect(0, 0, 1350, 820))
         if self.composition is not None:
             for action in self.composition:
                 if action.zone != "Hero":
@@ -185,9 +185,7 @@ class BoardComp(QWidget):
                     hero_loc = self.get_image_location(11)
                     quest_loc = tuple(map(operator.add, hero_loc, hero_quest_loc))
                     self.draw_quest(painter, action.counter, quest_loc, .30)
-        else:
-            painter.eraseRect(QRect(0, 0, 1350, 820))
-            self.draw_hero(painter)
+        self.draw_hero(painter)
         last_seen_text = ""
         if self.last_seen is not None:
             if self.last_seen == 0:

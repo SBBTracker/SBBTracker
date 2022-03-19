@@ -283,7 +283,7 @@ class SBBTracker(QMainWindow):
         super().__init__()
 
         self.setWindowTitle("SBBTracker")
-        self.comps = [BoardComp() for _ in range(0, 8)]
+        self.comps = [BoardComp(self) for _ in range(0, 8)]
         self.round_indicator = QLabel(tr("Waiting for match to start..."))
         self.round_indicator.setFont(round_font)
         self.player_stats = stats.PlayerStats()
@@ -446,15 +446,9 @@ class SBBTracker(QMainWindow):
             comp.current_round = 0
             comp.last_seen = None
 
-            for overlay in [self.overlay, self.streamer_overlay]:
-                overlay_comp = overlay.comps[index]
-                overlay_comp.composition = None
-                overlay_comp.player = None
-                overlay_comp.current_round = 0
-                overlay_comp.last_seen = None
-                overlay_comp.xps.clear()
-                overlay_comp.healths.clear()
-                overlay.simulation_stats.reset_chances()
+        for overlay in [self.overlay, self.streamer_overlay]:
+            overlay.comp_widget.reset()
+            overlay.simulation_stats.reset_chances()
 
     def end_combat(self):
         self.overlay.simulation_stats.update_labels()
