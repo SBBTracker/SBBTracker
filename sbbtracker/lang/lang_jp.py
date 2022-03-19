@@ -101,7 +101,7 @@ lang = {
     "Hide art and show template ids": "テンプレートIDとアートを隠す",
     "Enable ID window": "IDウィンドウを有効化",
     "Reset": "リセット",
-    "Show capturable score window": "順位結果ウィンドウを表示",
+    "Show capturable score window": "順位結果ウィンドウを有効化",
     "Number of scores per line": "改行するまでの結果数",
     "Reset scores": "順位結果ウィンドウをリセット",
     "Chroma-key filter #00FFFF to hide the scores background": "Chroma-key filter #00FFFF to hide the scores background",
