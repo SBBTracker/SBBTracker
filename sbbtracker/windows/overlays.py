@@ -1,8 +1,8 @@
 import operator
 
-from PySide6 import QtGui
+from PySide6 import QtCore, QtGui
 from PySide6.QtCore import QPoint, QRect, QSize, Qt, Signal
-from PySide6.QtGui import QFont, QGuiApplication, QPainter, QPixmap
+from PySide6.QtGui import QColor, QFont, QGuiApplication, QPainter, QPainterPath, QPen, QPixmap, QRegion
 from PySide6.QtWidgets import (
     QFrame,
     QGridLayout, QHBoxLayout,
@@ -62,45 +62,6 @@ def move_point_by_scale(x, y, scale):
     return new_x, new_y
 
 
-class OverlayBoardComp(BoardComp):
-    def __init__(self):
-        super().__init__()
-        self.xps = []
-        self.healths = []
-
-    def update_history(self, xp, health):
-        if len(self.xps) == 3:
-            self.xps.pop(0)
-            self.healths.pop(0)
-        if xp == "6.0" or xp not in self.xps:
-            self.xps.append(xp)
-            self.healths.append(health)
-
-    def get_image_location(self, position: int):
-        if 7 <= position <= 9:
-            x = (161 * (position - 7))
-            y = 440
-        else:
-            x, y = super().get_image_location(position)
-        return x, y
-
-    def draw_hero(self, painter: QPainter):
-        pass
-
-    def draw_history(self, painter: QPainter):
-        border = QRect(18, 40, 265, 390)
-        painter.drawRoundedRect(border, 25, 25)
-        for i in reversed(range(0, len(self.xps))):
-            self.draw_xp(painter, (30, 50 + 130*(len(self.xps) - 1 - i)), self.xps[i])
-            self.draw_health(painter, (140, 45 + 130*(len(self.healths)-1-i)), self.healths[i])
-
-    def paintEvent(self, event):
-        super().paintEvent(event)
-        painter = QPainter(self)
-        painter.scale(self.scale, self.scale)
-        self.draw_history(painter)
-
-
 class OverlayWindow(QMainWindow):
     simluation_update = Signal(str, str, str, str, str)
 
@@ -129,20 +90,16 @@ class OverlayWindow(QMainWindow):
         self.turn_display = TurnDisplay(main_widget)
         self.turn_display.setVisible(False)
 
+        self.pin_comp = False
+
         self.show_hide = True
 
-        self.comps = [OverlayBoardComp() for _ in range(0, 8)]
-        self.comp_widgets = [QFrame(main_widget) for _ in range(0, 8)]
+        self.comp_widget = OverlayCompWidget(self)
         self.places = list(range(0, 8))
         self.new_places = list(range(0, 8))
-        self.base_comp_size = QSize(1020, 650)
-        for index in range(len(self.comps)):
-            comp = self.comps[index]
-            widget = self.comp_widgets[index]
-
-            comp.setParent(widget)
-            widget.setVisible(False)
-            widget.move(round(self.size().width() / 2 - 100), 0)
+        self.base_comp_size = QSize(1020, 665)
+        self.comp_widget.setVisible(False)
+        self.comp_widget.move(round(self.size().width() / 2 - 100), 0)
         self.set_transparency()
         self.update_comp_scaling()
 
@@ -187,11 +144,15 @@ class OverlayWindow(QMainWindow):
                 hover.setVisible(True)
 
     def show_hide_comp(self, index, show_or_hide: bool):
-        widget = self.comp_widgets[self.places[index]]
+        # TODO: figure out how to move the comp widget
+        # if not QGuiApplication.keyboardModifiers() & Qt.ShiftModifier:
+        widget = self.comp_widget
         widget.setVisible(show_or_hide)
+        true_index = self.places[index]
+        widget.change_widget(true_index)
+        widget.update()
         if self.stream_overlay:
-            streamer_widget = self.stream_overlay.comp_widgets[self.places[index]]
-            streamer_widget.setVisible(show_or_hide)
+            self.stream_overlay.show_hide_comp(index, show_or_hide)
 
     def update_round(self, round_num):
         self.turn_display.update_label(f"Turn {round_num} ({round_to_xp(round_num)})")
@@ -199,33 +160,29 @@ class OverlayWindow(QMainWindow):
             self.stream_overlay.update_round(round_num)
 
     def update_player(self, index, health, xp, round_num, place):
-        self.comps[index].current_round = round_num
-        self.comps[index].update_history(xp, health)
+        comp = self.comp_widget.get_comp(index)
+        comp.current_round = round_num
+        comp.update_history(xp, health)
         self.new_places[int(place) - 1] = index
         if self.stream_overlay:
             self.stream_overlay.update_player(index, health, xp, round_num, place)
 
     def update_comp(self, index, player, round_number):
-        comp = self.comps[index]
-        comp.composition = player
-        comp.last_seen = round_number
+        self.comp_widget.update_comp(index, player, round_number)
         self.update()
 
     def update_comp_scaling(self):
-        for i in range(len(self.comps)):
-            comp = self.comps[i]
-            widget = self.comp_widgets[i]
-            comp.scale = settings.get(settings.overlay_comps_scaling) / 100
-            comp.setFixedSize(self.base_comp_size * comp.scale)
-            widget.setFixedSize(self.base_comp_size * comp.scale)
-            widget.updateGeometry()
+        comp_widget = self.comp_widget
+        scale = settings.get(settings.overlay_comps_scaling) / 100
+        comp_widget.set_scale(scale)
+        comp_widget.setFixedSize(self.base_comp_size * scale)
+        comp_widget.updateGeometry()
 
     def update_placements(self):
         self.places = self.new_places.copy()
         self.new_places = list(range(0, 8))
-        for widget in self.comp_widgets:
-            #  fixes bug where hovering over the hero at the end of combat gets the overlay stuck
-            widget.setVisible(False)
+        #  fixes bug where hovering over the hero at the end of combat gets the overlay stuck
+        self.comp_widget.setVisible(False)
 
     def set_rect(self, left, top, right, bottom, dpi):
         self.dpi_scale = 1 / round(dpi / 96 - .24)  # round .75 and up to nearest int
@@ -250,8 +207,7 @@ class OverlayWindow(QMainWindow):
             self.move(left_edge, top_edge)
             self.scale_factor = self.sbb_rect.size().height() / base_size[1]
             self.update_hovers()
-            for widget in self.comp_widgets:
-                widget.move(QPoint(round(self.size().width() / 2 - 100), 0) * self.dpi_scale)
+            self.comp_widget.move(QPoint(round(self.size().width() / 2 - 100), 0) * self.dpi_scale)
 
             sim_pos = QPoint(*settings.get(settings.simulator_position, (self.sbb_rect.top() / 2 - 100, 0)))
             if not self.centralWidget().geometry().contains(sim_pos):
@@ -260,6 +216,7 @@ class OverlayWindow(QMainWindow):
             turn_pos = QPoint(*settings.get(settings.turn_indicator_position, (self.sbb_rect.top() - 300, 0)))
             if not self.centralWidget().geometry().contains(turn_pos):
                 turn_pos = QPoint(0, 0)
+            # overlay_pos =
             self.turn_display.move(turn_pos * self.dpi_scale)
             self.turn_display.label.setFont(QFont("Roboto", int(settings.get(settings.turn_display_font_size))))
             self.turn_display.update()
@@ -285,7 +242,7 @@ class OverlayWindow(QMainWindow):
     def set_transparency(self):
         alpha = (100 - settings.get(settings.boardcomp_transparency, 0)) / 100
         style = f"background-color: rgba({default_bg_color_rgb}, {alpha});"
-        for widget in self.comp_widgets:
+        for widget in self.comp_widget.comps:
             widget.setStyleSheet(style)
 
         alpha = (100 - settings.get(settings.simulator_transparency, 0)) / 100
@@ -321,7 +278,7 @@ class StreamerOverlayWindow(OverlayWindow):
     def set_transparency(self):
         alpha = 1
         style = f"background-color: rgba({default_bg_color_rgb}, {alpha});"
-        for widget in self.comp_widgets:
+        for widget in self.comp_widget.comps:
             widget.setStyleSheet(style)
 
         alpha = 1
@@ -331,6 +288,47 @@ class StreamerOverlayWindow(OverlayWindow):
     def set_rect(self, left, top, right, bottom, dpi):
         super().set_rect(left, top, right, bottom, dpi)
         settings.set_(settings.streamer_overlay_size, self.sbb_rect.size().toTuple())
+
+
+class OverlayBoardComp(BoardComp):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.xps = []
+        self.healths = []
+
+    def update_history(self, xp, health):
+        if len(self.xps) == 3:
+            self.xps.pop(0)
+            self.healths.pop(0)
+        if xp == "6.0" or xp not in self.xps:
+            self.xps.append(xp)
+            self.healths.append(health)
+
+    def get_image_location(self, position: int):
+        if 7 <= position <= 9:
+            x = (161 * (position - 7)) + 20
+            y = 440 + 15
+        else:
+            x, y = super().get_image_location(position)
+        return x, y
+
+    def draw_hero(self, painter: QPainter):
+        pass
+
+    def draw_history(self, painter: QPainter):
+        border = QRect(18, 40, 265, 390)
+        painter.setPen(QPen(QColor("white"), 2))
+        painter.drawRoundedRect(border, 25, 25)
+        for i in reversed(range(0, len(self.xps))):
+            self.draw_xp(painter, (30, 50 + 130 * (len(self.xps) - 1 - i)), self.xps[i])
+            self.draw_health(painter, (140, 45 + 130 * (len(self.healths) - 1 - i)), self.healths[i])
+
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        painter = QPainter(self)
+        painter.setRenderHints(QPainter.Antialiasing | QPainter.TextAntialiasing)
+        painter.scale(self.scale, self.scale)
+        self.draw_history(painter)
 
 
 class SimStatWidget(QFrame):
@@ -372,6 +370,52 @@ class MovableWidget(QWidget):
         if self.setting:
             settings.set_(self.setting, self.pos().toTuple())
 
+
+class OverlayCompWidget(MovableWidget):
+    def __init__(self, parent):
+        super().__init__(parent, settings.overlay_comps_position)
+        self.frame = QFrame(self)
+        self.frame.setAttribute(Qt.WA_TranslucentBackground, True)
+        self.comps = [OverlayBoardComp(self.frame) for _ in range(0, 8)]
+        for comp in self.comps:
+            comp.setVisible(False)
+        self.visible_comp = self.comps[0]
+
+    def set_scale(self, scale):
+        for comp in self.comps:
+            comp.scale = scale
+
+    def update_comp(self, index, player, round_number):
+        comp = self.get_comp(index)
+        comp.composition = player
+        comp.last_seen = round_number
+
+    def change_widget(self, index):
+        self.visible_comp.setVisible(False)
+        self.visible_comp = self.comps[index]
+        self.visible_comp.setVisible(True)
+
+    def reset(self):
+        for comp in self.comps:
+            comp.composition = None
+            comp.player = None
+            comp.current_round = 0
+            comp.last_seen = None
+            comp.xps.clear()
+            comp.healths.clear()
+
+    def resizeEvent(self, event:QtGui.QResizeEvent):
+        self.frame.setFixedSize(self.size())
+        for comp in self.comps:
+            comp.setFixedSize(self.size())
+        radius = 10
+        path = QPainterPath()
+        path.addRoundedRect(self.rect(), radius, radius)
+        mask = QRegion(path.toFillPolygon().toPolygon())
+        self.setMask(mask)
+
+    def get_comp(self, index):
+        return self.comps[index]
 
 class SimulatorStats(MovableWidget):
     def __init__(self, parent):
@@ -517,6 +561,7 @@ class HoverRegion(QWidget):
         self.background.setMinimumSize(width, height)
         self.setStyleSheet("background-color: rgba(0, 0, 0, 0.01);")
         self.setMinimumSize(width, height)
+
 
     def enterEvent(self, event):
         self.enter_hover.emit()
