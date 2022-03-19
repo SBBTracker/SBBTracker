@@ -1,9 +1,8 @@
 import importlib
-import json
 
 from sbbtracker import settings
 
-lang = settings.get(settings.language)
+lang = settings.get(settings.language, "en")
 
 lang_module = importlib.import_module(f"lang.lang_{lang}")
 
