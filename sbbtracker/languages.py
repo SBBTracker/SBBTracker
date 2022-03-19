@@ -2,9 +2,11 @@ import importlib
 
 from sbbtracker import settings
 
+from sbbtracker.lang import *
+
 lang = settings.get(settings.language, "en")
 
-lang_module = importlib.import_module(f"lang.lang_{lang}")
+lang_module = importlib.import_module(f".lang_{lang}", package="sbbtracker.lang")
 
 lang_dict = getattr(lang_module, "lang")
 
