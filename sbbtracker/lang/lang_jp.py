@@ -76,7 +76,7 @@ lang = {
     "Backup Stats": "統計データをバックアップ",
     "Reimport Stats": "統計データをインポート",
     "Reimporting is temporarily disabled": "「統計データをインポート」は一時的に無効にしています",
-    "Upload matches to sbbtracker.com": "ゲーム結果をsbbtracker.comにアップロード",
+    "Upload matches to sbbtracker.com": "ゲーム結果を sbbtracker.com にアップロード",
     "Match uploads include your steam name, sbb id, board comps, placement, and change in mmr.": "Match uploads include your steam name, sbb id, board comps, placement, and change in mmr.",
     "Enable overlay": "オーバーレイを有効化",
     "Hide if SBB in background (restart to take effect)": "バックグラウンド時は隠す(有効時は再起動)",
@@ -88,20 +88,20 @@ lang = {
     "Number of threads": "スレッド数",
     "More threads = faster simulation but takes more computing power": "※スレッド数を多くするほど早くなりますがPCに負荷がかかります",
     "Adjust simulator transparency": "シミュレーション結果の透過度",
-    "Simulator scale": "シミュレーション結果表示サイズ",
+    "Simulator scale": "シミュレーション結果の表示サイズ",
     "Board Comps": "盤面情報",
-    "Enable board comps": "「相手盤面」の有効化",
+    "Enable board comps": "「相手盤面」を有効化",
     "Board comps scaling": "「相手盤面」の表示サイズ",
     "Adjust comps transparency": "「相手盤面」の透過度",
     "Turn Display": "Turn Display",
-    "Enable turn display": "Turn Display 表示",
-    "Turn font size (restart to resize)": "Turn Display フォントサイズ(再起動してください)",
-    "Turn transparency": "Turn Display 透過度",
+    "Enable turn display": "Turn Display を有効化",
+    "Turn font size (restart to resize)": "Turn Display の表示サイズ(再起動してください)",
+    "Turn transparency": "Turn Display の透過度",
     "Enable export last comp button": "最終盤面出力ボタンを有効化",
     "Hide art and show template ids": "テンプレートIDとアートを隠す",
     "Enable ID window": "IDウィンドウを有効化",
     "Reset": "リセット",
-    "Show capturable score window": "順位結果ウィンドウを表示",
+    "Show capturable score window": "順位結果ウィンドウを有効化",
     "Number of scores per line": "改行するまでの結果数",
     "Reset scores": "順位結果ウィンドウをリセット",
     "Chroma-key filter #00FFFF to hide the scores background": "Chroma-key filter #00FFFF to hide the scores background",
@@ -115,10 +115,10 @@ lang = {
     "Import progress": "インポート進行度",
     "Importer": "インポーター",
     # Overlay
-    "Show Tracker": "トラッカー表示",
+    "Show Tracker": " トラッカー表示 ",
     "Hide Tracker": "トラッカー非表示",
     "Turn {0} ({1})": "Turn {0} ({1})",
-    "Scores:": "順位:",
+    "Scores:": " 順位 :",
     # Board Comps
     "Last seen just now": "たった今",
     "Last seen 1 turn ago": "1 ターン前",
@@ -127,9 +127,9 @@ lang = {
     # Graphs
     "Matches per Hero": "ヒーロー使用回数",
     "MMR Graph": "MMRグラフ",
-    "Cumulative MMR": "MMR増減",
-    "Games": "ゲーム数",
-    "Cumulative MMR over last {0} games": "直近 {0} ゲームの MMR 推移",
+    "Cumulative MMR": "Cumulative MMR",
+    "Games": "Games",
+    "Cumulative MMR over last {0} games": "Cumulative MMR over last {0} games",
 
     # Special long messages (use 3 " to do newlines)
     """Would you like to opt into to data collection?
@@ -167,7 +167,7 @@ You may change your selection at any time at Settings > Data > Upload Matches"""
 
 プライバシーポリシーの詳細は、sbbtracker.com/privacyをご覧ください。
 
-設定 > データ > ゲーム結果をsbbtracker.comにアップロード でいつでも変更することができます。""",
+設定 > データ > ゲーム結果を sbbtracker.com にアップロード でいつでも変更することができます。""",
     #
     """
 Would you like to import your old games? This is done by 
