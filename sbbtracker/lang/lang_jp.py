@@ -115,10 +115,10 @@ lang = {
     "Import progress": "インポート進行度",
     "Importer": "インポーター",
     # Overlay
-    "Show Tracker": " トラッカー表示 ",
+    "Show Tracker": "  トラッカー表示  ",
     "Hide Tracker": "トラッカー非表示",
     "Turn {0} ({1})": "Turn {0} ({1})",
-    "Scores:": " 順位 :",
+    "Scores:": "Scores:",
     # Board Comps
     "Last seen just now": "たった今",
     "Last seen 1 turn ago": "1 ターン前",
