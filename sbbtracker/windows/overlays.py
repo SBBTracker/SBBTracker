@@ -148,7 +148,8 @@ class OverlayWindow(QMainWindow):
         # if not QGuiApplication.keyboardModifiers() & Qt.ShiftModifier:
         widget = self.comp_widget
         widget.setVisible(show_or_hide)
-        widget.change_widget(index)
+        true_index = self.places[index]
+        widget.change_widget(true_index)
         widget.update()
         if self.stream_overlay:
             self.stream_overlay.show_hide_comp(index, show_or_hide)
