@@ -171,6 +171,7 @@ class BoardComp(QWidget):
         painter.setRenderHints(QPainter.Antialiasing | QPainter.TextAntialiasing | QPainter.SmoothPixmapTransform)
         painter.scale(self.scale, self.scale)
         painter.eraseRect(QRect(0, 0, 1350, 820))
+        self.draw_hero(painter)
         if self.composition is not None:
             for action in self.composition:
                 if action.zone != "Hero":
@@ -185,7 +186,6 @@ class BoardComp(QWidget):
                     hero_loc = self.get_image_location(11)
                     quest_loc = tuple(map(operator.add, hero_loc, hero_quest_loc))
                     self.draw_quest(painter, action.counter, quest_loc, .30)
-        self.draw_hero(painter)
         last_seen_text = ""
         if self.last_seen is not None:
             if self.last_seen == 0:
