@@ -216,7 +216,6 @@ class OverlayWindow(QMainWindow):
             turn_pos = QPoint(*settings.get(settings.turn_indicator_position, (self.sbb_rect.top() - 300, 0)))
             if not self.centralWidget().geometry().contains(turn_pos):
                 turn_pos = QPoint(0, 0)
-            # overlay_pos =
             self.turn_display.move(turn_pos * self.dpi_scale)
             self.turn_display.label.setFont(QFont("Roboto", int(settings.get(settings.turn_display_font_size))))
             self.turn_display.update()
@@ -240,20 +239,23 @@ class OverlayWindow(QMainWindow):
         self.update()
 
     def set_transparency(self):
-        alpha = (100 - settings.get(settings.boardcomp_transparency, 0)) / 100
+        alpha = self.get_alpha(settings.boardcomp_transparency)
         style = f"background-color: rgba({default_bg_color_rgb}, {alpha});"
         for widget in self.comp_widget.comps:
             widget.setStyleSheet(style)
 
-        alpha = (100 - settings.get(settings.simulator_transparency, 0)) / 100
+        alpha = self.get_alpha(settings.simulator_transparency)
         scale = settings.get(settings.simulator_scale) / 100
         style = f"background-color: rgba({default_bg_color_rgb}, {alpha});"
         self.simulation_stats.resize(400 * scale, 80 * scale)
         self.simulation_stats.setStyleSheet(style)
 
-        alpha = (100 - settings.get(settings.turn_display_transparency, 0)) / 100
+        alpha = self.get_alpha(settings.turn_display_transparency)
         style = f"background-color: rgba({default_bg_color_rgb}, {alpha}); font-size: {settings.get(settings.turn_display_font_size)}px"
         self.turn_display.setStyleSheet(style)
+
+    def get_alpha(self, setting):
+        return  (100 - settings.get(setting, 0)) / 100
 
     def toggle_transparency(self):
         if settings.get(settings.streaming_mode):
@@ -275,15 +277,8 @@ class StreamerOverlayWindow(OverlayWindow):
         self.setFixedSize(*settings.get(settings.streamer_overlay_size))
         self.disable_hovers()
 
-    def set_transparency(self):
-        alpha = 1
-        style = f"background-color: rgba({default_bg_color_rgb}, {alpha});"
-        for widget in self.comp_widget.comps:
-            widget.setStyleSheet(style)
-
-        alpha = 1
-        style = f"background-color: rgba({default_bg_color_rgb}, {alpha}); font-size: 17px"
-        self.simulation_stats.setStyleSheet(style)
+    def get_alpha(self, setting):
+        return 1
 
     def set_rect(self, left, top, right, bottom, dpi):
         super().set_rect(left, top, right, bottom, dpi)
@@ -518,6 +513,7 @@ class SimulatorStats(MovableWidget):
         self.displayable = True
 
     def resizeEvent(self, event: QtGui.QResizeEvent):
+        print(self.size())
         w = event.size().width()
         h = event.size().height()
         for child in self.background.children():
