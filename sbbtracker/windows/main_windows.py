@@ -301,6 +301,7 @@ class SBBTracker(QMainWindow):
         settings.get(settings.enable_overlay)
         self.show_overlay()
         if settings.get(settings.streaming_mode):
+            self.streamer_overlay.set_transparency()
             self.streamer_overlay.show()
         self.streamable_scores = StreamableMatchDisplay()
         self.show_scores()
