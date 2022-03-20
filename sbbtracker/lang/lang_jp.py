@@ -64,7 +64,7 @@ lang = {
     "Data": "データ",
     "Overlay": "オーバーレイ",
     "Advanced": "高度な設定",
-    "Streaming": "配信用設定",
+    "Streaming": "ストリーミング",
     "About": "About",
     "Language": "言語",
     "Save match results": "ゲーム結果を保存",
