@@ -120,10 +120,10 @@ class SettingsWindow(QMainWindow):
         settings_tabs = QTabWidget()
         settings_tabs.addTab(general_settings, tr("General"))
         settings_tabs.addTab(data_tab, tr("Data"))
-        settings_tabs.addTab(overlay_settings_scroll, "Overlay")
-        settings_tabs.addTab(advanced_tab, "Advanced")
-        settings_tabs.addTab(streaming_tab, "Streaming")
-        settings_tabs.addTab(about_tab, "About")
+        settings_tabs.addTab(overlay_settings_scroll, tr("Overlay"))
+        settings_tabs.addTab(advanced_tab, tr("Advanced"))
+        settings_tabs.addTab(streaming_tab, tr("Streaming"))
+        settings_tabs.addTab(about_tab, tr("About"))
 
         self.setWindowIcon(QIcon(asset_utils.get_asset("icon.png")))
         self.setWindowTitle("SBBTracker settings")
@@ -299,9 +299,9 @@ and Lunco
         streaming_layout.addRow(tr("Reset scores"), reset_scores)
         streaming_layout.addRow(QLabel(tr("Chroma-key filter #00FFFF to hide the scores background")))
         streaming_layout.addRow(QLabel(""))
-        streaming_layout.addRow("Show capturable overlay window", enable_stream_overlay)
-        streaming_layout.addRow("Background color", self.stream_overlay_color)
-        streaming_layout.addRow(QLabel("Enabling this will add a copy of the overlay behind your other windows."))
+        streaming_layout.addRow(tr("Show capturable overlay window"), enable_stream_overlay)
+        streaming_layout.addRow(tr("Background color"), self.stream_overlay_color)
+        streaming_layout.addRow(QLabel(tr("Enabling this will add a copy of the overlay behind your other windows.")))
         streaming_wiki_link = QLabel(
             "<a href=\"https://github.com/SBBTracker/SBBTracker/wiki/Streaming-Settings-Guide\" style=\"color: "
             f"{primary_color};\">{tr('Wiki guide here')}</a>")
