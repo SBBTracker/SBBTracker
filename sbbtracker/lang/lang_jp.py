@@ -7,6 +7,7 @@
 #  If you see {0}, {1}, keep it in the translated sentence
 
 lang = {
+    "Enable Hero Selection overlay": "ヒーロー選択オーバーレイを有効化",
     "Hero Selection": "ヒーロー選択",
     "Placements": "Placements",
     "SBBTracker Ratings": "SBBTracker戦績",

@@ -300,10 +300,11 @@ class OverlayWindow(QMainWindow):
             self.setWindowFlags(Qt.SubWindow)
 
     def update_hero_rates(self, index, placement, matches):
-        self.hero_rates[index].update_info(placement, matches)
-        self.hero_rates[index].setVisible(True)
-        if self.stream_overlay is not None:
-            self.stream_overlay.update_hero_rates(index, placement, matches)
+        if settings.get(settings.enable_hero_stats):
+            self.hero_rates[index].update_info(placement, matches)
+            self.hero_rates[index].setVisible(True)
+            if self.stream_overlay is not None:
+                self.stream_overlay.update_hero_rates(index, placement, matches)
 
     def hide_hero_rates(self):
         self.data_button.setVisible(False)
@@ -314,8 +315,9 @@ class OverlayWindow(QMainWindow):
         self.update()
 
     def update_data_url(self, hero_names):
-        self.data_button.setVisible(True)
-        self.data_url = 'https://sbbtracker.com/data?dataset=mythic&heroes=' + ','.join(hero_names)
+        if settings.get(settings.enable_hero_stats):
+            self.data_button.setVisible(True)
+            self.data_url = 'https://sbbtracker.com/data?dataset=mythic&heroes=' + ','.join(hero_names)
 
     def open_data_page(self):
         open_url(self, self.data_url)

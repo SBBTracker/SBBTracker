@@ -212,6 +212,10 @@ and Lunco
         show_tracker_button_checkbox.setEnabled(enable_overlay_checkbox.checkState())
         enable_overlay_checkbox.stateChanged.connect(lambda state: show_tracker_button_checkbox.setEnabled(bool(state)))
 
+        show_hero_stats_checkbox = SettingsCheckbox(settings.enable_hero_stats)
+        show_hero_stats_checkbox.setEnabled(enable_overlay_checkbox.checkState())
+        enable_overlay_checkbox.stateChanged.connect(lambda state: show_hero_stats_checkbox.setEnabled(bool(state)))
+
         windows_scaling = SettingsCheckbox(settings.disable_scaling)
         windows_scaling.setEnabled(enable_overlay_checkbox.checkState())
         enable_overlay_checkbox.stateChanged.connect(lambda state: windows_scaling.setEnabled(bool(state)))
@@ -219,6 +223,7 @@ and Lunco
         general_overlay_section.addRow(tr("Enable overlay"), enable_overlay_checkbox)
         general_overlay_section.addRow(tr("Hide if SBB in background (restart to take effect)"), hide_overlay_in_bg_checkbox)
         general_overlay_section.addRow(tr("Enable 'Show Tracker' button"), show_tracker_button_checkbox)
+        general_overlay_section.addRow(tr("Enable Hero Selection overlay"), show_hero_stats_checkbox)
         general_overlay_section.addRow(tr("Ignore windows scaling (Windows 8 compatability)"), windows_scaling)
         overlay_layout.addWidget(general_overlay_section)
         # Simulator

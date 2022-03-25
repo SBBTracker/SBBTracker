@@ -343,6 +343,8 @@ class SBBTracker(QMainWindow):
         main_tabs.addTab(self.match_history, tr("Match History"))
         main_tabs.addTab(self.stats_graph, tr("Stats Graphs"))
 
+        self.main_tabs = main_tabs
+
         toolbar = QToolBar(self)
         toolbar.setMinimumHeight(40)
         toolbar.setStyleSheet("QToolBar {border-bottom: none; border-top: none;}")
@@ -570,6 +572,7 @@ class SBBTracker(QMainWindow):
 
     def update_hero_discover(self, hero_ids):
         self.hero_selection.update_heroes(hero_ids, self.player_stats, self.overlay)
+        self.main_tabs.setCurrentIndex(1)
 
     def export_last_comp(self):
         if self.most_recent_combat:
