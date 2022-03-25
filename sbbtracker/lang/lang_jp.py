@@ -7,6 +7,10 @@
 #  If you see {0}, {1}, keep it in the translated sentence
 
 lang = {
+    "Hero Selection": "ヒーロー選択",
+    "Placements": "Placements",
+    "SBBTracker Ratings": "SBBTracker戦績",
+
     "All Matches": "すべてのゲーム",
     "Latest Patch": "最新パッチ",
     "Previous Patch": "前回のパッチ",
@@ -50,7 +54,6 @@ lang = {
     "Ending Heroes": "終了時ヒーロー",
     "Health Graph": "体力グラフ",
     "XP Graph": "XPグラフ",
-    "Num Matches": "Num Matches",
 
     "Hero": "ヒーロー",
     "# Matches": "ゲーム回数",

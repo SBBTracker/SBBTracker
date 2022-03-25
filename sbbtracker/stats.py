@@ -7,6 +7,7 @@ from datetime import date, datetime
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 
+import numpy as np
 import pandas as pd
 from construct import GreedyRange
 
@@ -201,6 +202,19 @@ class PlayerStats:
         else:
             filtered = df[(df['Timestamp'] >= start_date) & (df['Timestamp'] <= end_date)]
             return self.generate_stats(sort_col, sort_asc, filtered)
+
+
+    def get_stats_for_hero(self, start_date, end_date, hero_name):
+        df = self.df
+        df['Timestamp'] = pd.to_datetime(df['Timestamp'], format="%Y-%m-%d")
+        df = df[(df['Timestamp'] >= start_date) & (df['Timestamp'] <= end_date)]
+        hero_df = df.loc[df['StartingHero'] == hero_name]
+        avg_place = round(hero_df['Placement'].mean(), 2)
+        avg_place = 0.00 if np.isnan(avg_place) else avg_place
+        num_matches = len(hero_df)
+        histogram = np.histogram(hero_df['Placement'], bins=range(1, 10))
+        return avg_place, num_matches, histogram
+
 
     def delete_entry(self, row, reverse=False):
         index = len(self.df.index) - row - 1 if reverse else row

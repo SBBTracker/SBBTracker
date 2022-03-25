@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
 from sbbtracker import settings
 from sbbtracker.languages import tr
 from sbbtracker.utils import asset_utils, sbb_logic_utils
+from sbbtracker.utils.qt_utils import open_url
 from sbbtracker.utils.sbb_logic_utils import round_to_xp
 from sbbtracker.windows.board_comps import BoardComp
 from sbbtracker.windows.constants import default_bg_color, default_bg_color_rgb
@@ -31,6 +32,20 @@ def get_hover_size(resolution: (int, int)):
     width = 0.0773 * y + 0.687
     return width, width * 17 / 21
 
+def get_hero_discover_location(resolution: (int, int), location: int):
+    w, h = resolution
+    scaled_w = int(h * 16 / 9)
+    x = (scaled_w -  scaled_w / 3 * 2) / 2 - (scaled_w - w) / 2
+    y = (h - (4 / 9 * h)) / 2 + (4 / 9 * h)
+    shift = (h * 19 / 64) * location + scaled_w / 40
+    return int(x + shift), int(y)
+
+def get_hero_discover_size(resolution: (int, int)):
+    return int(resolution[1] * 14 / 64), 100
+
+def get_data_button_location(resolution: (int, int)):
+    fourth_hero = get_hero_discover_location(resolution, 3)
+    return fourth_hero[0] + 50, resolution[1] - resolution[1] / 10
 
 hover_size = (84, 68)
 p1_loc = (38, 247)
@@ -75,6 +90,11 @@ class OverlayWindow(QMainWindow):
         main_widget.setObjectName("overlay")
         main_widget.setStyleSheet("QWidget#overlay {background-color: rgba(0, 0, 0, 0);}")
 
+        self.hero_rates = [WinrateWidget(self) for _ in range(0, 4)]
+        for widget in self.hero_rates:
+            widget.setFixedSize(100, 100)
+            widget.setVisible(False)
+
         self.show_comps = settings.get(settings.enable_comps)
         self.main_window = main_window
         self.stream_overlay = None
@@ -93,6 +113,13 @@ class OverlayWindow(QMainWindow):
         self.pin_comp = False
 
         self.show_hide = True
+
+        self.data_button = QPushButton(tr("SBBTracker Ratings"), main_widget)
+        self.data_button.clicked.connect(self.open_data_page)
+        self.data_button.setFont(QFont("Roboto", 14))
+        self.data_button.resize(self.data_button.sizeHint().width(), self.data_button.sizeHint().height())
+        self.data_button.setVisible(False)
+        self.data_url = 'https://sbbtracker.com/data'
 
         self.comp_widget = OverlayCompWidget(self)
         self.places = list(range(0, 8))
@@ -150,8 +177,8 @@ class OverlayWindow(QMainWindow):
         widget.setVisible(show_or_hide)
         true_index = self.places[index]
         widget.change_widget(true_index)
-        widget.update()
-        if self.stream_overlay:
+        self.update()
+        if self.stream_overlay is not None:
             self.stream_overlay.show_hide_comp(index, show_or_hide)
 
     def update_round(self, round_num):
@@ -164,19 +191,22 @@ class OverlayWindow(QMainWindow):
         comp.current_round = round_num
         comp.update_history(xp, health)
         self.new_places[int(place) - 1] = index
+        if round_num == 0:
+            self.hide_hero_rates()
         if self.stream_overlay:
             self.stream_overlay.update_player(index, health, xp, round_num, place)
 
     def update_comp(self, index, player, round_number):
         self.comp_widget.update_comp(index, player, round_number)
         self.update()
+        if self.stream_overlay is not None:
+            self.stream_overlay.update_comp(index, player, round_number)
 
     def update_comp_scaling(self):
-        comp_widget = self.comp_widget
         scale = settings.get(settings.overlay_comps_scaling) / 100
-        comp_widget.set_scale(scale)
-        comp_widget.setFixedSize(self.base_comp_size * scale)
-        comp_widget.updateGeometry()
+        self.comp_widget.set_scale(scale)
+        self.comp_widget.setFixedSize(self.base_comp_size * scale)
+        self.comp_widget.updateGeometry()
 
     def update_placements(self):
         self.places = self.new_places.copy()
@@ -219,6 +249,12 @@ class OverlayWindow(QMainWindow):
             self.turn_display.move(turn_pos * self.dpi_scale)
             self.turn_display.label.setFont(QFont("Roboto", int(settings.get(settings.turn_display_font_size))))
             self.turn_display.update()
+
+            self.data_button.move(*get_data_button_location(self.sbb_rect.size().toTuple()))
+
+            for i, widget in enumerate(self.hero_rates):
+                widget.setFixedSize(*get_hero_discover_size(self.sbb_rect.size().toTuple()))
+                widget.move(*get_hero_discover_location(self.sbb_rect.size().toTuple(), i))
             if settings.get(settings.streaming_mode) and self.stream_overlay is not None:
                 self.stream_overlay.set_rect(left, top, right, bottom, dpi)
 
@@ -263,6 +299,27 @@ class OverlayWindow(QMainWindow):
         else:
             self.setWindowFlags(Qt.SubWindow)
 
+    def update_hero_rates(self, index, placement, matches):
+        self.hero_rates[index].update_info(placement, matches)
+        self.hero_rates[index].setVisible(True)
+        if self.stream_overlay is not None:
+            self.stream_overlay.update_hero_rates(index, placement, matches)
+
+    def hide_hero_rates(self):
+        self.data_button.setVisible(False)
+        for rate in self.hero_rates:
+            rate.setVisible(False)
+        if self.stream_overlay is not None:
+            self.stream_overlay.hide_hero_rates()
+        self.update()
+
+    def update_data_url(self, hero_names):
+        self.data_button.setVisible(True)
+        self.data_url = 'https://sbbtracker.com/data?dataset=mythic&heroes=' + ','.join(hero_names)
+
+    def open_data_page(self):
+        open_url(self, self.data_url)
+
 
 class StreamerOverlayWindow(OverlayWindow):
     def __init__(self, main_window):
@@ -277,6 +334,11 @@ class StreamerOverlayWindow(OverlayWindow):
         self.setFixedSize(*settings.get(settings.streamer_overlay_size))
         self.disable_hovers()
 
+        # TODO: understand why is this needed to have board comps work
+        self.comp_widget = OverlayCompWidget(self)
+        self.set_transparency()
+        self.update_comp_scaling()
+
     def get_alpha(self, setting):
         return 1
 
@@ -284,6 +346,8 @@ class StreamerOverlayWindow(OverlayWindow):
         super().set_rect(left, top, right, bottom, dpi)
         settings.set_(settings.streamer_overlay_size, self.sbb_rect.size().toTuple())
 
+    def update_hovers(self):
+        pass
 
 class OverlayBoardComp(BoardComp):
     def __init__(self, parent):
@@ -513,7 +577,6 @@ class SimulatorStats(MovableWidget):
         self.displayable = True
 
     def resizeEvent(self, event: QtGui.QResizeEvent):
-        print(self.size())
         w = event.size().width()
         h = event.size().height()
         for child in self.background.children():
@@ -557,7 +620,6 @@ class HoverRegion(QWidget):
         self.background.setMinimumSize(width, height)
         self.setStyleSheet("background-color: rgba(0, 0, 0, 0.01);")
         self.setMinimumSize(width, height)
-
 
     def enterEvent(self, event):
         self.enter_hover.emit()
@@ -607,3 +669,24 @@ class StreamableMatchDisplay(QMainWindow):
         if self._mousePressed and (Qt.LeftButton & event.buttons()):
             self.move(self._windowPos +
                       (event.globalPosition().toPoint() - self._mousePos))
+
+
+class WinrateWidget(QFrame):
+    def __init__(self, parent):
+        super().__init__(parent)
+        layout = QVBoxLayout(self)
+        self.placement_label = QLabel("Avg Placement: 0.0")
+        self.matches_label = QLabel("Matches: 0")
+        self.placement_label.setObjectName("WinLabel")
+        self.matches_label.setObjectName("WinLabel")
+        layout.addWidget(self.placement_label, alignment=Qt.AlignHCenter)
+        layout.addWidget(self.matches_label, alignment=Qt.AlignHCenter)
+
+    def resizeEvent(self, event):
+        w = event.size().width()
+        for  label in [self.matches_label, self.placement_label]:
+            label.setStyleSheet(f"QLabel#WinLabel{{font-size:{18 * w / 300}pt }}")
+
+    def update_info(self, placement, matches):
+        self.placement_label.setText(tr("Avg Place")+ f": {placement}")
+        self.matches_label.setText(tr("# Matches")+ f": {matches}")

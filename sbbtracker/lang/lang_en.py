@@ -7,6 +7,10 @@
 #  If you see {0}, {1}, keep it in the translated sentence
 
 lang = {
+    "Hero Selection": "",
+    "Placements": "",
+    "SBBTracker Ratings": "",
+
     "All Matches": "",
     "Latest Patch": "",
     "Previous Patch": "",
@@ -50,7 +54,6 @@ lang = {
     "Ending Heroes": "",
     "Health Graph": "",
     "XP Graph": "",
-    "Num Matches": "",
 
     "Hero": "",
     "# Matches": "",

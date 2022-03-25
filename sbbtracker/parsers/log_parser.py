@@ -1,6 +1,7 @@
 import gzip
 import json
 import os
+import re
 import time
 from collections import defaultdict
 from enum import Enum
@@ -56,6 +57,7 @@ TASK_ENDGAME = "TaskEndGame"
 TASK_ENDCOMBAT = "TaskEndCombat"
 TASK_GETTHISPLAYER = "GetThisPlayer"
 TASK_MATCHMAKING = "TaskMatchmaking"
+TASK_HERODISCOVER = "TaskHeroDiscover"
 
 JOB_PLAYERINFO = "PlayerInfo"
 JOB_INITCURRENTPLAYER = "InitCurrentPlayer"
@@ -67,6 +69,7 @@ JOB_ENDCOMBAT = "EndCombat"
 JOB_HEALTHUPDATE = "HealthUpdate"
 JOB_MATCHMAKING = "StateMatchmaking"
 JOB_CARDUPDATE = "CardUpdate"
+JOB_HERODISCOVER = "HeroDiscover"
 
 
 def parse_list(line, delimiter):
@@ -103,6 +106,11 @@ def parse_list(line, delimiter):
     new_line = line[dis - lastpipe:].strip()
 
     return new_line, specval
+
+
+def parse_complicated_list(line):
+    pattern = re.compile('CardTemplateId: ([0-9]*)')
+    return '', pattern.findall(line)
 
 
 def process_line(line, ifs, dt=None, path=[]):
@@ -147,6 +155,8 @@ def process_line(line, ifs, dt=None, path=[]):
     # If we need to hunt for the next val do it here
     elif current_key in ['FrameOverride']:
         line, specval = parse_list(line=line, delimiter=' ')
+    elif current_key in ["Choices"]:
+        line, specval = parse_complicated_list(line)
     else:
         # First find the distance to the first colon or pipe
         # colon means we go "in" a level
@@ -280,7 +290,10 @@ class Action:
                     self.playerid = info["PlayerData"].replace("Id ", "")
                     self.attrs.append('mmr')
 
-            # elif self.action_type == EVENT_PRESENTHERODISCOVER:
+            elif self.action_type == EVENT_PRESENTHERODISCOVER:
+                self.task = TASK_HERODISCOVER
+                self.choices = info['Choices']
+                self.attrs = ['choices']
 
             elif self.action_type == EVENT_ENTERBRAWLPHASE:
                 self.task = TASK_GATHERIDS
@@ -379,6 +392,8 @@ def run(queue: Queue, log=logfile):
                 current_round = None
                 lastupdated = dict()
                 queue.put(Update(JOB_NEWGAME, action))
+            if action.task == TASK_HERODISCOVER:
+                queue.put(Update(JOB_HERODISCOVER, action))
             elif not inbrawl and not current_player_stats and action.task == TASK_ADDPLAYER \
                     and prev_action is not None and prev_action.action_type == EVENT_UPDATEEMOTES:
                 current_player_stats = action

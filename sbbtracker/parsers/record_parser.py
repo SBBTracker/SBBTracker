@@ -1,5 +1,5 @@
-# Credit to ForgottenArbiter
-# https://github.com/ForgottenArbiter/SBBRecordReader
+from typing import BinaryIO
+import re
 
 import binascii
 import struct
@@ -13,6 +13,17 @@ STRUCT_GUID = Struct(
     "field_3" / Int16ul,
     "field_4" / Int64ul
 )
+
+preamble_regex = re.compile(r"ClientVersion:\[([^\]]+)\]\|TransportVersion:\[([^\]]+)\]\|CardDatabaseVersion:\[([^\]]+)\]")
+
+
+def parse_preamble(f: BinaryIO):
+    preamble = f.readline().decode("utf-8")
+    answer = preamble_regex.match(preamble)
+    client_version = answer[1]
+    transport_version = answer[2]
+    card_database_version = answer[3]
+    return client_version, transport_version, card_database_version
 
 
 class GuidAdapter(Adapter):
@@ -31,7 +42,7 @@ class GuidAdapter(Adapter):
         return STRUCT_GUID.build(dict(field_1=field_1, field_2=field_2, field_3=field_3, field_4=field_4))
 
 
-ZONE = Enum(Byte, none=0, character=1, treasure=3, hero=4, shop=6)  # TODO: Incomplete
+ZONE = Enum(Byte, none=0, character=1, spell=2, treasure=3, hero=4, hand=5, shop=6)  # TODO: Incomplete
 
 SUBTYPE = Enum(Int16ul, prince=0, princess=1, animal=2, mage=4, fairy=6, dwarf=7, treant=8, egg=9, good=0xA, evil=0xB,
                brawl_spell=0xF,
@@ -427,3 +438,4 @@ id_to_action_name = {b'\x01\x00': 'ActionConnectionInfo',
                      b'\x1c\x00': 'ActionAttack',
                      b'\x1d\x00': 'ActionDealDamage',
                      b'!\x00': 'ActionBrawlComplete'}
+

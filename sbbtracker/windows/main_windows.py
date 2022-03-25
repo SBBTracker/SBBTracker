@@ -16,10 +16,13 @@ from queue import Queue
 from statistics import mean
 
 import matplotlib
+import numpy as np
+import pandas as pd
 import requests
 
 from sbbtracker import graphs, paths, settings, stats, updater, version
 from sbbtracker.languages import tr
+from sbbtracker.utils.qt_utils import open_url
 from sbbtracker.utils.sbb_logic_utils import round_to_xp
 from sbbtracker.windows.constants import default_bg_color, primary_color
 from sbbtracker.windows.overlays import BoardComp, OverlayWindow, StreamableMatchDisplay, StreamerOverlayWindow
@@ -193,7 +196,8 @@ class LogThread(QThread):
     health_update = Signal(object)
     new_game = Signal(bool)
     update_card = Signal(object)
-    end_combat = Signal()
+    end_combat = Signal(bool)
+    hero_discover = Signal(list)
 
     def run(self):
         queue = Queue()
@@ -230,6 +234,9 @@ class LogThread(QThread):
                 build_id = state.build_id
                 combats.clear()
                 match_data.clear()
+            elif job == log_parser.JOB_HERODISCOVER:
+                if round_number < 1:
+                    self.hero_discover.emit(state.choices)
             elif job == log_parser.JOB_INITCURRENTPLAYER:
                 if not after_first_combat:
                     current_player = state
@@ -248,7 +255,7 @@ class LogThread(QThread):
                 if counter == 8:
                     self.player_info_update.emit(states)
                     if after_first_combat:
-                        self.end_combat.emit()
+                        self.end_combat.emit(False)
                 if not after_first_combat:
                     after_first_combat = True
             elif job == log_parser.JOB_BOARDINFO:
@@ -260,7 +267,7 @@ class LogThread(QThread):
             elif job == log_parser.JOB_ENDCOMBAT:
                 counter = 0
             elif job == log_parser.JOB_ENDGAME:
-                self.end_combat.emit()
+                self.end_combat.emit(True)
                 if state and current_player and session_id and build_id:
                     match_data["tracker-id"] = api_id
                     match_data["tracker-version"] = version.__version__
@@ -327,9 +334,11 @@ class SBBTracker(QMainWindow):
         self.match_history = MatchHistory(self, self.player_stats)
         self.live_graphs = LiveGraphs()
         self.stats_graph = StatsGraph(self.player_stats)
+        self.hero_selection = HeroSelection(self)
 
         main_tabs = QTabWidget()
         main_tabs.addTab(comps_widget, tr("Board Comps"))
+        main_tabs.addTab(self.hero_selection, tr("Hero Selection"))
         main_tabs.addTab(self.live_graphs, tr("Live Graphs"))
         main_tabs.addTab(self.match_history, tr("Match History"))
         main_tabs.addTab(self.stats_graph, tr("Stats Graphs"))
@@ -405,6 +414,7 @@ class SBBTracker(QMainWindow):
         self.log_updates.health_update.connect(self.update_health)
         self.log_updates.end_combat.connect(self.end_combat)
         self.log_updates.update_card.connect(self.shop_display.update_card)
+        self.log_updates.hero_discover.connect(self.update_hero_discover)
 
         self.board_queue = Queue()
         self.simulation = SimulationThread(self.board_queue)
@@ -437,6 +447,7 @@ class SBBTracker(QMainWindow):
         self.sim_results.clear()
         self.shop_display.clear()
         self.overlay.enable_hovers()
+        self.overlay.hide_hero_rates()
         self.overlay.turn_display.setVisible(settings.get(settings.enable_turn_display))
         self.streamer_overlay.turn_display.setVisible(settings.get(settings.enable_turn_display))
         for index in range(0, 8):
@@ -451,9 +462,13 @@ class SBBTracker(QMainWindow):
             overlay.comp_widget.reset()
             overlay.simulation_stats.reset_chances()
 
-    def end_combat(self):
+    def end_combat(self, end_of_game):
         self.overlay.simulation_stats.update_labels()
         self.streamer_overlay.simulation_stats.update_labels()
+        if end_of_game:
+            self.overlay.hide_hero_rates()
+            self.overlay.disable_hovers()
+            self.overlay.turn_display.setVisible(False)
 
     def get_comp(self, index: int):
         return self.comps[index]
@@ -462,6 +477,7 @@ class SBBTracker(QMainWindow):
         self.round_indicator.setText(f"Turn {round_number} ({round_to_xp(round_number)})")
         self.round_indicator.update()
         self.overlay.update_round(round_number)
+        self.overlay.hide_hero_rates()
 
     def update_player(self, player, round_number):
         index = self.get_player_index(player.playerid)
@@ -526,8 +542,6 @@ class SBBTracker(QMainWindow):
             self.match_history.update_stats_table()
             if settings.get(settings.streamable_score_list):
                 self.streamable_scores.add_score(place)
-        self.overlay.disable_hovers()
-        self.overlay.turn_display.setVisible(False)
 
     def update_health(self, player):
         index = self.get_player_index(player.playerid)
@@ -554,25 +568,23 @@ class SBBTracker(QMainWindow):
         else:
             self.streamable_scores.hide()
 
+    def update_hero_discover(self, hero_ids):
+        self.hero_selection.update_heroes(hero_ids, self.player_stats, self.overlay)
+
     def export_last_comp(self):
         if self.most_recent_combat:
             with open(paths.sbbtracker_folder.joinpath("last_combat.json"), "w") as file:
                 json.dump(from_state(asset_utils.replace_template_ids(self.most_recent_combat)),
                           file, default=lambda o: o.__dict__)
 
-    def open_url(self, url_string: str):
-        url = QUrl(url_string)
-        if not QDesktopServices.openUrl(url):
-            QMessageBox.warning(self, tr('Open Url'), tr('Could not open url'))
-
     def open_discord(self):
-        self.open_url('https://discord.com/invite/2AJctfj239')
+        open_url(self, 'https://discord.com/invite/2AJctfj239')
 
     def open_github_release(self):
-        self.open_url("https://github.com/SBBTracker/SBBTracker/releases/latest")
+        open_url(self, "https://github.com/SBBTracker/SBBTracker/releases/latest")
 
     def open_issues(self):
-        self.open_url("https://github.com/SBBTracker/SBBTracker/issues")
+        open_url(self, "https://github.com/SBBTracker/SBBTracker/issues")
 
     def show_patch_notes(self):
         try:
@@ -866,8 +878,7 @@ class StatsGraph(QWidget):
         self.mmr_range.setMaximumWidth(200)
         self.mmr_range.addItems(["25", "50", "100"])
         self.mmr_range.activated.connect(self.update_mmr_range)
-        self.range_label = QLabel(tr("Num Matches"));
-
+        self.range_label = QLabel(tr("# Matches"))
 
         self.range = 25
 
@@ -893,3 +904,74 @@ class StatsGraph(QWidget):
     def update_mmr_range(self):
         self.range = int(self.mmr_range.currentText())
         self.update_graph()
+
+
+class HeroSelection(QWidget):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.heroes = [HeroStatsWidget(self) for _ in range(0, 4)]
+        layout = QHBoxLayout(self)
+        for widget in self.heroes:
+            layout.addWidget(widget)
+
+    def update_heroes(self, hero_ids, player_stats: stats.PlayerStats, overlay):
+        hero_names = []
+        for i in range(0, 4):
+            hero_id = hero_ids[i]
+            hero_name = asset_utils.get_card_name(hero_id)
+            hero_names.append(hero_name)
+            placement, matches, histogram = player_stats.get_stats_for_hero(*get_date_range(latest_patch), hero_name)
+            self.heroes[i].update_hero(placement, matches, histogram, hero_id)
+            overlay.update_hero_rates(i, placement, matches)
+        overlay.update_data_url(hero_names)
+
+
+class HeroStatsWidget(QWidget):
+    def __init__(self, parent):
+        super().__init__(parent)
+
+        font = QFont("Roboto", 20)
+        self.placement = QLabel("Avg Placement: " + "0.00")
+        self.placement.setFont(font)
+        self.num_matches = QLabel("Matches: " + "0")
+        self.num_matches.setFont(font)
+        self.hero_label = QLabel()
+        self.hero_label.setFont(font)
+        self.hero_name_label = QLabel()
+        self.hero_name_label.setFont(font)
+        self.histogram = HistogramWidget(self)
+        self.histogram.setFixedSize(300, 250)
+
+        layout = QVBoxLayout(self)
+        layout.addWidget(self.hero_name_label, alignment=Qt.AlignCenter)
+        layout.addWidget(self.hero_label, alignment=Qt.AlignCenter)
+        layout.addWidget(self.placement, alignment=Qt.AlignHCenter | Qt.AlignTop)
+        layout.addWidget(self.num_matches, alignment=Qt.AlignCenter | Qt.AlignTop)
+        layout.addWidget(self.histogram, alignment=Qt.AlignCenter | Qt.AlignTop)
+        layout.addStretch()
+
+    def update_hero(self, placement, matches, histogram, hero_id):
+        hero_name = asset_utils.get_card_name(hero_id)
+        pixmap = QPixmap(asset_utils.get_card_path(hero_id, False))
+        self.hero_label.setPixmap(pixmap)
+        self.hero_name_label.setText(hero_name)
+        self.placement.setText(tr("Avg Place") + ": " + str(placement))
+        self.num_matches.setText(tr("# Matches") + ": " + str(matches))
+        self.histogram.draw_hist(histogram)
+
+
+class HistogramWidget(QWidget):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.figure = None
+        self.canvas = FigureCanvasQTAgg(plt.Figure(figsize=(13.5, 18)))
+        self.ax = self.canvas.figure.subplots()
+        layout = QVBoxLayout(self)
+        layout.addWidget(self.canvas)
+
+    def draw_hist(self, series):
+        self.ax.cla()
+        self.ax.bar(np.arange(1,9), series[0], width=1)
+        self.ax.set_xticks(np.arange(1,9))
+        self.ax.set_title(tr("Placements"))
+        self.canvas.draw()
