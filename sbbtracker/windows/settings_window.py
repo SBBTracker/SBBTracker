@@ -196,7 +196,7 @@ and Lunco
         data_layout.addWidget(QLabel(tr("Reimporting is temporarily disabled")))
         data_layout.addWidget(reimport_button)
         data_layout.addRow(tr("Upload matches to sbbtracker.com"), enable_upload)
-        data_layout.addWidget(QLabel(tr("Match uploads include your steam name, sbb id, board comps,placement, and change in mmr.")))
+        data_layout.addWidget(QLabel(tr("Match uploads include your steam name, sbb id, board comps, placement, and change in mmr.")))
 
         overlay_layout = QVBoxLayout(overlay_settings)
 
