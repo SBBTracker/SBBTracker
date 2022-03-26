@@ -11,6 +11,8 @@ from queue import Queue
 from pygtail import Pygtail
 from sbbtracker.paths import logfile, offsetfile
 
+from sbbtracker.utils.asset_utils import reverse_template_id
+
 
 VERYLARGE = 2 ** 20
 NOTFOUND = -1
@@ -83,7 +85,7 @@ def parse_list(line, delimiter):
     line : str
         The current line of text being operated on
     delimiter : str
-        The delimiter we're expecting to see in the 
+        The delimiter we're expecting to see in the
         line separating list elements
 
     Returns
@@ -119,7 +121,7 @@ def process_line(line, ifs, dt=None, path=[]):
     Log lines are kind of like flattened YAML, except they have mistakes
     and have random newlines inside of them and are all around
     a fantastic time. We handle those edge cases here.
-    
+
     Parameters
     ----------
     line : str
@@ -230,7 +232,7 @@ def process_line(line, ifs, dt=None, path=[]):
 
 def parse(ifs):
     """
-    Parse the log file into workable dictionaries. A nice function to 
+    Parse the log file into workable dictionaries. A nice function to
     separate the business logic from the parsing logic
 
     Parameters
@@ -347,6 +349,56 @@ class Action:
 
     def __repr__(self):
         return json.dumps({k: getattr(self, k) for k in ['task', *self.attrs]}, sort_keys=True, indent=4)
+
+    @classmethod
+    def from_state(cls, state):
+        card = cls(info=None)
+        template_id = reverse_template_id(
+            state['content_id'], golden=state.get("is_golden", False)
+        )
+
+        card.content_id = template_id
+        card.zone = state['zone']
+        card.task = ""
+        card.action_type = "GLG.Transport.Actions.ActionCreateCard"
+        card.counter = state.get('counter', '-1')
+        card.playerid = state["playerid"]
+
+        card.attrs = ["content_id", "zone", "task", "action_type", "counter", "playerid"]
+
+        if state["zone"] == "Hero":
+            card.displayname = ""
+            card.health = 1 # player health is cast to an int
+            card.heroid = template_id
+            card.place = "-1"
+            card.level = "-1"
+            card.experience = "-1"
+            card.slot = "0"
+            card.attrs.extend(
+                [
+                    'displayname', 'health', 'heroid', 'place', 'level', 'experience', 'slot',
+                ]
+            )
+
+        elif state["zone"] in ("Character", "Treasure", "Spell"):
+            card.cardattack = str(state.get('cardattack', '0'))
+            card.cardhealth = str(state.get('cardhealth', '0'))
+            card.is_golden = state.get('is_golden', False)
+            card.cost = str(state.get('cost', '-1')) # TODO see if this will always be there
+            card.subtypes = state.get('subtypes', []) # TODO see if this will always be there
+            card.slot = state.get('slot', '0')
+
+            card.attrs.extend(
+                [
+                    'cardattack',
+                    'cardhealth',
+                    'is_golden',
+                    'cost',
+                    'subtypes',
+                    'slot',
+                ]
+            )
+        return card
 
 
 class Update:

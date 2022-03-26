@@ -19,8 +19,10 @@ from PySide6.QtWidgets import (
 )
 from qt_material import apply_stylesheet
 
+
 from sbbtracker import stats, settings, paths
 from sbbtracker.utils import asset_utils
+
 
 logging.basicConfig(filename=paths.sbbtracker_folder.joinpath("sbbtracker.log"), filemode="w",
                     format='%(name)s - %(levelname)s - %(message)s', level=logging.WARNING)
@@ -85,10 +87,10 @@ Things that are currently collected:
 * Hero, Health, and XP
 * Net MMR
 
-This may include more game-related information as we improve 
+This may include more game-related information as we improve
 our ability to collect it.
 
-This info may be shared as part of the public dataset. 
+This info may be shared as part of the public dataset.
 
 For a full privacy policy, please visit sbbtracker.com/privacy.
 

@@ -28,6 +28,7 @@ from sbbtracker.windows.constants import default_bg_color, primary_color
 from sbbtracker.windows.overlays import BoardComp, OverlayWindow, StreamableMatchDisplay, StreamerOverlayWindow
 from sbbtracker.windows.settings_window import SettingsWindow
 from sbbtracker.windows.shop_display import ShopDisplay
+from sbbtracker.windows.simulation_widget import BoardAnalysis, SimulationThread
 
 matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
@@ -334,6 +335,7 @@ class SBBTracker(QMainWindow):
         self.match_history = MatchHistory(self, self.player_stats)
         self.live_graphs = LiveGraphs()
         self.stats_graph = StatsGraph(self.player_stats)
+        self.board_analysis = BoardAnalysis(size=self.size(), player_ids=self.player_ids)
         self.hero_selection = HeroSelection(self)
 
         main_tabs = QTabWidget()
@@ -342,6 +344,7 @@ class SBBTracker(QMainWindow):
         main_tabs.addTab(self.live_graphs, tr("Live Graphs"))
         main_tabs.addTab(self.match_history, tr("Match History"))
         main_tabs.addTab(self.stats_graph, tr("Stats Graphs"))
+        main_tabs.addTab(self.board_analysis, "Simulator")
 
         self.main_tabs = main_tabs
 
@@ -513,6 +516,7 @@ class SBBTracker(QMainWindow):
                 board_player.level = 0
             comp.composition = board
             comp.last_seen = round_number
+            self.board_analysis.update_comp(board, round_number, player_id)
             self.overlay.update_comp(index, board, round_number)
             self.streamer_overlay.update_comp(index, board, round_number)
             self.update()

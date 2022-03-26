@@ -27,7 +27,7 @@ def draw_text(painter, location, text, font):
 
 
 class BoardComp(QWidget):
-    def __init__(self, parent):
+    def __init__(self, parent, scale=1):
         super().__init__(parent)
         self.composition = None
 
@@ -44,7 +44,8 @@ class BoardComp(QWidget):
         self.last_seen = None
         self.current_round = 0
         self.player = None
-        self.scale = 1
+        self.scale = scale
+        self.custom_message = None
 
         self.number_display_font = QFont(display_font_family, 30, weight=QFont.Black)
 
@@ -186,19 +187,23 @@ class BoardComp(QWidget):
                     hero_loc = self.get_image_location(11)
                     quest_loc = tuple(map(operator.add, hero_loc, hero_quest_loc))
                     self.draw_quest(painter, action.counter, quest_loc, .30)
-        last_seen_text = ""
-        if self.last_seen is not None:
-            if self.last_seen == 0:
-                last_seen_text = tr("Last seen just now")
-            elif self.last_seen > 0:
-                if self.current_round - self.last_seen == 1:
-                    last_seen_text += tr("Last seen 1 turn ago")
-                else:
-                    last_seen_text += tr("Last seen {0} turns ago").format(self.current_round - self.last_seen)
+        if self.custom_message:
+            last_seen_text = self.custom_message
         else:
-            last_seen_text = tr("Not yet seen")
+            last_seen_text = ""
+            if self.last_seen is not None:
+                if self.last_seen == 0:
+                    last_seen_text = tr("Last seen just now")
+                elif self.last_seen > 0:
+                    if self.current_round - self.last_seen == 1:
+                        last_seen_text += tr("Last seen 1 turn ago")
+                    else:
+                        last_seen_text += tr("Last seen {0} turns ago").format(self.current_round - self.last_seen)
+            else:
+                last_seen_text = tr("Not yet seen")
         painter.setPen(QPen(QColor("white"), 1))
         seen_font = QFont("Roboto")
         seen_font.setPixelSize(20)
         painter.setFont(seen_font)
         painter.drawText(10, 25, last_seen_text)
+

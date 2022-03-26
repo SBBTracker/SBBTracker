@@ -15,12 +15,17 @@ if getattr(sys, 'frozen', False):
 else:
     application_path = Path(__file__).parent.parent
 
+
 def get_asset(asset_name: str):
     return str(application_path.joinpath(f"../assets/{asset_name}"))
 
 
 with open(get_asset("template-ids.json"), "r") as json_file:
     content_id_lookup = json.load(json_file)
+    template_id_lookup = {
+        v["Id"]: {"TemplateId": k, "Name": v["Name"]}
+        for k, v in content_id_lookup.items()
+    }
 
 
 def get_card_art_name(template_id: str, is_golden: bool):
@@ -78,4 +83,11 @@ def replace_template_ids(state):
             if hasattr(character, "health") and character.health <= 0:
                 character.content_id = ""
     return copied
+
+
+def reverse_template_id(content_id, golden=False):
+    template_id = int(template_id_lookup[content_id]["TemplateId"])
+    if golden:
+        template_id += 1
+    return str(template_id)
 
