@@ -1,3 +1,4 @@
+import logging
 import operator
 
 from PySide6 import QtCore, QtGui
@@ -338,6 +339,13 @@ class StreamerOverlayWindow(OverlayWindow):
 
         # TODO: understand why is this needed to have board comps work
         self.comp_widget = OverlayCompWidget(self)
+        self.hero_rates = []
+        for i in range(0, 4):
+            widget = WinrateWidget(self)
+            widget.setFixedSize(100, 100)
+            widget.setVisible(False)
+            self.hero_rates.append(widget)
+
         self.set_transparency()
         self.update_comp_scaling()
 
