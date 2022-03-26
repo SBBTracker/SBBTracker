@@ -1,7 +1,8 @@
 import operator
 
+from PySide6 import QtCore, QtGui
 from PySide6.QtCore import QPoint, QRect, QSize, Qt, Signal
-from PySide6.QtGui import QFont, QGuiApplication, QPainter, QPixmap
+from PySide6.QtGui import QColor, QFont, QGuiApplication, QPainter, QPainterPath, QPen, QPixmap, QRegion
 from PySide6.QtWidgets import (
     QFrame,
     QGridLayout, QHBoxLayout,
@@ -13,7 +14,9 @@ from PySide6.QtWidgets import (
 )
 
 from sbbtracker import settings
+from sbbtracker.languages import tr
 from sbbtracker.utils import asset_utils, sbb_logic_utils
+from sbbtracker.utils.qt_utils import open_url
 from sbbtracker.utils.sbb_logic_utils import round_to_xp
 from sbbtracker.windows.board_comps import BoardComp
 from sbbtracker.windows.constants import default_bg_color, default_bg_color_rgb
@@ -29,6 +32,20 @@ def get_hover_size(resolution: (int, int)):
     width = 0.0773 * y + 0.687
     return width, width * 17 / 21
 
+def get_hero_discover_location(resolution: (int, int), location: int):
+    w, h = resolution
+    scaled_w = int(h * 16 / 9)
+    x = (scaled_w -  scaled_w / 3 * 2) / 2 - (scaled_w - w) / 2
+    y = (h - (4 / 9 * h)) / 2 + (4 / 9 * h)
+    shift = (h * 19 / 64) * location + scaled_w / 40
+    return int(x + shift), int(y)
+
+def get_hero_discover_size(resolution: (int, int)):
+    return int(resolution[1] * 14 / 64), 100
+
+def get_data_button_location(resolution: (int, int)):
+    fourth_hero = get_hero_discover_location(resolution, 3)
+    return fourth_hero[0] + 50, resolution[1] - resolution[1] / 10
 
 hover_size = (84, 68)
 p1_loc = (38, 247)
@@ -60,45 +77,6 @@ def move_point_by_scale(x, y, scale):
     return new_x, new_y
 
 
-class OverlayBoardComp(BoardComp):
-    def __init__(self):
-        super().__init__()
-        self.xps = []
-        self.healths = []
-
-    def update_history(self, xp, health):
-        if len(self.xps) == 3:
-            self.xps.pop(0)
-            self.healths.pop(0)
-        if xp == "6.0" or xp not in self.xps:
-            self.xps.append(xp)
-            self.healths.append(health)
-
-    def get_image_location(self, position: int):
-        if 7 <= position <= 9:
-            x = (161 * (position - 7))
-            y = 440
-        else:
-            x, y = super().get_image_location(position)
-        return x, y
-
-    def draw_hero(self, painter: QPainter):
-        pass
-
-    def draw_history(self, painter: QPainter):
-        border = QRect(18, 40, 265, 390)
-        painter.drawRoundedRect(border, 25, 25)
-        for i in reversed(range(0, len(self.xps))):
-            self.draw_xp(painter, (30, 50 + 130*(len(self.xps) - 1 - i)), self.xps[i])
-            self.draw_health(painter, (140, 45 + 130*(len(self.healths)-1-i)), self.healths[i])
-
-    def paintEvent(self, event):
-        super().paintEvent(event)
-        painter = QPainter(self)
-        painter.scale(self.scale, self.scale)
-        self.draw_history(painter)
-
-
 class OverlayWindow(QMainWindow):
     simluation_update = Signal(str, str, str, str, str)
 
@@ -111,6 +89,11 @@ class OverlayWindow(QMainWindow):
         main_widget = QWidget()
         main_widget.setObjectName("overlay")
         main_widget.setStyleSheet("QWidget#overlay {background-color: rgba(0, 0, 0, 0);}")
+
+        self.hero_rates = [WinrateWidget(self) for _ in range(0, 4)]
+        for widget in self.hero_rates:
+            widget.setFixedSize(100, 100)
+            widget.setVisible(False)
 
         self.show_comps = settings.get(settings.enable_comps)
         self.main_window = main_window
@@ -127,24 +110,27 @@ class OverlayWindow(QMainWindow):
         self.turn_display = TurnDisplay(main_widget)
         self.turn_display.setVisible(False)
 
+        self.pin_comp = False
+
         self.show_hide = True
 
-        self.comps = [OverlayBoardComp() for _ in range(0, 8)]
-        self.comp_widgets = [QFrame(main_widget) for _ in range(0, 8)]
+        self.data_button = QPushButton(tr("SBBTracker Ratings"), main_widget)
+        self.data_button.clicked.connect(self.open_data_page)
+        self.data_button.setFont(QFont("Roboto", 14))
+        self.data_button.resize(self.data_button.sizeHint().width(), self.data_button.sizeHint().height())
+        self.data_button.setVisible(False)
+        self.data_url = 'https://sbbtracker.com/data'
+
+        self.comp_widget = OverlayCompWidget(self)
         self.places = list(range(0, 8))
         self.new_places = list(range(0, 8))
-        self.base_comp_size = QSize(1020, 650)
-        for index in range(len(self.comps)):
-            comp = self.comps[index]
-            widget = self.comp_widgets[index]
-
-            comp.setParent(widget)
-            widget.setVisible(False)
-            widget.move(round(self.size().width() / 2 - 100), 0)
+        self.base_comp_size = QSize(1020, 665)
+        self.comp_widget.setVisible(False)
+        self.comp_widget.move(round(self.size().width() / 2 - 100), 0)
         self.set_transparency()
         self.update_comp_scaling()
 
-        self.show_button = QPushButton("Show Tracker", main_widget)
+        self.show_button = QPushButton(tr("Show Tracker"), main_widget)
         self.show_button.clicked.connect(self.show_hide_main_window)
         self.show_button.move(40, 40)
         self.show_button.resize(self.show_button.sizeHint().width(), self.show_button.sizeHint().height())
@@ -157,10 +143,10 @@ class OverlayWindow(QMainWindow):
     def show_hide_main_window(self):
         if self.show_hide:
             self.main_window.setWindowState(Qt.WindowState.WindowActive)
-            self.show_button.setText("Hide Tracker")
+            self.show_button.setText(tr("Hide Tracker"))
         else:
             self.main_window.showMinimized()
-            self.show_button.setText("Show Tracker")
+            self.show_button.setText(tr("Show Tracker"))
         self.show_hide = not self.show_hide
 
     def visible_in_bg(self, visible):
@@ -185,11 +171,15 @@ class OverlayWindow(QMainWindow):
                 hover.setVisible(True)
 
     def show_hide_comp(self, index, show_or_hide: bool):
-        widget = self.comp_widgets[self.places[index]]
+        # TODO: figure out how to move the comp widget
+        # if not QGuiApplication.keyboardModifiers() & Qt.ShiftModifier:
+        widget = self.comp_widget
         widget.setVisible(show_or_hide)
-        if self.stream_overlay:
-            streamer_widget = self.stream_overlay.comp_widgets[self.places[index]]
-            streamer_widget.setVisible(show_or_hide)
+        true_index = self.places[index]
+        widget.change_widget(true_index)
+        self.update()
+        if self.stream_overlay is not None:
+            self.stream_overlay.show_hide_comp(index, show_or_hide)
 
     def update_round(self, round_num):
         self.turn_display.update_label(f"Turn {round_num} ({round_to_xp(round_num)})")
@@ -197,33 +187,32 @@ class OverlayWindow(QMainWindow):
             self.stream_overlay.update_round(round_num)
 
     def update_player(self, index, health, xp, round_num, place):
-        self.comps[index].current_round = round_num
-        self.comps[index].update_history(xp, health)
+        comp = self.comp_widget.get_comp(index)
+        comp.current_round = round_num
+        comp.update_history(xp, health)
         self.new_places[int(place) - 1] = index
+        if round_num == 0:
+            self.hide_hero_rates()
         if self.stream_overlay:
             self.stream_overlay.update_player(index, health, xp, round_num, place)
 
     def update_comp(self, index, player, round_number):
-        comp = self.comps[index]
-        comp.composition = player
-        comp.last_seen = round_number
+        self.comp_widget.update_comp(index, player, round_number)
         self.update()
+        if self.stream_overlay is not None:
+            self.stream_overlay.update_comp(index, player, round_number)
 
     def update_comp_scaling(self):
-        for i in range(len(self.comps)):
-            comp = self.comps[i]
-            widget = self.comp_widgets[i]
-            comp.scale = settings.get(settings.overlay_comps_scaling) / 100
-            comp.setFixedSize(self.base_comp_size * comp.scale)
-            widget.setFixedSize(self.base_comp_size * comp.scale)
-            widget.updateGeometry()
+        scale = settings.get(settings.overlay_comps_scaling) / 100
+        self.comp_widget.set_scale(scale)
+        self.comp_widget.setFixedSize(self.base_comp_size * scale)
+        self.comp_widget.updateGeometry()
 
     def update_placements(self):
         self.places = self.new_places.copy()
         self.new_places = list(range(0, 8))
-        for widget in self.comp_widgets:
-            #  fixes bug where hovering over the hero at the end of combat gets the overlay stuck
-            widget.setVisible(False)
+        #  fixes bug where hovering over the hero at the end of combat gets the overlay stuck
+        self.comp_widget.setVisible(False)
 
     def set_rect(self, left, top, right, bottom, dpi):
         self.dpi_scale = 1 / round(dpi / 96 - .24)  # round .75 and up to nearest int
@@ -248,8 +237,7 @@ class OverlayWindow(QMainWindow):
             self.move(left_edge, top_edge)
             self.scale_factor = self.sbb_rect.size().height() / base_size[1]
             self.update_hovers()
-            for widget in self.comp_widgets:
-                widget.move(QPoint(round(self.size().width() / 2 - 100), 0) * self.dpi_scale)
+            self.comp_widget.move(QPoint(round(self.size().width() / 2 - 100), 0) * self.dpi_scale)
 
             sim_pos = QPoint(*settings.get(settings.simulator_position, (self.sbb_rect.top() / 2 - 100, 0)))
             if not self.centralWidget().geometry().contains(sim_pos):
@@ -261,6 +249,12 @@ class OverlayWindow(QMainWindow):
             self.turn_display.move(turn_pos * self.dpi_scale)
             self.turn_display.label.setFont(QFont("Roboto", int(settings.get(settings.turn_display_font_size))))
             self.turn_display.update()
+
+            self.data_button.move(*get_data_button_location(self.sbb_rect.size().toTuple()))
+
+            for i, widget in enumerate(self.hero_rates):
+                widget.setFixedSize(*get_hero_discover_size(self.sbb_rect.size().toTuple()))
+                widget.move(*get_hero_discover_location(self.sbb_rect.size().toTuple(), i))
             if settings.get(settings.streaming_mode) and self.stream_overlay is not None:
                 self.stream_overlay.set_rect(left, top, right, bottom, dpi)
 
@@ -281,20 +275,52 @@ class OverlayWindow(QMainWindow):
         self.update()
 
     def set_transparency(self):
-        alpha = (100 - settings.get(settings.boardcomp_transparency, 0)) / 100
+        alpha = self.get_alpha(settings.boardcomp_transparency)
         style = f"background-color: rgba({default_bg_color_rgb}, {alpha});"
-        for widget in self.comp_widgets:
+        for widget in self.comp_widget.comps:
             widget.setStyleSheet(style)
 
-        alpha = (100 - settings.get(settings.simulator_transparency, 0)) / 100
-        style = f"background-color: rgba({default_bg_color_rgb}, {alpha}); font-size: 17px"
+        alpha = self.get_alpha(settings.simulator_transparency)
+        scale = settings.get(settings.simulator_scale) / 100
+        style = f"background-color: rgba({default_bg_color_rgb}, {alpha});"
+        self.simulation_stats.resize(400 * scale, 80 * scale)
         self.simulation_stats.setStyleSheet(style)
+
+        alpha = self.get_alpha(settings.turn_display_transparency)
+        style = f"background-color: rgba({default_bg_color_rgb}, {alpha}); font-size: {settings.get(settings.turn_display_font_size)}px"
+        self.turn_display.setStyleSheet(style)
+
+    def get_alpha(self, setting):
+        return  (100 - settings.get(setting, 0)) / 100
 
     def toggle_transparency(self):
         if settings.get(settings.streaming_mode):
             self.setWindowFlags(self.windowFlags() | Qt.SubWindow)
         else:
             self.setWindowFlags(Qt.SubWindow)
+
+    def update_hero_rates(self, index, placement, matches):
+        if settings.get(settings.enable_hero_stats):
+            self.hero_rates[index].update_info(placement, matches)
+            self.hero_rates[index].setVisible(True)
+            if self.stream_overlay is not None:
+                self.stream_overlay.update_hero_rates(index, placement, matches)
+
+    def hide_hero_rates(self):
+        self.data_button.setVisible(False)
+        for rate in self.hero_rates:
+            rate.setVisible(False)
+        if self.stream_overlay is not None:
+            self.stream_overlay.hide_hero_rates()
+        self.update()
+
+    def update_data_url(self, hero_names):
+        if settings.get(settings.enable_hero_stats):
+            self.data_button.setVisible(True)
+            self.data_url = 'https://sbbtracker.com/data?dataset=mythic&heroes=' + ','.join(hero_names)
+
+    def open_data_page(self):
+        open_url(self, self.data_url)
 
 
 class StreamerOverlayWindow(OverlayWindow):
@@ -310,19 +336,60 @@ class StreamerOverlayWindow(OverlayWindow):
         self.setFixedSize(*settings.get(settings.streamer_overlay_size))
         self.disable_hovers()
 
-    def set_transparency(self):
-        alpha = 1
-        style = f"background-color: rgba({default_bg_color_rgb}, {alpha});"
-        for widget in self.comp_widgets:
-            widget.setStyleSheet(style)
+        # TODO: understand why is this needed to have board comps work
+        self.comp_widget = OverlayCompWidget(self)
+        self.set_transparency()
+        self.update_comp_scaling()
 
-        alpha = 1
-        style = f"background-color: rgba({default_bg_color_rgb}, {alpha}); font-size: 17px"
-        self.simulation_stats.setStyleSheet(style)
+    def get_alpha(self, setting):
+        return 1
 
     def set_rect(self, left, top, right, bottom, dpi):
         super().set_rect(left, top, right, bottom, dpi)
         settings.set_(settings.streamer_overlay_size, self.sbb_rect.size().toTuple())
+
+    def update_hovers(self):
+        pass
+
+class OverlayBoardComp(BoardComp):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.xps = []
+        self.healths = []
+
+    def update_history(self, xp, health):
+        if len(self.xps) == 3:
+            self.xps.pop(0)
+            self.healths.pop(0)
+        if xp == "6.0" or xp not in self.xps:
+            self.xps.append(xp)
+            self.healths.append(health)
+
+    def get_image_location(self, position: int):
+        if 7 <= position <= 9:
+            x = (161 * (position - 7)) + 20
+            y = 440 + 15
+        else:
+            x, y = super().get_image_location(position)
+        return x, y
+
+    def draw_hero(self, painter: QPainter):
+        pass
+
+    def draw_history(self, painter: QPainter):
+        border = QRect(18, 40, 265, 390)
+        painter.setPen(QPen(QColor("white"), 2))
+        painter.drawRoundedRect(border, 25, 25)
+        for i in reversed(range(0, len(self.xps))):
+            self.draw_xp(painter, (30, 50 + 130 * (len(self.xps) - 1 - i)), self.xps[i])
+            self.draw_health(painter, (140, 45 + 130 * (len(self.healths) - 1 - i)), self.healths[i])
+
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        painter = QPainter(self)
+        painter.setRenderHints(QPainter.Antialiasing | QPainter.TextAntialiasing)
+        painter.scale(self.scale, self.scale)
+        self.draw_history(painter)
 
 
 class SimStatWidget(QFrame):
@@ -330,15 +397,15 @@ class SimStatWidget(QFrame):
         super().__init__(parent)
         self.title = title
         self.value = value
+        self.setObjectName("SimStatWidget")
 
         layout = QVBoxLayout(self)
         layout.addWidget(title, alignment=Qt.AlignHCenter)
         layout.addWidget(value, alignment=Qt.AlignHCenter)
         layout.setSpacing(20)
         title.setAttribute(Qt.WA_TranslucentBackground)
-        title.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
+        title.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         value.setAttribute(Qt.WA_TranslucentBackground)
-        self.setFixedWidth(80)
         self.setStyleSheet("background-color: rgba(0,0,0,0%);")
 
 
@@ -364,6 +431,52 @@ class MovableWidget(QWidget):
         if self.setting:
             settings.set_(self.setting, self.pos().toTuple())
 
+
+class OverlayCompWidget(MovableWidget):
+    def __init__(self, parent):
+        super().__init__(parent, settings.overlay_comps_position)
+        self.frame = QFrame(self)
+        self.frame.setAttribute(Qt.WA_TranslucentBackground, True)
+        self.comps = [OverlayBoardComp(self.frame) for _ in range(0, 8)]
+        for comp in self.comps:
+            comp.setVisible(False)
+        self.visible_comp = self.comps[0]
+
+    def set_scale(self, scale):
+        for comp in self.comps:
+            comp.scale = scale
+
+    def update_comp(self, index, player, round_number):
+        comp = self.get_comp(index)
+        comp.composition = player
+        comp.last_seen = round_number
+
+    def change_widget(self, index):
+        self.visible_comp.setVisible(False)
+        self.visible_comp = self.comps[index]
+        self.visible_comp.setVisible(True)
+
+    def reset(self):
+        for comp in self.comps:
+            comp.composition = None
+            comp.player = None
+            comp.current_round = 0
+            comp.last_seen = None
+            comp.xps.clear()
+            comp.healths.clear()
+
+    def resizeEvent(self, event:QtGui.QResizeEvent):
+        self.frame.setFixedSize(self.size())
+        for comp in self.comps:
+            comp.setFixedSize(self.size())
+        radius = 10
+        path = QPainterPath()
+        path.addRoundedRect(self.rect(), radius, radius)
+        mask = QRegion(path.toFillPolygon().toPolygon())
+        self.setMask(mask)
+
+    def get_comp(self, index):
+        return self.comps[index]
 
 class SimulatorStats(MovableWidget):
     def __init__(self, parent):
@@ -411,11 +524,11 @@ class SimulatorStats(MovableWidget):
         self.error_msg.setObjectName("sim-error")
         self.error_msg.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
-        label_layout.addWidget(SimStatWidget(self, win_dmg_title, self.win_dmg_label), 0, 0)
-        label_layout.addWidget(SimStatWidget(self, win_percent_title, self.win_label), 0, 1)
-        label_layout.addWidget(SimStatWidget(self, tie_title, self.tie_label), 0, 2)
-        label_layout.addWidget(SimStatWidget(self, loss_percent_title, self.loss_label), 0, 3)
-        label_layout.addWidget(SimStatWidget(self, loss_dmg_title, self.loss_dmg_label), 0, 4)
+        label_layout.addWidget(SimStatWidget(background, win_dmg_title, self.win_dmg_label), 0, 0)
+        label_layout.addWidget(SimStatWidget(background, win_percent_title, self.win_label), 0, 1)
+        label_layout.addWidget(SimStatWidget(background, tie_title, self.tie_label), 0, 2)
+        label_layout.addWidget(SimStatWidget(background, loss_percent_title, self.loss_label), 0, 3)
+        label_layout.addWidget(SimStatWidget(background, loss_dmg_title, self.loss_dmg_label), 0, 4)
 
         self.layout.addWidget(self.error_widget)
         self.error_widget.setMinimumSize(background.minimumSize())
@@ -424,6 +537,10 @@ class SimulatorStats(MovableWidget):
         label_layout.setRowStretch(0, 1)
         label_layout.setRowStretch(1, 1)
         label_layout.setContentsMargins(0, 0, 0, 0)
+
+        self.background = background
+        self.labels = [self.tie_label, self.win_label, self.loss_label, self.win_dmg_label, self.loss_dmg_label,
+                       tie_title, win_dmg_title, win_percent_title, loss_percent_title, loss_dmg_title]
 
     def reset_chances(self):
         self.win_dmg = "-"
@@ -461,15 +578,27 @@ class SimulatorStats(MovableWidget):
         self.loss_dmg_label.setText(self.loss_dmg)
         self.displayable = True
 
+    def resizeEvent(self, event: QtGui.QResizeEvent):
+        w = event.size().width()
+        h = event.size().height()
+        for child in self.background.children():
+            if type(child) is SimStatWidget:
+                child.setFixedWidth(int(80 * w / 400))
+                child.setFixedHeight(h)
+        for label in self.labels:
+            label.setFont(QFont("Roboto", 12*settings.get(settings.simulator_scale)/100))
+
 
 class TurnDisplay(MovableWidget):
     def __init__(self, parent):
         super().__init__(parent, settings.turn_indicator_position)
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setStyleSheet("background-color: rgba(0,0,0,0%);")
         layout = QHBoxLayout(self)
         frame = QFrame(self)
         frame_layout = QHBoxLayout(frame)
-        self.label = QLabel("Turn 0 (0.0)", frame)
-        frame.setStyleSheet(f"QFrame {{ background-color: {default_bg_color}}};")
+        self.label = QLabel("Turn {0} ({1})".format(0, 0.0), frame)
+        self.label.setStyleSheet("background-color: rgba(0,0,0,0%);")
         self.label.setFont(QFont("Roboto", int(settings.get(settings.turn_display_font_size))))
         layout.addWidget(frame)
         frame_layout.addWidget(self.label, Qt.AlignVCenter)
@@ -507,7 +636,7 @@ class StreamableMatchDisplay(QMainWindow):
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnBottomHint)
         self.setWindowTitle("SBBTracker Scores")
         self.scores = settings.get(settings.streamable_scores)
-        self.label = QLabel("Scores:")
+        self.label = QLabel(tr("Scores:"))
         self.label.setStyleSheet("QLabel { font-size: 50px; background-color: #00FFFF;}")
         self.setCentralWidget(self.label)
         self.update_label()
@@ -518,7 +647,7 @@ class StreamableMatchDisplay(QMainWindow):
         self.update_label()
 
     def update_label(self):
-        display_text = "Scores: "
+        display_text = tr("Scores:") + " "
         max_scores = settings.get(settings.streamable_score_max_len)
         for i in range(0, len(self.scores)):
             score = self.scores[i]
@@ -542,3 +671,24 @@ class StreamableMatchDisplay(QMainWindow):
         if self._mousePressed and (Qt.LeftButton & event.buttons()):
             self.move(self._windowPos +
                       (event.globalPosition().toPoint() - self._mousePos))
+
+
+class WinrateWidget(QFrame):
+    def __init__(self, parent):
+        super().__init__(parent)
+        layout = QVBoxLayout(self)
+        self.placement_label = QLabel("Avg Placement: 0.0")
+        self.matches_label = QLabel("Matches: 0")
+        self.placement_label.setObjectName("WinLabel")
+        self.matches_label.setObjectName("WinLabel")
+        layout.addWidget(self.placement_label, alignment=Qt.AlignHCenter)
+        layout.addWidget(self.matches_label, alignment=Qt.AlignHCenter)
+
+    def resizeEvent(self, event):
+        w = event.size().width()
+        for  label in [self.matches_label, self.placement_label]:
+            label.setStyleSheet(f"QLabel#WinLabel{{font-size:{18 * w / 300}pt }}")
+
+    def update_info(self, placement, matches):
+        self.placement_label.setText(tr("Avg Place")+ f": {placement}")
+        self.matches_label.setText(tr("# Matches")+ f": {matches}")

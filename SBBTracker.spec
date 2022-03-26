@@ -1,14 +1,18 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_submodules
+import glob
 
 block_cipher = None
 
+hidden_battlesim = collect_submodules('sbbbattlesim')
+hidden_tracker = [ file[2:].replace("/", ".").replace("\\", ".").replace(".py", "") for file in glob.glob("./sbbtracker/lang/lang_*.py") ]
 
+print(collect_submodules('./sbbtracker/lang/'))
 a = Analysis(['sbbtracker/application.py'],
              pathex=[],
              binaries=[],
              datas=[],
-             hiddenimports=collect_submodules('sbbbattlesim'),
+             hiddenimports=hidden_battlesim+hidden_tracker,
              hookspath=[],
              hooksconfig={},
              runtime_hooks=[],

@@ -1,17 +1,14 @@
+import concurrent.futures
 import calendar
 import concurrent.futures
 import datetime
 import json
 import logging
-import multiprocessing
-import operator
 import os
-import re
 import sys
 import threading
 import time
 import uuid
-import calendar
 from collections import defaultdict
 from datetime import date
 from pathlib import Path
@@ -19,36 +16,32 @@ from queue import Queue
 from statistics import mean
 
 import matplotlib
+import numpy as np
+import pandas as pd
 import requests
 
 from sbbtracker import graphs, paths, settings, stats, updater, version
+from sbbtracker.languages import tr
+from sbbtracker.utils.qt_utils import open_url
 from sbbtracker.utils.sbb_logic_utils import round_to_xp
 from sbbtracker.windows.constants import default_bg_color, primary_color
 from sbbtracker.windows.overlays import BoardComp, OverlayWindow, StreamableMatchDisplay, StreamerOverlayWindow
+from sbbtracker.windows.settings_window import SettingsWindow
 from sbbtracker.windows.shop_display import ShopDisplay
 
 matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
-import numpy as np
 
-from PySide6.QtCore import QPoint, QRect, QSize, QThread, QUrl, Qt, Signal
-from PySide6.QtGui import QAction, QBrush, QColor, QDesktopServices, QFont, QFontMetrics, \
-    QGuiApplication, \
-    QIcon, \
-    QIntValidator, \
-    QPainter, QPainterPath, \
-    QPen, \
+from PySide6.QtCore import QSize, QThread, QUrl, Qt, Signal
+from PySide6.QtGui import QAction, QDesktopServices, QFont, QIcon, \
     QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView, QApplication,
-    QCheckBox, QComboBox, QDialog, QFileDialog, QFormLayout, QFrame,
-    QGridLayout, QHBoxLayout,
+    QComboBox, QDialog, QFileDialog, QHBoxLayout,
     QHeaderView,
     QLabel,
-    QLayout, QLineEdit, QMainWindow,
-    QMenu, QMessageBox, QProgressBar, QProgressDialog, QPushButton, QScrollArea, QSizePolicy, QSlider, QSplashScreen,
-    QStackedLayout,
-    QTabWidget,
+    QMainWindow,
+    QMenu, QMessageBox, QProgressBar, QPushButton, QSizePolicy, QTabWidget,
     QTableWidget,
     QTableWidgetItem,
     QToolBar,
@@ -76,16 +69,17 @@ def update_table(table: QTableWidget, data: list[list]):
             table.setItem(row, column, QTableWidgetItem(str(datum)))
 
 
-all_matches = "All Matches"
-latest_patch = "Latest Patch (68.9)"
-prev_patch = "Previous Patch (67.5)"
-today_ = "Today"
-last_7 = "Last 7 days"
-last_30 = "Last 30 days"
-this_month = "This month"
-last_month = "Last month"
+all_matches = tr("All Matches")
+latest_patch = tr("Latest Patch") + " (68.9)"
+prev_patch = tr("Previous Patch") + " (67.5)"
+today_ = tr("Today")
+yesterday = tr("Yesterday")
+last_7 = tr("Last 7 days")
+last_30 = tr("Last 30 days")
+this_month = tr("This month")
+last_month = tr("Last month")
 
-default_dates = [all_matches, latest_patch, prev_patch, today_, last_7, last_30, this_month, last_month]
+default_dates = [all_matches, latest_patch, prev_patch, today_, yesterday, last_7, last_30, this_month, last_month]
 
 
 def get_date_range(key):
@@ -104,6 +98,8 @@ def get_date_range(key):
         return "2022-02-14", "2022-03-02"
     elif key == today_:
         return today.isoformat(), today.isoformat()
+    elif key == yesterday:
+        return (today - datetime.timedelta(1)).isoformat(), (today - datetime.timedelta(1)).isoformat()
     elif key == last_7:
         return (today - datetime.timedelta(days=7)).isoformat(), today.isoformat()
     elif key == last_30:
@@ -151,14 +147,14 @@ class SimulationThread(QThread):
                     simulation_stats = simulate(simulator_board, t=num_threads, k=int(num_simulations / num_threads),
                                                 timeout=60)
                 except SBBBSCrocException:
-                    self.error_simulation.emit("Captain Croc not supported", round_number)
+                    self.error_simulation.emit(tr("Captain Croc not supported"), round_number)
                 except concurrent.futures.TimeoutError:
-                    self.error_simulation.emit("Simulation timed out!", round_number)
+                    self.error_simulation.emit(tr("Simulation timed out!"), round_number)
                 except Exception:
                     logging.exception("Error in simulation!")
                     with open(paths.sbbtracker_folder.joinpath("error_board.json"), "w") as file:
                         json.dump(from_stated, file, default=lambda o: o.__dict__)
-                    self.error_simulation.emit("Error in simulation!", round_number)
+                    self.error_simulation.emit(tr("Error in simulation!"), round_number)
 
                 logging.debug(from_stated)
 
@@ -187,7 +183,7 @@ class SimulationThread(QThread):
 
                     self.end_simulation.emit(win_percent, tie_percent, loss_percent, win_dmg, loss_dmg, round_number)
             else:
-                self.error_simulation.emit("Couldn't get player id (try reattaching)", round_number)
+                self.error_simulation.emit(tr("Couldn't get player id (try reattaching)"), round_number)
             time.sleep(1)
 
 
@@ -200,7 +196,8 @@ class LogThread(QThread):
     health_update = Signal(object)
     new_game = Signal(bool)
     update_card = Signal(object)
-    end_combat = Signal()
+    end_combat = Signal(bool)
+    hero_discover = Signal(list)
 
     def run(self):
         queue = Queue()
@@ -237,6 +234,9 @@ class LogThread(QThread):
                 build_id = state.build_id
                 combats.clear()
                 match_data.clear()
+            elif job == log_parser.JOB_HERODISCOVER:
+                if round_number < 1:
+                    self.hero_discover.emit(state.choices)
             elif job == log_parser.JOB_INITCURRENTPLAYER:
                 if not after_first_combat:
                     current_player = state
@@ -255,7 +255,7 @@ class LogThread(QThread):
                 if counter == 8:
                     self.player_info_update.emit(states)
                     if after_first_combat:
-                        self.end_combat.emit()
+                        self.end_combat.emit(False)
                 if not after_first_combat:
                     after_first_combat = True
             elif job == log_parser.JOB_BOARDINFO:
@@ -267,7 +267,7 @@ class LogThread(QThread):
             elif job == log_parser.JOB_ENDCOMBAT:
                 counter = 0
             elif job == log_parser.JOB_ENDGAME:
-                self.end_combat.emit()
+                self.end_combat.emit(True)
                 if state and current_player and session_id and build_id:
                     match_data["tracker-id"] = api_id
                     match_data["tracker-version"] = version.__version__
@@ -285,362 +285,13 @@ class LogThread(QThread):
                 self.update_card.emit(state)
 
 
-class ImportThread(QThread):
-    update_progress = Signal(int, int)
-
-    def __init__(self, player_stats: stats.PlayerStats):
-        super(ImportThread, self).__init__()
-        self.player_stats = player_stats
-
-    def run(self):
-        self.player_stats.import_matches(self.update_progress.emit)
-
-
-class SliderCombo(QWidget):
-    def __init__(self, minimum, maximum, default, step=1):
-        super().__init__()
-        slider_editor = QHBoxLayout(self)
-        self.slider = QSlider(Qt.Horizontal)
-        self.editor = QLineEdit()
-        self.slider.setMaximum(maximum)
-        self.slider.setMinimum(minimum)
-        self.slider.setValue(default)
-        self.slider.setSingleStep(step)
-        self.slider.setTickInterval(step)
-        self.slider.setMinimumWidth(100)
-        self.slider.valueChanged.connect(lambda val: self.editor.setText(str(val)))
-        self.editor.setValidator(QIntValidator(0, maximum))
-        self.editor.setText(str(default))
-        self.editor.textEdited.connect(
-            lambda text: self.slider.setValue(int(text)) if text != '' else None)
-        self.editor.setMinimumWidth(100)
-        slider_editor.addWidget(self.slider)
-        slider_editor.addWidget(self.editor)
-
-    def get_value(self):
-        return int(self.editor.text()) if self.editor.text() else 0
-
-
-class HexColorEdit(QWidget):
-    def __init__(self, default):
-        super().__init__()
-        layout = QHBoxLayout(self)
-        self.editor = QLineEdit()
-        color_box = QWidget()
-        color_box.setMinimumSize(40, 40)
-        layout.addWidget(self.editor)
-        layout.addWidget(color_box)
-
-        self.editor.textEdited.connect(lambda text: self.update_color(text, color_box))
-        self.editor.setText(default)
-
-    def update_color(self, text: str, widget: QWidget):
-        valid_hex_color = re.search(r'^#(?:[0-9a-fA-F]{3}){1,2}$', text)
-
-        if valid_hex_color:
-            widget.setStyleSheet(f"background-color: {text} ;")
-
-
-class SettingsCheckbox(QCheckBox):
-    def __init__(self, setting: settings.Setting):
-        super().__init__()
-        self.setChecked(settings.get(setting))
-        self.stateChanged.connect(lambda: settings.toggle(setting))
-
-
-class SettingsWindow(QMainWindow):
-    def __init__(self, main_window):
-        super().__init__()
-        self.hide()
-        self.setWindowModality(Qt.ApplicationModal)
-        self.main_window = main_window
-        main_widget = QFrame()
-        main_layout = QVBoxLayout(main_widget)
-        general_settings = QWidget()
-        overlay_settings = QWidget()
-        overlay_settings_scroll = QScrollArea(widgetResizable=True)
-        overlay_settings_scroll.setWidget(overlay_settings)
-        about_tab = QWidget()
-        data_tab = QWidget()
-        advanced_tab = QWidget()
-        streaming_tab = QWidget()
-        settings_tabs = QTabWidget()
-        settings_tabs.addTab(general_settings, "General")
-        settings_tabs.addTab(data_tab, "Data")
-        settings_tabs.addTab(overlay_settings_scroll, "Overlay")
-        settings_tabs.addTab(advanced_tab, "Advanced")
-        settings_tabs.addTab(streaming_tab, "Streaming")
-        settings_tabs.addTab(about_tab, "About")
-
-        self.setWindowIcon(QIcon(asset_utils.get_asset("icon.png")))
-        self.setWindowTitle("SBBTracker settings")
-
-        about_layout = QVBoxLayout(about_tab)
-        about_layout.addWidget(QLabel(f"""SBBTracker v{version.__version__}
-
-
-SBBBattleSim by:
-reggles44
-isik
-fredyybob
-
-
-Special thanks to:
-NoLucksGiven,
-Asado,
-HamiO,
-chickenArise,
-bnor,
-and Lunco
-"""))
-        about_layout.addStretch()
-
-        general_layout = QFormLayout(general_settings)
-
-        save_stats_checkbox = SettingsCheckbox(settings.save_stats)
-
-        self.graph_color_chooser = QComboBox()
-        palettes = list(graphs.color_palettes.keys())
-        self.graph_color_chooser.addItems(palettes)
-        self.graph_color_chooser.setCurrentIndex(palettes.index(settings.get(settings.live_palette)))
-        self.graph_color_chooser.currentTextChanged.connect(main_window.live_graphs.set_color_palette)
-
-        matchmaking_only_checkbox = SettingsCheckbox(settings.matchmaking_only)
-        matchmaking_only_checkbox.setEnabled(bool(save_stats_checkbox.checkState()))
-
-        save_stats_checkbox.stateChanged.connect(lambda state: matchmaking_only_checkbox.setEnabled(bool(state)))
-
-        general_layout.addRow("Save match results", save_stats_checkbox)
-        general_layout.addRow("Ignore practice and group lobbies", matchmaking_only_checkbox)
-        general_layout.addRow("Graph color palette", self.graph_color_chooser)
-
-        data_layout = QFormLayout(data_tab)
-        export_button = QPushButton("Export Stats")
-        export_button.clicked.connect(main_window.export_csv)
-        delete_button = QPushButton("Delete Stats")
-        delete_button.clicked.connect(lambda: main_window.delete_stats(self))
-        self.last_backed_up = QLabel(f"Last backed up on: {stats.most_recent_backup_date()}")
-        backup_button = QPushButton("Backup Stats")
-        backup_button.clicked.connect(self.backup)
-        reimport_button = QPushButton("Reimport Stats")
-        reimport_button.setDisabled(True)
-        reimport_button.clicked.connect(self.import_stats)
-
-        enable_upload = SettingsCheckbox(settings.upload_data)
-
-        data_layout.addRow(self.last_backed_up, backup_button)
-        data_layout.addWidget(export_button)
-        data_layout.addWidget(delete_button)
-        data_layout.addWidget(QLabel("Reimporting is temporarily disabled."))
-        data_layout.addWidget(reimport_button)
-        data_layout.addRow("Upload matches to sbbtracker.com", enable_upload)
-        data_layout.addWidget(QLabel("Match uploads include your steam name, sbb id, board comps,"
-                                     "placement, and change in mmr."))
-
-        overlay_layout = QFormLayout(overlay_settings)
-        enable_overlay_checkbox = SettingsCheckbox(settings.enable_overlay)
-
-        hide_overlay_in_bg_checkbox = SettingsCheckbox(settings.hide_overlay_in_bg)
-
-        enable_overlay_checkbox.stateChanged.connect(lambda state: hide_overlay_in_bg_checkbox.setEnabled(bool(state)))
-
-        enable_sim_checkbox = SettingsCheckbox(settings.enable_sim)
-        enable_sim_checkbox.setEnabled(enable_overlay_checkbox.checkState())
-
-        enable_overlay_checkbox.stateChanged.connect(lambda state: enable_sim_checkbox.setEnabled(bool(state)))
-
-        show_tracker_button_checkbox = SettingsCheckbox(settings.show_tracker_button)
-        show_tracker_button_checkbox.setEnabled(enable_overlay_checkbox.checkState())
-
-        enable_overlay_checkbox.stateChanged.connect(lambda state: show_tracker_button_checkbox.setEnabled(bool(state)))
-
-        enable_comps = SettingsCheckbox(settings.enable_comps)
-        enable_comps.setEnabled(enable_overlay_checkbox.checkState())
-
-        enable_overlay_checkbox.stateChanged.connect(lambda state: enable_comps.setEnabled(bool(state)))
-
-        enable_turn_display = SettingsCheckbox(settings.enable_turn_display)
-        enable_turn_display.setEnabled(enable_overlay_checkbox.checkState())
-
-        enable_overlay_checkbox.stateChanged.connect(lambda state: enable_turn_display.setEnabled(bool(state)))
-
-        turn_display_font = QLineEdit()
-        turn_display_font.setValidator(QIntValidator(1, 100))
-        turn_display_font.setText(str(settings.get(settings.turn_display_font_size)))
-        turn_display_font.textChanged.connect(
-            lambda text: settings.set_(settings.turn_display_font_size, text) if text != '' else None)
-
-        windows_scaling = SettingsCheckbox(settings.disable_scaling)
-        windows_scaling.setEnabled(enable_overlay_checkbox.checkState())
-
-        enable_overlay_checkbox.stateChanged.connect(lambda state: windows_scaling.setEnabled(bool(state)))
-
-        self.comp_transparency_slider = SliderCombo(0, 100, settings.get(settings.boardcomp_transparency))
-        self.simulator_transparency_slider = SliderCombo(0, 100, settings.get(settings.simulator_transparency))
-        self.num_sims_silder = SliderCombo(100, 10000, settings.get(settings.number_simulations, 1000))
-        self.num_threads_slider = SliderCombo(1, 4, settings.get(settings.number_threads))
-        self.overlay_comps_scaling = SliderCombo(50, 200, settings.get(settings.overlay_comps_scaling))
-
-        overlay_layout.addRow("Enable overlay (does not work in fullscreen)", enable_overlay_checkbox)
-        overlay_layout.addRow("Hide if SBB in background (restart to take effect)", hide_overlay_in_bg_checkbox)
-        overlay_layout.addRow(QLabel(" "))
-        overlay_layout.addRow("Enable simulator", enable_sim_checkbox)
-        overlay_layout.addRow("Number of simulations", self.num_sims_silder)
-        overlay_layout.addRow("Number of threads", self.num_threads_slider)
-        overlay_layout.addRow(QLabel("More threads = faster simulation but takes more computing power"))
-        overlay_layout.addRow(QLabel(" "))
-        overlay_layout.addRow("Enable \"Show Tracker\" button", show_tracker_button_checkbox)
-        overlay_layout.addRow("Enable board comps", enable_comps)
-        overlay_layout.addRow("Board comps scaling", self.overlay_comps_scaling)
-        overlay_layout.addRow("Enable turn display", enable_turn_display)
-        overlay_layout.addRow("Turn font size (restart to resize)", turn_display_font)
-        overlay_layout.addRow("Ignore windows scaling (Windows 8 compat)", windows_scaling)
-        overlay_layout.addRow("Adjust comps transparency", self.comp_transparency_slider)
-        overlay_layout.addRow("Adjust simulator transparency", self.simulator_transparency_slider)
-
-        advanced_layout = QFormLayout(advanced_tab)
-        enable_export_comp_checkbox = SettingsCheckbox(settings.export_comp_button)
-        show_id_mode = SettingsCheckbox(settings.show_ids)
-        show_id_window = SettingsCheckbox(settings.show_id_window)
-        advanced_layout.addRow("Enable export last comp button", enable_export_comp_checkbox)
-        advanced_layout.addRow("Hide art and show template ids", show_id_mode)
-        advanced_layout.addRow("Enable ID window", show_id_window)
-
-        streaming_layout = QFormLayout(streaming_tab)
-        enable_stream_overlay = QCheckBox()
-        enable_stream_overlay.setChecked(settings.get(settings.streaming_mode))
-        enable_stream_overlay.stateChanged.connect(lambda: settings.toggle(settings.streaming_mode))
-
-        self.stream_overlay_color = HexColorEdit(settings.get(settings.stream_overlay_color))
-
-        streamable_score = QCheckBox()
-        streamable_score.setChecked(settings.get(settings.streamable_score_list))
-        streamable_score.stateChanged.connect(lambda: settings.toggle(settings.streamable_score_list))
-
-        self.max_scores = QLineEdit()
-        self.max_scores.setText(str(settings.get(settings.streamable_score_max_len)))
-        self.max_scores.setValidator(QIntValidator(1, 50))
-
-        reset_scores = QPushButton("Reset")
-        reset_scores.clicked.connect(main_window.streamable_scores.reset)
-
-        streaming_layout.addRow("Show capturable score window", streamable_score)
-        streaming_layout.addRow("Number of scores per line", self.max_scores)
-        streaming_layout.addRow("Reset scores", reset_scores)
-        streaming_layout.addRow(QLabel("Chroma-key filter #00FFFF to hide the scores background"))
-        streaming_layout.addRow(QLabel(""))
-        streaming_layout.addRow("Show capturable overlay window", enable_stream_overlay)
-        streaming_layout.addRow("Background color", self.stream_overlay_color)
-        streaming_layout.addRow(QLabel("Enabling this will add a copy of the overlay behind your other windows."))
-        streaming_wiki_link = QLabel(
-            "<a href=\"https://github.com/SBBTracker/SBBTracker/wiki/Streaming-Settings-Guide\" style=\"color: "
-            f"{primary_color};\">Wiki guide here</a>")
-        streaming_wiki_link.setTextFormat(Qt.RichText)
-        streaming_wiki_link.setTextInteractionFlags(Qt.TextBrowserInteraction)
-        streaming_wiki_link.setOpenExternalLinks(True)
-        streaming_layout.addRow(streaming_wiki_link)
-
-        save_close_layout = QHBoxLayout()
-        self.save_button = QPushButton("Save")
-        self.save_button.clicked.connect(self.save)
-        close_button = QPushButton("Cancel")
-        close_button.clicked.connect(self.hide)
-        save_close_layout.addStretch()
-        save_close_layout.addWidget(self.save_button)
-        save_close_layout.addWidget(close_button)
-
-        main_layout.addWidget(settings_tabs)
-        main_layout.addLayout(save_close_layout)
-
-        self.setCentralWidget(main_widget)
-        self.setMinimumSize(600, 600)
-
-    def save(self):
-        settings.set_(settings.live_palette, self.graph_color_chooser.currentText())
-        settings.set_(settings.boardcomp_transparency, self.comp_transparency_slider.get_value())
-        settings.set_(settings.simulator_transparency, self.simulator_transparency_slider.get_value())
-        settings.set_(settings.number_threads, self.num_threads_slider.get_value())
-        settings.set_(settings.number_simulations, self.num_sims_silder.get_value())
-        settings.set_(settings.stream_overlay_color, self.stream_overlay_color.editor.text())
-        settings.set_(settings.overlay_comps_scaling, self.overlay_comps_scaling.get_value())
-
-        max_scores_val = self.max_scores.text()
-        if max_scores_val and int(max_scores_val) > 0:
-            settings.set_(settings.streamable_score_max_len, int(max_scores_val))
-
-        settings.save()
-        self.hide()
-
-        self.main_window.shop_display.show() if settings.get(settings.show_id_window) else self.main_window.shop_display.hide()
-        # self.main_window.overlay.update_monitor()
-        self.main_window.overlay.update_comp_scaling()
-        self.main_window.streamer_overlay.update_comp_scaling()
-        self.main_window.overlay.set_transparency()
-        self.main_window.show_scores()
-        if not settings.get(settings.hide_overlay_in_bg) or self.main_window.overlay.visible:
-            self.main_window.show_overlay()
-        if settings.get(settings.streaming_mode):
-            self.main_window.streamer_overlay.show()
-            self.main_window.streamer_overlay.centralWidget().setStyleSheet(
-                f"QWidget#overlay {{background-color: {settings.get(settings.stream_overlay_color)}}}")
-            self.main_window.streamer_overlay.turn_display.setVisible(settings.get(settings.enable_turn_display))
-        else:
-            self.main_window.streamer_overlay.hide()
-        self.main_window.overlay.set_comps_enabled(settings.get(settings.enable_comps))
-        self.main_window.streamer_overlay.set_comps_enabled(settings.get(settings.enable_comps))
-        self.main_window.overlay.simulation_stats.setVisible(settings.get(settings.enable_sim))
-        self.main_window.overlay.show_button.setVisible(settings.get(settings.show_tracker_button))
-        self.main_window.overlay.turn_display.setVisible(settings.get(settings.enable_turn_display))
-        self.main_window.export_comp_action.setVisible(settings.get(settings.export_comp_button))
-
-    def import_stats(self):
-        message = """
-Would you like to import your old games? This is done by 
-reading the record files generated by the game. This will 
-import games going back to Dec 14 2021 (assuming you have not
-deleted the record files).
-
-Note that not all games are guaranteed to be imported.
-
-If you have games already recorded from before Jan 2nd 2022
-duplicated matches may appear. You may wish to backup and delete 
-your current stats before doing this, or manually remove stats 
-yourself.
-
-The importer may take a long time to complete. Please be patient.
-
-
-
-"""
-        reply = QMessageBox.question(self, "Reimport Stats?", message)
-        if reply == QMessageBox.Yes:
-            self.import_thread = ImportThread(self.main_window.player_stats)
-            self.progress = QProgressDialog("Import progress", "Cancel", 0, 100, self)
-            self.progress.setWindowTitle("Importer")
-            self.import_thread.update_progress.connect(self.handle_import_progress)
-            self.import_thread.start()
-            self.progress.canceled.connect(self.import_thread.terminate)
-            self.progress.show()
-            self.main_window.match_history.update_history_table()
-
-    def backup(self):
-        stats.backup_stats(force=True)
-        self.last_backed_up.setText(f"Last backed up on: {stats.most_recent_backup_date()}")
-
-    def handle_import_progress(self, num, totalsize):
-        import_percent = num * 100 / totalsize
-        self.progress.setValue(import_percent)
-        if num == totalsize:
-            self.progress.close()
-
-
 class SBBTracker(QMainWindow):
     def __init__(self):
         super().__init__()
 
         self.setWindowTitle("SBBTracker")
-        self.comps = [BoardComp() for _ in range(0, 8)]
-        self.round_indicator = QLabel("Waiting for match to start...")
+        self.comps = [BoardComp(self) for _ in range(0, 8)]
+        self.round_indicator = QLabel(tr("Waiting for match to start..."))
         self.round_indicator.setFont(round_font)
         self.player_stats = stats.PlayerStats()
         self.player_ids = []
@@ -657,6 +308,7 @@ class SBBTracker(QMainWindow):
         settings.get(settings.enable_overlay)
         self.show_overlay()
         if settings.get(settings.streaming_mode):
+            self.streamer_overlay.set_transparency()
             self.streamer_overlay.show()
         self.streamable_scores = StreamableMatchDisplay()
         self.show_scores()
@@ -665,7 +317,7 @@ class SBBTracker(QMainWindow):
         for index in range(len(self.comps)):
             self.comp_tabs.addTab(self.comps[index], f"Player{index}")
 
-        self.reset_button = QPushButton("Reattach to Storybook Brawl")
+        self.reset_button = QPushButton(tr("Reattach to Storybook Brawl"))
         self.reset_button.setMaximumWidth(self.reset_button.fontMetrics().boundingRect("Reattach to Storybook Brawl")
                                           .width() * 2)
         self.reset_button.clicked.connect(self.reattach_to_log)
@@ -682,37 +334,41 @@ class SBBTracker(QMainWindow):
         self.match_history = MatchHistory(self, self.player_stats)
         self.live_graphs = LiveGraphs()
         self.stats_graph = StatsGraph(self.player_stats)
+        self.hero_selection = HeroSelection(self)
 
         main_tabs = QTabWidget()
-        main_tabs.addTab(comps_widget, "Board Comps")
-        main_tabs.addTab(self.live_graphs, "Live Graphs")
-        main_tabs.addTab(self.match_history, "Match History")
-        main_tabs.addTab(self.stats_graph, "Stats Graphs")
+        main_tabs.addTab(comps_widget, tr("Board Comps"))
+        main_tabs.addTab(self.hero_selection, tr("Hero Selection"))
+        main_tabs.addTab(self.live_graphs, tr("Live Graphs"))
+        main_tabs.addTab(self.match_history, tr("Match History"))
+        main_tabs.addTab(self.stats_graph, tr("Stats Graphs"))
+
+        self.main_tabs = main_tabs
 
         toolbar = QToolBar(self)
         toolbar.setMinimumHeight(40)
         toolbar.setStyleSheet("QToolBar {border-bottom: none; border-top: none;}")
-        discord_action = QAction(QPixmap(asset_utils.get_asset("icons/discord.png")), "&Join our Discord", self)
+        discord_action = QAction(QPixmap(asset_utils.get_asset("icons/discord.png")), "&"+tr("Join our Discord"), self)
         # toolbar.insertAction(toolbar.minimize, discord_action)
         toolbar.addAction(discord_action)
         discord_action.triggered.connect(self.open_discord)
 
-        bug_action = QAction(QPixmap(asset_utils.get_asset("icons/bug_report.png")), "&Report a bug", self)
+        bug_action = QAction(QPixmap(asset_utils.get_asset("icons/bug_report.png")), "&"+tr("Report a bug"), self)
         toolbar.insertAction(discord_action, bug_action)
         bug_action.triggered.connect(self.open_issues)
 
         self.settings_window = SettingsWindow(self)
-        settings_action = QAction(QPixmap(asset_utils.get_asset("icons/settings.png")), "&Settings", self)
+        settings_action = QAction(QPixmap(asset_utils.get_asset("icons/settings.png")), "&"+tr("Settings"), self)
         toolbar.insertAction(bug_action, settings_action)
         settings_action.triggered.connect(self.settings_window.show)
 
         self.export_comp_action = QAction(QPixmap(asset_utils.get_asset("icons/file-export.png")),
-                                          "&Export last combat", self)
+                                          "&"+tr("Export last combat"), self)
         toolbar.insertAction(bug_action, self.export_comp_action)
         self.export_comp_action.triggered.connect(self.export_last_comp)
         self.export_comp_action.setVisible(settings.get(settings.export_comp_button))
 
-        patch_notes_action = QAction(QPixmap(asset_utils.get_asset("icons/information.png")), "&Patch Notes", self)
+        patch_notes_action = QAction(QPixmap(asset_utils.get_asset("icons/information.png")), "&"+tr("Patch Notes"), self)
         toolbar.insertAction(self.export_comp_action, patch_notes_action)
         patch_notes_action.triggered.connect(self.show_patch_notes)
 
@@ -722,13 +378,13 @@ class SBBTracker(QMainWindow):
         self.update_banner.setMinimumHeight(40)
         self.update_banner.setStyleSheet(
             f"QToolBar {{border-bottom: none; border-top: none; background: {primary_color};}}")
-        update_text = QLabel("    An update is available! Would you like to install?    ")
+        update_text = QLabel(tr("    An update is available! Would you like to install?    "))
         update_text.setStyleSheet(f"QLabel {{ color : {default_bg_color}; }}")
         self.update_banner.addWidget(update_text)
 
-        yes_update = QAction("&Yes", self)
+        yes_update = QAction("&"+tr("Yes"), self)
         yes_update.triggered.connect(self.install_update)
-        no_update = QAction("&Remind me later", self)
+        no_update = QAction("&"+tr("Remind me later"), self)
         no_update.triggered.connect(self.update_banner.hide)
         self.update_banner.addAction(yes_update)
         self.update_banner.addAction(no_update)
@@ -743,7 +399,7 @@ class SBBTracker(QMainWindow):
         main_layout.addWidget(main_tabs)
 
         self.setCentralWidget(main_widget)
-        self.setMinimumSize(QSize(1200, 800))
+        self.setMinimumSize(QSize(1200, 820))
         self.setBaseSize(QSize(1400, 900))
         self.github_updates = updater.UpdateCheckThread()
         self.github_updates.github_update.connect(self.handle_update)
@@ -760,6 +416,7 @@ class SBBTracker(QMainWindow):
         self.log_updates.health_update.connect(self.update_health)
         self.log_updates.end_combat.connect(self.end_combat)
         self.log_updates.update_card.connect(self.shop_display.update_card)
+        self.log_updates.hero_discover.connect(self.update_hero_discover)
 
         self.board_queue = Queue()
         self.simulation = SimulationThread(self.board_queue)
@@ -792,6 +449,7 @@ class SBBTracker(QMainWindow):
         self.sim_results.clear()
         self.shop_display.clear()
         self.overlay.enable_hovers()
+        self.overlay.hide_hero_rates()
         self.overlay.turn_display.setVisible(settings.get(settings.enable_turn_display))
         self.streamer_overlay.turn_display.setVisible(settings.get(settings.enable_turn_display))
         for index in range(0, 8):
@@ -802,19 +460,17 @@ class SBBTracker(QMainWindow):
             comp.current_round = 0
             comp.last_seen = None
 
-            for overlay in [self.overlay, self.streamer_overlay]:
-                overlay_comp = overlay.comps[index]
-                overlay_comp.composition = None
-                overlay_comp.player = None
-                overlay_comp.current_round = 0
-                overlay_comp.last_seen = None
-                overlay_comp.xps.clear()
-                overlay_comp.healths.clear()
-                overlay.simulation_stats.reset_chances()
+        for overlay in [self.overlay, self.streamer_overlay]:
+            overlay.comp_widget.reset()
+            overlay.simulation_stats.reset_chances()
 
-    def end_combat(self):
+    def end_combat(self, end_of_game):
         self.overlay.simulation_stats.update_labels()
         self.streamer_overlay.simulation_stats.update_labels()
+        if end_of_game:
+            self.overlay.hide_hero_rates()
+            self.overlay.disable_hovers()
+            self.overlay.turn_display.setVisible(False)
 
     def get_comp(self, index: int):
         return self.comps[index]
@@ -823,6 +479,7 @@ class SBBTracker(QMainWindow):
         self.round_indicator.setText(f"Turn {round_number} ({round_to_xp(round_number)})")
         self.round_indicator.update()
         self.overlay.update_round(round_number)
+        self.overlay.hide_hero_rates()
 
     def update_player(self, player, round_number):
         index = self.get_player_index(player.playerid)
@@ -830,7 +487,7 @@ class SBBTracker(QMainWindow):
         title = f"{real_hero_name}"
         if player.health <= 0:
             self.comp_tabs.tabBar().setTabTextColor(index, "red")
-            title += " *DEAD*"
+            title += tr(" *DEAD*")
         self.comp_tabs.tabBar().setTabText(index, title)
         comp = self.get_comp(index)
         comp.player = player
@@ -887,8 +544,6 @@ class SBBTracker(QMainWindow):
             self.match_history.update_stats_table()
             if settings.get(settings.streamable_score_list):
                 self.streamable_scores.add_score(place)
-        self.overlay.disable_hovers()
-        self.overlay.turn_display.setVisible(False)
 
     def update_health(self, player):
         index = self.get_player_index(player.playerid)
@@ -915,25 +570,24 @@ class SBBTracker(QMainWindow):
         else:
             self.streamable_scores.hide()
 
+    def update_hero_discover(self, hero_ids):
+        self.hero_selection.update_heroes(hero_ids, self.player_stats, self.overlay)
+        self.main_tabs.setCurrentIndex(1)
+
     def export_last_comp(self):
         if self.most_recent_combat:
             with open(paths.sbbtracker_folder.joinpath("last_combat.json"), "w") as file:
                 json.dump(from_state(asset_utils.replace_template_ids(self.most_recent_combat)),
                           file, default=lambda o: o.__dict__)
 
-    def open_url(self, url_string: str):
-        url = QUrl(url_string)
-        if not QDesktopServices.openUrl(url):
-            QMessageBox.warning(self, 'Open Url', 'Could not open url')
-
     def open_discord(self):
-        self.open_url('https://discord.com/invite/2AJctfj239')
+        open_url(self, 'https://discord.com/invite/2AJctfj239')
 
     def open_github_release(self):
-        self.open_url("https://github.com/SBBTracker/SBBTracker/releases/latest")
+        open_url(self, "https://github.com/SBBTracker/SBBTracker/releases/latest")
 
     def open_issues(self):
-        self.open_url("https://github.com/SBBTracker/SBBTracker/issues")
+        open_url(self, "https://github.com/SBBTracker/SBBTracker/issues")
 
     def show_patch_notes(self):
         try:
@@ -956,10 +610,10 @@ class SBBTracker(QMainWindow):
     def install_update(self):
         if paths.os_name == "Windows":
             dialog = QDialog(self)
-            dialog.setWindowTitle("Updater")
+            dialog.setWindowTitle(tr("Updater"))
             dialog_layout = QVBoxLayout(dialog)
             self.download_progress = QProgressBar(dialog)
-            dialog_layout.addWidget(QLabel("Downloading update..."))
+            dialog_layout.addWidget(QLabel(tr("Downloading update...")))
             dialog_layout.addWidget(self.download_progress)
             dialog.show()
             dialog.update()
@@ -990,7 +644,7 @@ class SBBTracker(QMainWindow):
             self.player_stats.export(Path(filepath))
 
     def delete_stats(self, window):
-        reply = QMessageBox.question(window, "Delete all Stats", "Do you want to delete *ALL* saved stats?")
+        reply = QMessageBox.question(window, tr("Delete all Stats"), tr("Do you want to delete *ALL* saved stats?"))
         if reply == QMessageBox.Yes:
             self.player_stats.delete()
             self.match_history.update_history_table()
@@ -1025,9 +679,10 @@ class MatchHistory(QWidget):
         self.display_starting_hero = 0
         self.filter_ = settings.get(settings.filter_)
         if self.filter_ not in default_dates:
-            self.filter_ = "All Matches"
+            self.filter_ = tr("All Matches")
             settings.set_(settings.filter_, self.filter_)
-        self.match_history_table.setHorizontalHeaderLabels(["Starting Hero", "Ending Hero", "Place", "+/- MMR"])
+        self.match_history_table.setHorizontalHeaderLabels([tr("Starting Hero"), tr("Ending Hero"), tr("Place"),
+                                                            tr("+/- MMR")])
         self.match_history_table.setColumnWidth(0, 140)
         self.match_history_table.setColumnWidth(1, 140)
         self.match_history_table.setColumnWidth(2, 80)
@@ -1039,7 +694,7 @@ class MatchHistory(QWidget):
 
         def history_menu(position):
             menu = QMenu()
-            delete_action = menu.addAction("Delete")
+            delete_action = menu.addAction(tr("Delete"))
             action = menu.exec(self.match_history_table.mapToGlobal(position))
             if action == delete_action:
                 self.player_stats.delete_entry(self.match_history_table.itemAt(position).row() +
@@ -1076,7 +731,7 @@ class MatchHistory(QWidget):
         stats_widget = QWidget()
         stats_layout = QVBoxLayout(stats_widget)
         self.stats_table = QTableWidget(asset_utils.get_num_heroes() + 1, 6)
-        self.stats_table.setHorizontalHeaderLabels(stats.headings)
+        self.stats_table.setHorizontalHeaderLabels([tr(heading) for heading in stats.headings])
         self.stats_table.setColumnWidth(0, 130)
         self.stats_table.setColumnWidth(1, 115)
         self.stats_table.setColumnWidth(2, 115)
@@ -1099,7 +754,7 @@ QTabBar::tab:right{
 
         filter_widget = QWidget()
         self.toggle_hero = QComboBox()
-        hero_types = ["Starting Heroes", "Ending Heroes"]
+        hero_types = [tr("Starting Heroes"), tr("Ending Heroes")]
         self.toggle_hero.activated.connect(self.toggle_heroes)
         self.toggle_hero.addItems(hero_types)
         self.filter_combo = QComboBox()
@@ -1184,8 +839,8 @@ class LiveGraphs(QWidget):
         self.xp_ax = self.xp_canvas.figure.subplots()
 
         graphs_tabs = QTabWidget(self)
-        graphs_tabs.addTab(self.health_canvas, "Health Graph")
-        graphs_tabs.addTab(self.xp_canvas, "XP Graph")
+        graphs_tabs.addTab(self.health_canvas, tr("Health Graph"))
+        graphs_tabs.addTab(self.xp_canvas, tr("XP Graph"))
         self.layout.addWidget(graphs_tabs)
 
     def set_color_palette(self, palette):
@@ -1219,10 +874,24 @@ class StatsGraph(QWidget):
         self.graph_selection.setMaximumWidth(200)
         self.graph_selection.addItems([graphs.matches_per_hero, graphs.mmr_change])
         self.graph_selection.activated.connect(self.update_graph)
+
         self.selection = graphs.mmr_change
 
+        self.mmr_range = QComboBox()
+        self.mmr_range.setMaximumWidth(200)
+        self.mmr_range.addItems(["25", "50", "100"])
+        self.mmr_range.activated.connect(self.update_mmr_range)
+        self.range_label = QLabel(tr("# Matches"))
+
+        self.range = 25
+
         self.layout = QVBoxLayout(self)
-        self.layout.addWidget(self.graph_selection)
+        combo_layout = QHBoxLayout(self)
+        combo_layout.addWidget(self.graph_selection, alignment=Qt.AlignLeft)
+        combo_layout.addWidget(self.range_label, alignment=Qt.AlignRight)
+        combo_layout.addWidget(self.mmr_range, alignment=Qt.AlignLeft)
+        combo_layout.addStretch()
+        self.layout.addLayout(combo_layout)
         self.layout.addWidget(self.canvas)
 
         self.update_graph()
@@ -1230,5 +899,82 @@ class StatsGraph(QWidget):
     def update_graph(self):
         self.selection = self.graph_selection.currentText()
         self.ax.cla()
-        self.figure = graphs.stats_graph(self.player_stats.df, self.selection, self.ax)
+        self.mmr_range.setVisible(self.selection == graphs.mmr_change)
+        self.range_label.setVisible(self.selection == graphs.mmr_change)
+        self.figure = graphs.stats_graph(self.player_stats.df, self.selection, self.ax, self.range)
+        self.canvas.draw()
+
+    def update_mmr_range(self):
+        self.range = int(self.mmr_range.currentText())
+        self.update_graph()
+
+
+class HeroSelection(QWidget):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.heroes = [HeroStatsWidget(self) for _ in range(0, 4)]
+        layout = QHBoxLayout(self)
+        for widget in self.heroes:
+            layout.addWidget(widget)
+
+    def update_heroes(self, hero_ids, player_stats: stats.PlayerStats, overlay):
+        hero_names = []
+        for i in range(0, 4):
+            hero_id = hero_ids[i]
+            hero_name = asset_utils.get_card_name(hero_id)
+            hero_names.append(hero_name)
+            placement, matches, histogram = player_stats.get_stats_for_hero(*get_date_range(latest_patch), hero_name)
+            self.heroes[i].update_hero(placement, matches, histogram, hero_id)
+            overlay.update_hero_rates(i, placement, matches)
+        overlay.update_data_url(hero_names)
+
+
+class HeroStatsWidget(QWidget):
+    def __init__(self, parent):
+        super().__init__(parent)
+
+        font = QFont("Roboto", 20)
+        self.placement = QLabel("Avg Placement: " + "0.00")
+        self.placement.setFont(font)
+        self.num_matches = QLabel("Matches: " + "0")
+        self.num_matches.setFont(font)
+        self.hero_label = QLabel()
+        self.hero_label.setFont(font)
+        self.hero_name_label = QLabel()
+        self.hero_name_label.setFont(font)
+        self.histogram = HistogramWidget(self)
+        self.histogram.setFixedSize(300, 250)
+
+        layout = QVBoxLayout(self)
+        layout.addWidget(self.hero_name_label, alignment=Qt.AlignCenter)
+        layout.addWidget(self.hero_label, alignment=Qt.AlignCenter)
+        layout.addWidget(self.placement, alignment=Qt.AlignHCenter | Qt.AlignTop)
+        layout.addWidget(self.num_matches, alignment=Qt.AlignCenter | Qt.AlignTop)
+        layout.addWidget(self.histogram, alignment=Qt.AlignCenter | Qt.AlignTop)
+        layout.addStretch()
+
+    def update_hero(self, placement, matches, histogram, hero_id):
+        hero_name = asset_utils.get_card_name(hero_id)
+        pixmap = QPixmap(asset_utils.get_card_path(hero_id, False))
+        self.hero_label.setPixmap(pixmap)
+        self.hero_name_label.setText(hero_name)
+        self.placement.setText(tr("Avg Place") + ": " + str(placement))
+        self.num_matches.setText(tr("# Matches") + ": " + str(matches))
+        self.histogram.draw_hist(histogram)
+
+
+class HistogramWidget(QWidget):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.figure = None
+        self.canvas = FigureCanvasQTAgg(plt.Figure(figsize=(13.5, 18)))
+        self.ax = self.canvas.figure.subplots()
+        layout = QVBoxLayout(self)
+        layout.addWidget(self.canvas)
+
+    def draw_hist(self, series):
+        self.ax.cla()
+        self.ax.bar(np.arange(1,9), series[0], width=1)
+        self.ax.set_xticks(np.arange(1,9))
+        self.ax.set_title(tr("Placements"))
         self.canvas.draw()

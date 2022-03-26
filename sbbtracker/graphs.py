@@ -5,12 +5,14 @@ import matplotlib
 import numpy as np
 import pandas as pd
 
+from sbbtracker.languages import tr
+
 matplotlib.use("Qt5Agg")
 from matplotlib import pyplot as plt
 from matplotlib.ticker import MaxNLocator
 
-matches_per_hero = "Matches per Hero"
-mmr_change = "MMR Graph"
+matches_per_hero = tr("Matches per Hero")
+mmr_change = tr("MMR Graph")
 color_palettes = {
     'paired':  ['#a6cee3', '#1f78b4', '#b2df8a', '#33a02c', '#fb9a99', '#e31a1c', '#fdbf6f', '#ff7f00'],
     'set':     ['#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00', '#ffff33', '#a65628', '#f781bf'],
@@ -70,6 +72,8 @@ class LivePlayerStates:
     def to_json(self):
         return json.dumps(self.json_friendly(), separators=(',', ':'))
 
+# live graphs
+
 
 def live_health_graph(states: LivePlayerStates, ax, palette):
     players = states.get_ids()
@@ -120,6 +124,8 @@ def xp_graph(states: LivePlayerStates, ax, palette):
     ax.yaxis.set_major_locator(MaxNLocator(integer=True))
     return plt.gcf()
 
+# static graphs
+
 
 def hero_freq_graph(df: pd.DataFrame, ax):
     if len(df.index) > 0:
@@ -135,28 +141,28 @@ def hero_freq_graph(df: pd.DataFrame, ax):
             ind = range(max(matches) + 1)
             ax.invert_yaxis()
             ax.grid(axis='y')
-            ax.set_xticks(ind)
+            # ax.set_xticks(ind)
             ax.set_title("Matches per Hero")
 
     return plt.gcf()
 
 
-def mmr_graph(df: pd.DataFrame, ax):
-    mmrs = df["+/-MMR"].tail(20).values.astype(int)
+def mmr_graph(df: pd.DataFrame, ax, mmr_range):
+    mmrs = df["+/-MMR"].tail(mmr_range).values.astype(int)
     data = np.cumsum(mmrs)
     timeseries = range(1, len(data) + 1)
     plt.axhline(y=0, color='w', linewidth=2.0)
     ax.plot(timeseries, data, linewidth=3.0)
-    ax.set_ylabel("Cumulative MMR")
-    ax.set_xlabel("Games")
-    ax.set_title("Cumulative MMR over last 20 games")
-    ax.set_xticks(range(1, 21))
+    ax.set_ylabel(tr("Cumulative MMR"))
+    ax.set_xlabel(tr("Games"))
+    ax.set_title(tr("Cumulative MMR over last {0} games").format(mmr_range))
+    # ax.set_xticks(range(1, 21))
 
     return plt.gcf()
 
 
-def stats_graph(df: pd.DataFrame, graph_type: str, ax):
+def stats_graph(df: pd.DataFrame, graph_type: str, ax, mmr_range=25):
     if graph_type == mmr_change:
-        return mmr_graph(df, ax)
+        return mmr_graph(df, ax, mmr_range)
     elif graph_type == matches_per_hero:
         return hero_freq_graph(df, ax)
