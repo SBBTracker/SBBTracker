@@ -7,6 +7,9 @@
 #  If you see {0}, {1}, keep it in the translated sentence
 
 lang = {
+    
+    "Auto Switch to Hero Select": "",
+    
     "Enable Hero Selection overlay": "",
     "Hero Selection": "",
     "Placements": "",
