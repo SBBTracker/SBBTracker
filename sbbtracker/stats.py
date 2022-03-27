@@ -212,7 +212,7 @@ class PlayerStats:
         avg_place = round(pd.to_numeric(hero_df['Placement']).mean(), 2)
         avg_place = 0.00 if np.isnan(avg_place) else avg_place
         num_matches = len(hero_df)
-        histogram = np.histogram(hero_df['Placement'], bins=range(1, 10))
+        histogram = np.histogram(pd.to_numeric(hero_df['Placement']), bins=range(1, 10))
         return avg_place, num_matches, histogram
 
 
