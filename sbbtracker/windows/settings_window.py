@@ -171,10 +171,13 @@ and Lunco
 
         save_stats_checkbox.stateChanged.connect(lambda state: matchmaking_only_checkbox.setEnabled(bool(state)))
 
+        auto_switch_hero_select_checkbox = SettingsCheckbox(settings.auto_switch_to_hero_select)
+
         general_layout.addRow(tr("Language"), language_select)
         general_layout.addRow(tr("Save match results"), save_stats_checkbox)
         general_layout.addRow(tr("Ignore practice and group lobbies"), matchmaking_only_checkbox)
         general_layout.addRow(tr("Graph color palette"), self.graph_color_chooser)
+        general_layout.addRow(tr("Auto Switch to Hero Select"), auto_switch_hero_select_checkbox)
 
         data_layout = QFormLayout(data_tab)
         export_button = QPushButton(tr("Export Stats"))

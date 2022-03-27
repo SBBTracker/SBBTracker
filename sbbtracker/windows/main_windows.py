@@ -572,7 +572,8 @@ class SBBTracker(QMainWindow):
 
     def update_hero_discover(self, hero_ids):
         self.hero_selection.update_heroes(hero_ids, self.player_stats, self.overlay)
-        self.main_tabs.setCurrentIndex(1)
+        if settings.get(settings.auto_switch_to_hero_select):
+            self.main_tabs.setCurrentIndex(1)
 
     def export_last_comp(self):
         if self.most_recent_combat:

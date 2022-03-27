@@ -35,6 +35,7 @@ player_id = Setting("player-id", False)
 api_key = Setting("api-key", "")
 prompt_data_collection = Setting("prompt-data-collection", True)
 streamer_overlay_size = Setting("streamer-overlay-size", (0, 0))
+auto_switch_to_hero_select = Setting('auto-switch-to-hero-select', True)
 # general
 language = Setting("lang", "en")
 live_palette = Setting("live-palette", "paired")
