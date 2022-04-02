@@ -7,6 +7,8 @@
 #  If you see {0}, {1}, keep it in the translated sentence
 
 lang = {
+    "Auto Switch to Hero Select": "ゲーム開始時に「ヒーロー選択」タブに切り替える",
+    
     "Enable Hero Selection overlay": "ヒーロー選択オーバーレイを有効化",
     "Hero Selection": "ヒーロー選択",
     "Placements": "Placements",
