@@ -6,12 +6,13 @@ import os
 from collections import namedtuple
 from pathlib import Path
 
+import pandas as pd
+
 if getattr(sys, 'frozen', False):
     # If the application is run as a bundle, the PyInstaller bootloader
     # extends the sys module by a flag frozen=True and sets the app
     # path into variable _MEIPASS'.
     application_path = Path(sys._MEIPASS)
-    print(application_path)
 else:
     application_path = Path(__file__).parent.parent
 
@@ -19,8 +20,13 @@ def get_asset(asset_name: str):
     return str(application_path.joinpath(f"../assets/{asset_name}"))
 
 
-with open(get_asset("template-ids.json"), "r") as json_file:
-    content_id_lookup = json.load(json_file)
+# headers:
+# Id|InPool|Name|Cost|Level|Attack|Health|Game Text|Golden or regular|Type|Subtypes|Keywords
+with open(get_asset("CardFile.txt"), "r") as card_file:
+    cardfile_df = pd.read_csv(card_file, delimiter='|')
+    content_id_lookup = {}
+    for index, row in cardfile_df.iterrows():
+        content_id_lookup[str(index)] = { "Id": row["Id"], "Name": row["Name"] }
 
 
 def get_card_art_name(template_id: str, is_golden: bool):
