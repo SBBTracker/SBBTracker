@@ -152,6 +152,7 @@ class PlayerStats:
                 {"StartingHero": starting_hero, "EndingHero": ending_hero, "Placement": placement,
                  "Timestamp": timestamp.strftime("%Y-%m-%d"), "+/-MMR": str(mmr_change), "SessionId": session_id},
                 ignore_index=True)
+            self.save()
         else:
             logging.warning("Not adding existing match!")
 
