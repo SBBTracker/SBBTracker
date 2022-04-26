@@ -392,52 +392,54 @@ def run(queue: Queue, log=logfile):
                 current_round = None
                 lastupdated = dict()
                 queue.put(Update(JOB_NEWGAME, action))
-            if action.task == TASK_HERODISCOVER:
-                queue.put(Update(JOB_HERODISCOVER, action))
-            elif not inbrawl and not current_player_stats and action.task == TASK_ADDPLAYER \
-                    and prev_action is not None and prev_action.action_type == EVENT_UPDATEEMOTES:
-                current_player_stats = action
-                queue.put(Update(JOB_INITCURRENTPLAYER, current_player_stats))
-            elif action.task == TASK_ADDPLAYER and prev_action is not None \
-                    and (prev_action.action_type not in [EVENT_ENTERRESULTSPHASE, EVENT_ADDPLAYER, EVENT_UPDATETURNTIMER]):
-                queue.put(Update(JOB_HEALTHUPDATE, action))
-            elif not inbrawl and action.task == TASK_ADDPLAYER:
-                queue.put(Update(JOB_PLAYERINFO, action))
-            elif not inbrawl and action.task == TASK_GATHERIDS:
-                inbrawl = True
-                brawldt = dict()
-                character_slots = defaultdict(set)
-                brawldt[action.player1] = list()
-                brawldt[action.player2] = list()
-                lastupdated[action.player1] = current_round
-                lastupdated[action.player2] = current_round
-            elif inbrawl and action.task == TASK_GETROUNDGATHER:
-                if action.zone in ['Spell', 'Treasure', 'Character', 'Hero']:
-                    if action.zone == 'Character':
-                        if action.slot not in character_slots[action.playerid]:
-                            character_slots[action.playerid].add(action.slot)
-                            brawldt[action.playerid].append(action)
-                    else:
-                        brawldt[action.playerid].append(action)
-            elif inbrawl and action.task != TASK_GETROUNDGATHER:
-                queue.put(Update(JOB_BOARDINFO, brawldt))
-                inbrawl = False
-            elif action.task == TASK_GETROUND:
-                queue.put(Update(JOB_ROUNDINFO, action))
             elif action.task == TASK_ENDGAME:
                 queue.put(Update(JOB_ENDGAME, action))
                 current_player_stats = None
-            elif action.task == TASK_ENDCOMBAT:
-                queue.put(Update(JOB_ENDCOMBAT, action))
-            elif action.task == TASK_MATCHMAKING:
-                queue.put(Update(JOB_MATCHMAKING, action))
-            elif not inbrawl and action.task == TASK_UPDATECARD:
-                queue.put(Update(JOB_CARDUPDATE, action))
             else:
-                pass
-
-            if action.task == TASK_ADDPLAYER:
-                if current_player_stats and action.displayname == current_player_stats.displayname:
+                if action.task == TASK_HERODISCOVER:
+                    queue.put(Update(JOB_HERODISCOVER, action))
+                elif not inbrawl and not current_player_stats and action.task == TASK_ADDPLAYER \
+                        and prev_action is not None and prev_action.action_type == EVENT_UPDATEEMOTES:
                     current_player_stats = action
+                    queue.put(Update(JOB_INITCURRENTPLAYER, current_player_stats))
+                elif action.task == TASK_ADDPLAYER and prev_action is not None \
+                        and (prev_action.action_type not in [EVENT_ENTERRESULTSPHASE, EVENT_ADDPLAYER, EVENT_UPDATETURNTIMER]):
+                    queue.put(Update(JOB_HEALTHUPDATE, action))
+                elif not inbrawl and action.task == TASK_ADDPLAYER:
+                    queue.put(Update(JOB_PLAYERINFO, action))
+                elif not inbrawl and action.task == TASK_GATHERIDS:
+                    inbrawl = True
+                    brawldt = dict()
+                    character_slots = defaultdict(set)
+                    brawldt[action.player1] = list()
+                    brawldt[action.player2] = list()
+                    lastupdated[action.player1] = current_round
+                    lastupdated[action.player2] = current_round
+                elif inbrawl and action.task == TASK_GETROUNDGATHER:
+                    if action.zone in ['Spell', 'Treasure', 'Character', 'Hero']:
+                        if action.zone == 'Character':
+                            if action.slot not in character_slots[action.playerid]:
+                                character_slots[action.playerid].add(action.slot)
+                                brawldt[action.playerid].append(action)
+                        else:
+                            brawldt[action.playerid].append(action)
+                elif inbrawl and action.task != TASK_GETROUNDGATHER:
+                    queue.put(Update(JOB_BOARDINFO, brawldt))
+                    inbrawl = False
+                elif action.task == TASK_GETROUND:
+                    queue.put(Update(JOB_ROUNDINFO, action))
+                elif action.task == TASK_ENDCOMBAT:
+                    queue.put(Update(JOB_ENDCOMBAT, action))
+                elif action.task == TASK_MATCHMAKING:
+                    queue.put(Update(JOB_MATCHMAKING, action))
+                elif not inbrawl and action.task == TASK_UPDATECARD:
+                    queue.put(Update(JOB_CARDUPDATE, action))
+                else:
+                    pass
+
+                if action.task == TASK_ADDPLAYER:
+                    if current_player_stats and action.displayname == current_player_stats.displayname:
+                        current_player_stats = action
+
             prev_action = action
         time.sleep(0.1)
