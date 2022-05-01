@@ -663,6 +663,7 @@ class SBBTracker(QMainWindow):
         self.log_updates.terminate()
         self.simulation.terminate()
         self.sbb_watcher_thread.terminate()
+        self.overlay.hover_thread.terminate()
         self.player_stats.save()
         self.overlay.close()
         self.streamer_overlay.close()
