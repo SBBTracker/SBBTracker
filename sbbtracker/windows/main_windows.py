@@ -93,9 +93,9 @@ def get_date_range(key):
     if key == all_matches:
         return "1970-01-01", today.isoformat()
     elif key == latest_patch:
-        return "2022-04-05", today.isoformat()
+        return "2022-05-02", today.isoformat()
     elif key == prev_patch:
-        return "2022-03-02", "2022-04-05"
+        return "2022-04-05", "2022-05-02"
     elif key == today_:
         return today.isoformat(), today.isoformat()
     elif key == yesterday:
