@@ -70,8 +70,8 @@ def update_table(table: QTableWidget, data: list[list]):
 
 
 all_matches = tr("All Matches")
-latest_patch = tr("Latest Patch") + " (69)"
-prev_patch = tr("Previous Patch") + " (68.9)"
+latest_patch = tr("Latest Patch") + " (70.6)"
+prev_patch = tr("Previous Patch") + " (69)"
 today_ = tr("Today")
 yesterday = tr("Yesterday")
 last_7 = tr("Last 7 days")
