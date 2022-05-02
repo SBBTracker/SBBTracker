@@ -650,16 +650,14 @@ class MouseDetectionThread(QThread):
                     hero_pos = -1
             if (hero_pos > -1 and not visible) or (prev_pos != hero_pos and visible and hero_pos != -1):
                 self.hover_update.emit(hero_pos, True)
-                print("SHOWING")
                 visible = True
                 prev_pos = hero_pos
             elif hero_pos == -1 and visible:
                 self.hover_update.emit(hero_pos, False)
-                print("HIDING")
                 visible = False
                 prev_pos = -1
                 hero_pos = -1
-            time.sleep(.2)
+            time.sleep(.1)
 
 class HoverRegion(QWidget):
     def __init__(self, parent, width, height):
