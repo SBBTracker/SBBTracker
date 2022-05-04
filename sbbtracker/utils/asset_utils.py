@@ -28,7 +28,6 @@ with open(get_asset("CardFile.txt"), "r") as card_file:
     for index, row in cardfile_df.iterrows():
         content_id_lookup[str(index)] = { "Id": row["Id"], "Name": row["Name"] }
 
-
 def get_card_art_name(template_id: str, is_golden: bool):
     """
     Map the content ID to the card to prevent issues with skins/renames.

@@ -17,7 +17,6 @@ def resize():
     for item in dirs:
         # if "Card art -" in item and os.path.isfile(path.joinpath(item)): # this is if its the wiki art
         if os.path.isfile(path.joinpath(item)):
-            if item.startswith("SBB_TREASURE"):
                 f, e = os.path.splitext(path.joinpath(item))
 
                 # Load image and mask

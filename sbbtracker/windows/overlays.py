@@ -1,9 +1,10 @@
 import logging
 import operator
+import time
 
 from PySide6 import QtCore, QtGui
-from PySide6.QtCore import QPoint, QRect, QSize, Qt, Signal
-from PySide6.QtGui import QColor, QFont, QGuiApplication, QPainter, QPainterPath, QPen, QPixmap, QRegion
+from PySide6.QtCore import QPoint, QRect, QSize, QThread, Qt, Signal
+from PySide6.QtGui import QColor, QCursor, QFont, QGuiApplication, QPainter, QPainterPath, QPen, QPixmap, QRegion
 from PySide6.QtWidgets import (
     QFrame,
     QGridLayout, QHBoxLayout,
@@ -97,6 +98,7 @@ class OverlayWindow(QMainWindow):
             widget.setVisible(False)
 
         self.show_comps = settings.get(settings.enable_comps)
+        self.in_brawl = False
         self.main_window = main_window
         self.stream_overlay = None
         self.visible = True
@@ -137,9 +139,16 @@ class OverlayWindow(QMainWindow):
         self.show_button.resize(self.show_button.sizeHint().width(), self.show_button.sizeHint().height())
         self.show_button.setVisible(settings.get(settings.show_tracker_button))
 
+        self.init_hover_thread()
+
         self.setCentralWidget(main_widget)
 
         self.disable_hovers()
+
+    def init_hover_thread(self):
+        self.hover_thread = MouseDetectionThread(self.hover_regions)
+        self.hover_thread.hover_update.connect(self.show_hide_comp)
+        self.hover_thread.start()
 
     def show_hide_main_window(self):
         if self.show_hide:
@@ -163,24 +172,22 @@ class OverlayWindow(QMainWindow):
             self.disable_hovers()
 
     def disable_hovers(self):
-        for hover in self.hover_regions:
-            hover.setVisible(False)
+        self.in_brawl = False
 
     def enable_hovers(self):
-        if self.show_comps:
-            for hover in self.hover_regions:
-                hover.setVisible(True)
+        self.in_brawl = True
 
     def show_hide_comp(self, index, show_or_hide: bool):
         # TODO: figure out how to move the comp widget
         # if not QGuiApplication.keyboardModifiers() & Qt.ShiftModifier:
-        widget = self.comp_widget
-        widget.setVisible(show_or_hide)
-        true_index = self.places[index]
-        widget.change_widget(true_index)
-        self.update()
-        if self.stream_overlay is not None:
-            self.stream_overlay.show_hide_comp(index, show_or_hide)
+        if self.in_brawl:
+            widget = self.comp_widget
+            widget.setVisible(show_or_hide)
+            true_index = self.places[index]
+            widget.change_widget(true_index)
+            self.update()
+            if self.stream_overlay is not None:
+                self.stream_overlay.show_hide_comp(index, show_or_hide)
 
     def update_round(self, round_num):
         self.turn_display.update_label(f"Turn {round_num} ({round_to_xp(round_num)})")
@@ -271,8 +278,7 @@ class OverlayWindow(QMainWindow):
             new_size = QSize(*get_hover_size(self.sbb_rect.size().toTuple()))
             hover.resize(new_size)
             hover.background.setFixedSize(new_size)
-            hover.enter_hover.connect(lambda y=i: self.show_hide_comp(y, True))
-            hover.leave_hover.connect(lambda y=i: self.show_hide_comp(y, False))
+            hover.position = i
         self.update()
 
     def set_transparency(self):
@@ -357,6 +363,9 @@ class StreamerOverlayWindow(OverlayWindow):
         settings.set_(settings.streamer_overlay_size, self.sbb_rect.size().toTuple())
 
     def update_hovers(self):
+        pass
+
+    def init_hover_thread(self):
         pass
 
 class OverlayBoardComp(BoardComp):
@@ -620,22 +629,45 @@ class TurnDisplay(MovableWidget):
         self.label.setText(text)
 
 
-class HoverRegion(QWidget):
-    enter_hover = Signal()
-    leave_hover = Signal()
+class MouseDetectionThread(QThread):
+    hover_update = Signal(int, bool)
 
+    def __init__(self, regions):
+        super(MouseDetectionThread, self).__init__()
+        self.regions = regions
+
+    def run(self):
+        visible = False
+        hero_pos = -1
+        prev_pos = -1
+        while True:
+            mouse_pos = QCursor.pos()
+            for region in self.regions:
+                if region.rect().contains(region.mapFromGlobal(mouse_pos)):
+                    hero_pos = region.position
+                    break
+                else:
+                    hero_pos = -1
+            if (hero_pos > -1 and not visible) or (prev_pos != hero_pos and visible and hero_pos != -1):
+                self.hover_update.emit(hero_pos, True)
+                visible = True
+                prev_pos = hero_pos
+            elif hero_pos == -1 and visible:
+                self.hover_update.emit(hero_pos, False)
+                visible = False
+                prev_pos = -1
+                hero_pos = -1
+            time.sleep(.1)
+
+class HoverRegion(QWidget):
     def __init__(self, parent, width, height):
         super().__init__(parent)
         self.background = QWidget(self)
         self.background.setMinimumSize(width, height)
-        self.setStyleSheet("background-color: rgba(0, 0, 0, 0.01);")
+        self.setStyleSheet("background-color: rgba(0, 0, 0, 1);")
         self.setMinimumSize(width, height)
-
-    def enterEvent(self, event):
-        self.enter_hover.emit()
-
-    def leaveEvent(self, event):
-        self.leave_hover.emit()
+        self.setVisible(False)
+        self.position = 0
 
 
 class StreamableMatchDisplay(QMainWindow):
