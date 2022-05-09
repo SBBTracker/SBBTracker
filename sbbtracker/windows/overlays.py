@@ -173,6 +173,7 @@ class OverlayWindow(QMainWindow):
 
     def disable_hovers(self):
         self.in_brawl = False
+        self.comp_widget.setVisible(False)
 
     def enable_hovers(self):
         self.in_brawl = True
@@ -180,7 +181,7 @@ class OverlayWindow(QMainWindow):
     def show_hide_comp(self, index, show_or_hide: bool):
         # TODO: figure out how to move the comp widget
         # if not QGuiApplication.keyboardModifiers() & Qt.ShiftModifier:
-        if self.in_brawl:
+        if self.in_brawl and self.show_comps:
             widget = self.comp_widget
             widget.setVisible(show_or_hide)
             true_index = self.places[index]
