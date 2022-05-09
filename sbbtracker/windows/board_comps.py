@@ -174,7 +174,7 @@ class BoardComp(QWidget):
         self.draw_hero(painter)
         if self.composition is not None:
             for action in self.composition:
-                if action.zone != "Hero" and action.zone != 'None':
+                if action.zone != "Hero" and action.zone != 'None' and action.zone != "Hand":
                     #  skip hero because we handle it elsewhere
                     #  spells broke
                     slot = action.slot
