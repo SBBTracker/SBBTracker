@@ -325,7 +325,7 @@ class OverlayWindow(QMainWindow):
     def update_data_url(self, hero_names):
         if settings.get(settings.enable_hero_stats):
             self.data_button.setVisible(True)
-            self.data_url = 'https://sbbtracker.com/data?dataset=mythic&heroes=' + ','.join(hero_names)
+            self.data_url = 'https://www.sbbtracker.com/data?dataset=mythic&heroes=' + ','.join(hero_names)
 
     def open_data_page(self):
         open_url(self, self.data_url)
