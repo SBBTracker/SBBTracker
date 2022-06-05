@@ -9,7 +9,7 @@ If FAQ doesn't help you, consider creating an issue or posting in the #bugs chan
 
 ## Features
 * Keep track of previous opponent's boards
-* Game overlay
+* Game overlay w/ Simulation
 * See history of players' healths
 * Record game placements
 * Stat analysis of your results
