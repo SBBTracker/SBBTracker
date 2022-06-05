@@ -26,12 +26,14 @@ from sbbtracker.windows.constants import default_bg_color, default_bg_color_rgb
 
 def portrait_location(resolution: (int, int)):
     x, y = resolution
-    return 0.346 * y - 126
-
+    offset = y * .22
+    new_x = -.1 * x + offset
+    new_y = 0.0917 * y - 3
+    return new_x, new_y
 
 def get_hover_size(resolution: (int, int)):
     x, y = resolution
-    width = 0.0773 * y + 0.687
+    width = 0.0917 * y + 4
     return width, width * 17 / 21
 
 def get_hero_discover_location(resolution: (int, int), location: int):
@@ -51,7 +53,7 @@ def get_data_button_location(resolution: (int, int)):
 
 hover_size = (84, 68)
 p1_loc = (38, 247)
-hover_distance = 15
+hover_distance = 38
 base_size = (1920, 1080)
 
 
@@ -271,8 +273,9 @@ class OverlayWindow(QMainWindow):
         true_scale = self.scale_factor
         for i in range(len(self.hover_regions)):
             hover = self.hover_regions[i]
-            loc = QPoint(38 * true_scale,
-                         portrait_location((self.sbb_rect.size() / self.dpi_scale).toTuple()) * self.dpi_scale +
+            calced_loc = portrait_location((self.sbb_rect.size() / self.dpi_scale).toTuple())
+            loc = QPoint(calced_loc[0] * self.dpi_scale,
+                         calced_loc[1] * self.dpi_scale +
                          hover_distance * i * true_scale +
                          hover_size[1] * true_scale * i)
             hover.move(loc)
