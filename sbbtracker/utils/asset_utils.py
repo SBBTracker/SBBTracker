@@ -26,7 +26,7 @@ with open(get_asset("CardFile.txt"), "r") as card_file:
     cardfile_df = pd.read_csv(card_file, delimiter='|')
     content_id_lookup = {}
     for index, row in cardfile_df.iterrows():
-        content_id_lookup[str(index)] = { "Id": row["Id"], "Name": row["Name"] }
+        content_id_lookup[str(index)] = { "Id": row["Id"], "Name": row["Name"], "InPool": row["InPool"] }
 
 def get_card_art_name(template_id: str, is_golden: bool):
     """
@@ -51,13 +51,7 @@ def get_card_name(template_id: str, is_golden=False):
 
 
 def get_num_heroes():
-    hero_list = [v for v in content_id_lookup.values() if v['Id'].startswith("SBB_HERO") and v['Name'] != "Big Bad Wolf"]
-    name_list = []
-    for hero in hero_list:
-        name = hero["Name"]
-        if name not in name_list:
-            name_list.append(name)
-    return len(name_list)
+    return len([v for v in content_id_lookup.values() if v['Id'].startswith("SBB_HERO") and v["InPool"]])
 
 def get_card_path(content_id: str, is_golden: bool):
     """
