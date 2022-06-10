@@ -39,45 +39,49 @@ SBB_CHARACTER_CAPTAINCROC|False|Captain Croc|6|6|10|10|<b>Last Breath:</b> Summo
 GOLDEN_SBB_CHARACTER_CAPTAINCROC|False|Captain Croc|6|6|20|20|<b>Last Breath:</b> Summon all the characters I've swallowed.|Golden|Character|Evil - Animal|LastBreath
 SBB_TREASURE_EASTEREGG|False|Easter Egg|2|2|0|0|Your Upgraded characters have +3/+3.When you win a brawl, give your surviving characters +1/+1 permanently.|Regular|Treasure||
 SBB_HERO_BIGBADWOLF|False|Big Bad Wolf|0|2|0|50|Your characters have +5/+5.|Regular|Hero||
+SBB_HERO_MAIDMARIAN3|False|Snow Angel|0|2|0|40|Buy 3 Good characters to get a level 3 Good character, then increase this ability by one.|Regular|Hero||
+SBB_HERO_MAIDMARIAN4|False|Snow Angel|0|2|0|40|Buy 4 Good characters to get a level 4 Good character, then increase this ability by one.|Regular|Hero||
+SBB_HERO_MAIDMARIAN5|False|Snow Angel|0|2|0|40|Buy 5 Good characters to get a level 5 Good character, then increase this ability by one.|Regular|Hero||
+SBB_HERO_MAIDMARIAN6|False|Snow Angel|0|2|0|40|Buy 6 Good characters to get a level 6 Good character.|Regular|Hero||
+SBB_HERO_MRSCLAUS|True|Mrs. Claus|0|1|0|40|Your Good characters have +1/+1.|Regular|Hero||
+SBB_HERO_KRAMPUS|True|Krampus|0|1|0|40|Your Evil characters have +1/+1.|Regular|Hero||
+SBB_HERO_GEPETTO|True|Geppetto|0|1|0|40|When you summon a character during a brawl, give it Attack and Health equal to your level.|Regular|Hero||
+SBB_HERO_GANDALF|True|Pup the Magic Dragon|0|1|0|40|Your characters with <b>Support</b> give an additional +2/+1.|Regular|Hero||Support
+SBB_HERO_SIRPIPS-A-LOT|True|Jack's Giant|0|1|0|40|Characters in your front row have +2 Health.|Regular|Hero||
+SBB_HERO_HORDEDRAGON|True|Hoard Dragon|0|1|0|40|When you pick a treasure, your choices are all 1 level higher.|Regular|Hero||
+SBB_HERO_FATE|True|The Fates|0|1|0|40|Your Upgraded characters have +3/+3.The first character you buy is destined to Upgrade.|Regular|Hero||
+SBB_HERO_MERLIN|True|Merlin|0|1|0|40|When you cast a spell, give a random character +1/+1 permanently.|Regular|Hero||
 SBB_HERO_MUERTE|True|Muerte|0|2|0|45|Your first <b>Last Breath</b> ability each brawl triggers twice.|Regular|Hero||LastBreath
 SBB_HERO_MORDRED|True|Mordred|0|2|0|45|The first time one of your characters dies each brawl, summon the highest Attack character from your hand.|Regular|Hero||
 SBB_HERO_MADCATTER|True|Mad Catter|0|2|0|40|When you roll, add Attack and Health equal to your level to a random character in your shop.|Regular|Hero||
 SBB_HERO_THEGREEDCURSED|True|The Cursed King|0|2|0|40|+1 Gold each round, but you take 3 damage if you don't buy a spell.|Regular|Hero||
-SBB_HERO_GEPETTO|True|Geppetto|0|1|0|40|When you summon a character during a brawl, give it Attack and Health equal to your level.|Regular|Hero||
-SBB_HERO_PRINCESSBELLE|True|Beauty|0|2|0|45|Your Evil characters are Good. Your abilities that affect Evil characters affect Good characters.|Regular|Hero||
+SBB_HERO_PRINCESSBELLE|True|Beauty|0|2|0|45|All your characters are Good. Your abilities that affect Evil characters affect Good characters.|Regular|Hero||
 SBB_HERO_POTIONMASTER|True|Potion Master|0|2|0|40|Your shop sells an extra spell.When you cast a spell directly on a character, give it +1/+1 permanently.|Regular|Hero||
 SBB_HERO_PETERPAN|True|Peter Pants|0|2|0|40|You start at level 3 and never grow up! Characters in your shop have +1/+1 for each time you would have leveled.|Regular|Hero||
-SBB_HERO_GANDALF|True|Pup the Magic Dragon|0|1|0|40|Your characters with <b>Support</b> give an additional +2/+1.|Regular|Hero||Support
 SBB_HERO_DARKONE|True|Evella|0|2|0|40|Your Evil characters have +1 Attack. They have an additional +1 Attack for each of your Animals that died this brawl.|Regular|Hero||
-SBB_HERO_KRAMPUS|True|Krampus|0|1|0|40|Your Evil characters have +1/+1.|Regular|Hero||
-SBB_HERO_MRSCLAUS|True|Mrs. Claus|0|1|0|40|Your Good characters have +1/+1.|Regular|Hero||
 SBB_HERO_PIEDPIPER|True|Pied Piper|0|2|0|40|Your shop sells an extra Animal with +1/+1.|Regular|Hero||
-SBB_HERO_SIRPIPS-A-LOT|True|Jack's Giant|0|1|0|40|Characters in your front row have +2 Health.|Regular|Hero||
-SBB_HERO_HORDEDRAGON|True|Hoard Dragon|0|1|0|40|When you pick a treasure, your choices are all 1 level higher.|Regular|Hero||
 SBB_HERO_DRACULA|True|Sad Dracula|0|2|0|40|You get the first attack each brawl. Your first character has "<b>Slay:</b> +2 Attack permanently."|Regular|Hero||Slay
 SBB_HERO_GWEN|True|Gwen|0|2|0|40|You start with <b>Knighthood</b>. (Permanently Upgrade a character.)|Regular|Hero||
 SBB_HERO_MORGANLEFAY|True|Morgan le Fay|0|2|0|45|When your health drops to 20 or less, pick a treasure of your level. Pick again when you drop to 5 or less.|Regular|Hero||
 SBB_HERO_CARDCHEAT|True|Pan's Shadow|0|2|0|45|When you reach level 4, level 2 and 3 characters no longer appear in your shop.|Regular|Hero||
-SBB_HERO_MERLIN|True|Merlin|0|1|0|40|When you cast a spell, give a random character +1/+1 permanently.|Regular|Hero||
 SBB_HERO_OLDGRANNY|True|Grandmother|0|2|0|50|When you reach level 6, become the <b>Big Bad Wolf</b>. (Your characters have +5/+5.)|Regular|Hero||
-SBB_HERO_FATE|True|The Fates|0|1|0|40|Your Upgraded characters have +3/+3.The first character you buy is destined to Upgrade.|Regular|Hero||
 SBB_HERO_SKIP,THETIMESKIPPER|True|Skip, the Time Skipper|0|2|0|40|You start with +2 XP and skip your first round.|Regular|Hero||
 SBB_HERO_BIGDEAL|True|Xelhua|0|2|0|45|Your level 4, 5, and 6 characters only cost 3 Gold.|Regular|Hero||
 SBB_HERO_CHARON|True|Charon|0|2|0|40|Give your first character that dies each brawl +2/+1 permanently.|Regular|Hero||
 SBB_HERO_SIRGALAHAD|True|Sir Galahad|0|2|0|40|When you find a treasure, give your characters +1/+1 permanently.|Regular|Hero||
 SBB_HERO_LOKI|True|Loki|0|2|0|40|Cast a random spell each round. (Instead of being able to buy spells)|Regular|Hero||
 SBB_HERO_THECOLLECTOR|True|Celestial Tiger|0|2|0|40|Double the abilities of your level 2 and 3 treasures.|Regular|Hero||
-SBB_HERO_MAIDMARIAN|True|Snow Angel|0|2|0|40|For every three Good characters you buy, get a random Good character with +1/+1.|Regular|Hero||
+SBB_HERO_MAIDMARIAN|True|Snow Angel|0|2|0|40|Buy 2 Good characters to get a level 2 Good character, then increase this ability by one.|Regular|Hero||
 SBB_HERO_MASK|True|Mask|0|2|0|40|When you reach level 3, you get two spells that let you pick a new hero.|Regular|Hero||
-SBB_HERO_MILITARYLEADER|True|Trophy Hunter|0|2|0|40|Your <b>Last Breath</b> abilities are also <b>Slay</b> abilities.|Regular|Hero||LastBreath - Slay
+SBB_HERO_MILITARYLEADER|True|Trophy Hunter|0|2|0|40|Your <b>Last Breath</b> abilities are also <b>Slay</b> abilities.Your <b>Last Breath</b> characters have +2 Attack.|Regular|Hero||LastBreath - Slay
 SBB_HERO_WONDERWADDLE|True|Wonder Waddle|0|2|0|40|You need just two copies to Upgrade level 2 and 3 Animals.|Regular|Hero||
 SBB_HERO_FALLENANGEL|True|Fallen Angel|0|2|0|40|Your characters have +2 Attack if you start with three Evil characters, and +2 Health if you start with three Good characters.|Regular|Hero||
-SBB_HERO_KINGLION|True|Mihri, King Lion|0|2|0|40|Your Princes and Princesses have +1/+2 for each Prince and Princess you've Upgraded.|Regular|Hero||
+SBB_HERO_KINGLION|True|Mihri, King Lion|0|2|0|40|Your Royals have +1/+2 for each Royal you've Upgraded.|Regular|Hero||
 SBB_HERO_BLACKKNIGHT|True|The Headless Horseman|0|2|0|40|You start with 3 <b>Kidnaps</b>. (Get an exact copy of the first enemy character that dies this brawl.)|Regular|Hero||
 SBB_HERO_APOCALYPSE|True|Apocalypse|0|2|0|45|When you reach level 6, devour all your characters. Then fill your board with random level 6 characters.|Regular|Hero||
 SBB_HERO_KINGMIDAS|True|King Midas|0|2|0|45|You only need two copies to Upgrade a character, but they don't give you a treasure.|Regular|Hero||
 SBB_HERO_SHAREBEAR|True|Sharebear|0|2|0|40|After each brawl, you and your last opponent gain +1 gold.|Regular|Hero||
-SBB_HERO_SEER|True|The Sphinx|0|2|0|40|When you level up, your spells are free this round.|Regular|Hero||
+SBB_HERO_SEER|True|The Sphinx|0|2|0|45|When you cast a spell, it's free for the rest of the game.|Regular|Hero||
 SBB_CHARACTER_WEEWILLIEWINKIE|True|Tiny|2|2|6|1||Regular|Character|Dwarf|
 GOLDEN_SBB_CHARACTER_WEEWILLIEWINKIE|True|Tiny|2|2|12|2||Golden|Character|Dwarf|
 SBB_CHARACTER_BADBILLYGRUFF|True|B-a-a-d Billy Gruff|2|2|2|3||Regular|Character|Evil - Animal|
@@ -94,10 +98,10 @@ SBB_CHARACTER_BABYROOT|True|Baby Root|2|2|0|3|<b>Support:</b> +3 Health|Regular|
 GOLDEN_SBB_CHARACTER_BABYROOT|True|Baby Root|2|2|0|6|<b>Support:</b> +6 Health|Golden|Character|Good - Treant|Support
 SBB_CHARACTER_BLACKCAT|True|Black Cat|2|2|1|1|<b>Last Breath:</b> Summon a 1/1 Cat.|Regular|Character|Evil - Animal|LastBreath
 GOLDEN_SBB_CHARACTER_BLACKCAT|True|Black Cat|2|2|2|2|<b>Last Breath:</b> Summon a 2/2 Cat.|Golden|Character|Evil - Animal|LastBreath
-SBB_CHARACTER_ANGRYDWARF|True|Fanny|2|2|2|2|<b>Dwarf Support</b>: +2/+2|Regular|Character|Dwarf|Support
-GOLDEN_SBB_CHARACTER_ANGRYDWARF|True|Fanny|2|2|4|4|<b>Dwarf Support:</b> +4/+4|Golden|Character|Dwarf|Support
-SBB_CHARACTER_LONELYPRINCE|True|Lonely Prince|2|2|1|1|When you buy another Royal, I transform into a 5/5 Frog Prince.|Regular|Character|Good - Royal|
-GOLDEN_SBB_CHARACTER_LONELYPRINCE|True|Lonely Prince|2|2|2|2|When you buy another Royal, I transform into a 10/10 Frog Prince.|Golden|Character|Good - Royal|
+SBB_CHARACTER_BIGBOSS|True|Bossy|2|2|2|2|Your other Dwarves have +1/+1.|Regular|Character|Dwarf|
+GOLDEN_SBB_CHARACTER_BIGBOSS|True|Bossy|2|2|4|4|Your other Dwarves have +2/+2.|Golden|Character|Dwarf|
+SBB_CHARACTER_LONELYPRINCE|True|Lonely Prince|2|2|1|1|When you buy another Royal, it kisses me and I transform into a 5/5 Frog Prince.|Regular|Character|Good - Royal|
+GOLDEN_SBB_CHARACTER_LONELYPRINCE|True|Lonely Prince|2|2|2|2|When you buy another Royal, it kisses me and I transform into a 10/10 Frog Prince.|Golden|Character|Good - Royal|
 SBB_CHARACTER_WIZARD'SFAMILIAR|True|Wizard's Familiar|2|2|1|1|When you cast a spell, I gain +1/+1 permanently.|Regular|Character|Animal - Mage|
 GOLDEN_SBB_CHARACTER_WIZARD'SFAMILIAR|True|Wizard's Familiar|2|2|2|2|When you cast a spell, I gain +2/+2 permanently.|Golden|Character|Animal - Mage|
 SBB_CHARACTER_FOXTAILARCHER|True|Sherwood Sureshot|2|2|2|1|<b>Ranged</b>|Regular|Character|Good - Royal|Ranged
@@ -120,7 +124,7 @@ SBB_CHARACTER_POLYWOGGLE|True|Polywoggle|2|2|1|1|<b>Slay:</b> I transform into a
 GOLDEN_SBB_CHARACTER_POLYWOGGLE|True|Polywoggle|2|2|2|2|<b>Slay:</b> I transform into an Upgraded character that is one level higher than your hero.|Golden|Character|Animal|Slay
 SBB_SPELL_SHARDOFTHEICEQUEEN|True|Shard of the Ice Queen|0|2|0|0|Transform a Good character into a new random Evil character of the same level. Give it +1/+1 permanently.|Regular|Spell||
 SBB_SPELL_FORBIDDENFRUIT|True|Forbidden Fruit|0|2|0|0|+1 Gold. Take 2 damage.|Regular|Spell|RandomSpell|
-SBB_SPELL_SHRINKRAY|True|Shrink Spell|2|2|0|0|Reduce the cost of all characters in the shop by 1.|Regular|Spell|RandomSpell|
+SBB_SPELL_SHRINKRAY|True|Shrink Ray|2|2|0|0|Reduce the cost of all characters in the shop by 1.|Regular|Spell|RandomSpell|
 SBB_SPELL_FREEROLL|True|Free Roll|0|2|0|0|Roll.|Regular|Spell|RandomSpell|
 SBB_SPELL_TESTYOURMIGHT|True|Magic Research|1|2|0|0|Give a character +1/+1 this brawl. If you win, this bonus is permanent.|Regular|Spell|RandomSpell - BeneficialSpell|
 SBB_SPELL_EENIEMEENIEMINEYMO|True|Roll the Dice|2|2|0|0|Get a random character from the shop and give it +1/+1 permanently.|Regular|Spell|RandomSpell|
@@ -150,6 +154,9 @@ SBB_TREASURE_DRAGONNEST|True|Dragon Nest|2|2|0|0|Your Dragons have +5/+5.|Regula
 SBB_TREASURE_QUESTINGPET|True|Noble Steed|2|2|0|0|Your <b>Questing</b> characters have +1/+1 and reward treasures one level higher.|Regular|Treasure||Quest
 SBB_TREASURE_SHARPENINGSTONE|True|Dancing Sword|2|2|0|0|Your Evil characters have +1/+1.|Regular|Treasure||
 SBB_TREASURE_FOUNTAINOFYOUTH|True|Fountain of Youth|2|2|0|0|Your Good characters have +1/+1.|Regular|Treasure||
+SBB_TREASURE_POTIONCAULDRON|True|Potion Master's Cookbook|2|2|0|0|When you cast a spell directly on a character, give it +2/+2 permanently.|Regular|Treasure||
+SBB_TREASURE_GREATLIBRARYCARD|True|Great Library Card|2|2|0|0|Your shop sells an extra spell.|Regular|Treasure||
+SBB_TREASURE_SKIPSPUZZLECUBE|True|Skip's Puzzle Rune|2|2|0|0|When you replace this, you gain +2 <b>XP </b>and +2 Health.|Regular|Treasure||XP
 SBB_CHARACTER_THEWHITESTAG|True|The White Stag|3|3|3|3|When I attack, give the characters behind me +3/+3 this brawl.|Regular|Character|Good - Animal|
 GOLDEN_SBB_CHARACTER_THEWHITESTAG|True|The White Stag|3|3|6|6|When I attack, give the characters behind me +6/+6 this brawl.|Golden|Character|Good - Animal|
 SBB_CHARACTER_QUESTINGPRINCESS|True|Brave Princess|3|3|5|3|<b>Quest:</b> I <b>Slay</b> 3 enemies.|Regular|Character|Good - Royal|Quest - Slay
@@ -221,6 +228,7 @@ SBB_TREASURE_CLOAKOFTHEASSASSIN|True|Cloak of the Assassin|3|3|0|0|Your characte
 SBB_TREASURE_MERLIN'SHAT|True|Merlin's Hat|3|3|0|0|Spells cost you 2 less.|Regular|Treasure||
 SBB_TREASURE_CRYSTALBALL|True|Crystal Ball|3|3|0|0|When you cast a spell directly on a character, add a spell to your shop and you can cast another spell this round.|Regular|Treasure||
 SBB_TREASURE_CURSEDTHRONE|True|Cursed Throne|3|3|0|0|Your Royals are also Monsters and have "<b>Slay:</b> +1/+1 permanently."|Regular|Treasure||
+SBB_TREASURE_SKIPSPHONEBOOTH|True|Enchanted Clocktower|3|3|0|0|After your next brawl, you become level 6 for the round.|Regular|Treasure||
 SBB_CHARACTER_JULIET|True|Juliet|4|4|7|7||Regular|Character|Good - Royal|
 GOLDEN_SBB_CHARACTER_JULIET|True|Juliet|4|4|14|14||Golden|Character|Good - Royal|
 SBB_CHARACTER_LADYOFTHELAKE|True|Lady of the Lake|4|4|3|3|<b>Ranged</b><b>Support: </b>+5 Health|Regular|Character|Good - Mage|Ranged - Support
@@ -247,7 +255,7 @@ SBB_CHARACTER_FAIRYGODMOTHER|True|Fairy Godmother|4|4|4|4|When one of your Good 
 GOLDEN_SBB_CHARACTER_FAIRYGODMOTHER|True|Fairy Godmother|4|4|8|8|When one of your Good characters dies, give your Good characters +4 Health this brawl.|Golden|Character|Good - Fairy|
 SBB_CHARACTER_FRIENDLYGHOST|True|Friendly Spirit|4|4|3|4|<b>Last Breath:</b> Give my Attack and Health to one of your other characters this brawl.|Regular|Character|Good - Monster|LastBreath
 GOLDEN_SBB_CHARACTER_FRIENDLYGHOST|True|Friendly Spirit|4|4|6|8|<b>Last Breath:</b> Give double my Attack and Health to one of your other characters this brawl.|Golden|Character|Good - Monster|LastBreath
-SBB_CHARACTER_PUFFPUFF|True|Puff Puff|4|4|7|7|<size=0.35>Puff Puffs don't triple.<b>Last Breath:</b> Give all your Puff Puffs everywhere +1/+1 permanently.</size>|Regular|Character|Good - Puff - Puff|LastBreath
+SBB_CHARACTER_PUFFPUFF|True|Puff Puff|4|4|7|7|Puff Puffs don't triple.<b>Last Breath:</b> Give all your Puff Puffs everywhere +1/+1 permanently.|Regular|Character|Good - Puff - Puff|LastBreath
 GOLDEN_SBB_CHARACTER_PUFFPUFF|True|Puff Puff|4|4|14|14|<b>Last Breath:</b> Give all your Puff Puffs everywhere +2/+2 permanently.|Golden|Character|Good - Puff - Puff|LastBreath
 SBB_CHARACTER_VENGEFULGODMOTHER|True|The Nutcracker|4|4|4|10|<b>Quest: </b>I survive damage 4 times.|Regular|Character|Good - Royal - Treant|Quest
 GOLDEN_SBB_CHARACTER_VENGEFULGODMOTHER|True|The Nutcracker|4|4|8|20|<b>Quest: </b>I survive damage 4 times.|Golden|Character|Good - Royal - Treant|Quest
@@ -267,6 +275,8 @@ SBB_CHARACTER_FATDRAGON|True|Feasting Dragon|4|4|5|8|<b>Slay:</b> For the rest o
 GOLDEN_SBB_CHARACTER_FATDRAGON|True|Feasting Dragon|4|4|10|16|<b>Slay:</b> For the rest of the game, characters in your shop have +2/+2.|Golden|Character|Dragon|Slay
 SBB_CHARACTER_LEAPFROG|True|Time Flies|4|4|2|2|When one of your characters dies, summon me from your hand.|Regular|Character|Animal|
 GOLDEN_SBB_CHARACTER_LEAPFROG|True|Time Flies|4|4|4|4|When one of your characters dies, summon me from your hand.|Golden|Character|Animal|
+SBB_CHARACTER_AIMY|True|Amy|4|4|5|5|<b>Ranged</b>|Regular|Character|Dwarf|Ranged
+GOLDEN_SBB_CHARACTER_AIMY|True|Amy|4|4|10|10|<b>Ranged</b>|Golden|Character|Dwarf|Ranged
 SBB_SPELL_NEWFACES|True|Masquerade Ball|2|4|0|0|Transform each character in the shop into a random character that is one level higher.|Regular|Spell|RandomSpell|
 SBB_SPELL_FLAMINGAURA|True|Burning Palm|2|4|0|0|Give a character +4 Attack permanently.|Regular|Spell|RandomSpell - BeneficialSpell|
 SBB_SPELL_STONESKIN|True|Stoneskin|2|4|0|0|Give a character +4 Health permanently.|Regular|Spell|RandomSpell - BeneficialSpell|
@@ -295,6 +305,7 @@ SBB_TREASURE_DECKOFMANYTHINGS|True|Deck of Many Things|4|4|0|0|At the start of e
 SBB_TREASURE_POWERGEM|True|Moonsong Horn|4|4|0|0|Your characters have +1/+1.Your spells cost 1 less.|Regular|Treasure||
 SBB_TREASURE_SUMMONINGCIRCLE|True|Summoning Portal|4|4|0|0|When you summon a character, give it +1/+1 for each character you've summoned this brawl.|Regular|Treasure||
 SBB_TREASURE_BANNEROFCOMMAND|True|Horn of Olympus|4|4|0|0|Your <b>Supports</b> affect all your front row characters.|Regular|Treasure||Support
+SBB_TREASURE_PIRATESHIP|True|Krampus' Sleigh|4|4|0|0|When you win a brawl, destroy this to gain +5 Gold and pick one of your opponent's treasures.|Regular|Treasure||
 SBB_CHARACTER_NIAN,THESEATERROR|True|Nian, Sea Terror|5|5|10|10|I only need two copies to Upgrade.|Regular|Character|Evil - Monster|
 GOLDEN_SBB_CHARACTER_NIAN,THESEATERROR|True|Nian, Sea Terror|5|5|20|20| |Golden|Character|Evil - Monster|
 SBB_CHARACTER_LANCELOT|True|Lancelot|5|5|9|9|<b>Slay: </b>+2/+2 permanently.<b>Quest:</b> I have at least 25 Attack or Health during a brawl.|Regular|Character|Good - Royal|Slay - Quest
@@ -321,10 +332,8 @@ SBB_CHARACTER_GOODANDEVILSISTERS|True|Shoulder Faeries|5|5|1|1|I have the Attack
 GOLDEN_SBB_CHARACTER_GOODANDEVILSISTERS|True|Shoulder Faeries|5|5|2|2|I have double the Attack of your strongest Evil character and double the Health of your healthiest Good character.|Golden|Character|Fairy|
 SBB_CHARACTER_WOMBATSINDISGUISE|True|Wombats in Disguise|5|5|4|4|<b>Last Breath</b>: Summon a random character and give it my Attack and Health.|Regular|Character|Animal|LastBreath
 GOLDEN_SBB_CHARACTER_WOMBATSINDISGUISE|True|Wombats in Disguise|5|5|8|8|<b>Last Breath</b>: Summon a random Upgraded character and give it double my Attack and Health.|Golden|Character|Animal|LastBreath
-SBB_CHARACTER_MONSTERLORD|True|Oni Tyrant|5|5|7|7|When one of your Monsters attacks, give it +7/+7 this brawl.|Regular|Character|Evil - Monster|
-GOLDEN_SBB_CHARACTER_MONSTERLORD|True|Oni Tyrant|5|5|14|14|When one of your Monsters attacks, give it +14/+14 this brawl.|Golden|Character|Evil - Monster|
-SBB_CHARACTER_ROBINWOOD|True|Robin Wood|5|5|7|10|<size=0.35><b>Ranged</b>At the start of each brawl, give the strongest enemy -7 Attack, and your weakest character +7 Attack.</size>|Regular|Character|Good - Treant|Ranged
-GOLDEN_SBB_CHARACTER_ROBINWOOD|True|Robin Wood|5|5|14|20|<size=0.35><b>Ranged</b>At the start of each brawl, give the strongest enemy -14 Attack, and your weakest character +14 Attack.</size>|Golden|Character|Good - Treant|Ranged
+SBB_CHARACTER_ROBINWOOD|True|Robin Wood|5|5|7|10|<b>Ranged</b>At the start of each brawl, give the strongest enemy -7 Attack, and your weakest character +7 Attack.|Regular|Character|Good - Treant|Ranged
+GOLDEN_SBB_CHARACTER_ROBINWOOD|True|Robin Wood|5|5|14|20|<b>Ranged</b>At the start of each brawl, give the strongest enemy -14 Attack, and your weakest character +14 Attack.|Golden|Character|Good - Treant|Ranged
 SBB_SPELL_ENFEEBLEMENT|True|Shrivel|2|5|0|0|Give a random enemy -12/-12 this brawl. |Regular|Spell|BrawlSpell - RandomSpell|
 SBB_SPELL_POISONAPPLE|True|Poison Apple|2|5|0|0|Reduce a random enemy's Health to 1 this brawl.|Regular|Spell|BrawlSpell - RandomSpell|
 SBB_SPELL_LUCKYCOIN|True|Lucky Coin|0|5|0|0|+1 Gold. You can cast another spell this round.|Regular|Spell||
@@ -334,10 +343,10 @@ SBB_TREASURE_DRACULA'SSABER|True|Dracula's Saber|5|5|0|0|When an enemy character
 SBB_TREASURE_MIDASHAND|True|Hand of Midas|5|5|0|0|The next time you buy a character, Upgrade it and destroy this.|Regular|Treasure||
 SBB_TREASURE_SCROLLOFTHEELDERS|True|Staff of the Old Toad|5|5|0|0|Level 2 and 3 characters no longer appear in your shop.|Regular|Treasure||
 SBB_TREASURE_HELMOFCOMMAND|True|Evil Eye|5|5|0|0|Double your <b>Support</b> bonuses.|Regular|Treasure||Support
-SBB_TREASURE_HEXINGWAND|True|Monkey's Paw|5|5|0|0|Your characters have +5/+5 this brawl if you started with fewer than 7 characters.|Regular|Treasure||
-SBB_TREASURE_HELMOFTHEUGLYGOSLING|True|Helm of the Ugly Gosling|5|5|0|0|At the start of each brawl, give your lowest attack character +15/+15 this brawl.|Regular|Treasure||
-SBB_CHARACTER_WORLDSERPENT|True|Jormungand|6|6|20|20|<size=0.35>When another one of your characters triggers a <b>Slay</b> ability, +20/+20 this brawl.<b>Slay:</b> +20/+20<b> </b>this brawl.</size>|Regular|Character|Monster|Slay
-GOLDEN_SBB_CHARACTER_WORLDSERPENT|True|Jormungand|6|6|40|40|<size=0.35>When another one of your characters triggers a <b>Slay</b> ability, +40/+40 this brawl.<b>Slay:</b> +40/+40 this brawl.</size>|Golden|Character|Monster|Slay
+SBB_TREASURE_HEXINGWAND|True|Monkey's Paw|5|5|0|0|Your characters have +5/+5 if you started with fewer than 7.|Regular|Treasure||
+SBB_TREASURE_HELMOFTHEUGLYGOSLING|True|Ugly Gosling Helm|5|5|0|0|At the start of each brawl, give your lowest attack character +15/+15 this brawl.|Regular|Treasure||
+SBB_CHARACTER_WORLDSERPENT|True|Jormungand|6|6|20|20|When another one of your characters triggers a <b>Slay</b> ability, +20/+20 this brawl.<b>Slay:</b> +20/+20<b> </b>this brawl.|Regular|Character|Monster|Slay
+GOLDEN_SBB_CHARACTER_WORLDSERPENT|True|Jormungand|6|6|40|40|When another one of your characters triggers a <b>Slay</b> ability, +40/+40 this brawl.<b>Slay:</b> +40/+40 this brawl.|Golden|Character|Monster|Slay
 SBB_CHARACTER_GRUMBLEGORE|True|Grumblegore|6|6|10|5|<b>RangedSupport:</b> +10 Attack|Regular|Character|Evil - Monster|Ranged - Support
 GOLDEN_SBB_CHARACTER_GRUMBLEGORE|True|Grumblegore|6|6|20|10|<b>RangedSupport:</b> +20 Attack|Golden|Character|Evil - Monster|Ranged - Support
 SBB_CHARACTER_THEGREENKNIGHT|True|The Green Knight|6|6|10|30|<b>Support: </b>+10 Health|Regular|Character|Good - Treant|Support
@@ -358,10 +367,12 @@ SBB_CHARACTER_THEGREATANDPOWERFUL|True|Scion of the Storm|6|6|2|2|+2/+2 for each
 GOLDEN_SBB_CHARACTER_THEGREATANDPOWERFUL|True|Scion of the Storm|6|6|4|4|+4/+4 for each spell you have cast this game.|Golden|Character|Mage|
 SBB_CHARACTER_KINGTREE|True|Ashwood Elm|6|6|0|15|At the start of each brawl, give your Treants +Attack equal to my Health this brawl.|Regular|Character|Evil - Treant|
 GOLDEN_SBB_CHARACTER_KINGTREE|True|Ashwood Elm|6|6|0|30|At the start of each brawl, give your Treants +Attack equal to double my Health this brawl.|Golden|Character|Evil - Treant|
-SBB_CHARACTER_PROSPERO|True|Bearstine|6|6|7|10|<size=0.35>Your other Animals have +2/+2.When you summon an Animal during a brawl, double its Attack and Health.</size>|Regular|Character|Good - Animal - Mage|
-GOLDEN_SBB_CHARACTER_PROSPERO|True|Bearstine|6|6|14|20|<size=0.35>Your other Animals have +4/+4.When you summon an Animal during a brawl, triple its Attack and Health.</size>|Golden|Character|Good - Animal - Mage|
+SBB_CHARACTER_PROSPERO|True|Bearstine|6|6|7|10|Your other Animals have +2/+2.When you summon an Animal during a brawl, double its Attack and Health.|Regular|Character|Good - Animal - Mage|
+GOLDEN_SBB_CHARACTER_PROSPERO|True|Bearstine|6|6|14|20|Your other Animals have +4/+4.When you summon an Animal during a brawl, triple its Attack and Health.|Golden|Character|Good - Animal - Mage|
 SBB_CHARACTER_PUMPKINKING|True|The Great Pumpkin|6|6|10|10|<b>Last Breath:</b> For each of your dead Evil characters, summon a random lower level Evil character.|Regular|Character|Evil - Monster|LastBreath
 GOLDEN_SBB_CHARACTER_PUMPKINKING|True|The Great Pumpkin|6|6|20|20|<b>Last Breath:</b> For each of your dead Evil characters, summon a random Upgraded lower level Evil character.|Golden|Character|Evil - Monster|LastBreath
+SBB_CHARACTER_MONSTERLORD|True|Oni Tyrant|6|6|13|13|When one of your Monsters attacks, give it +10/+10 this brawl.|Regular|Character|Evil - Monster|
+GOLDEN_SBB_CHARACTER_MONSTERLORD|True|Oni Tyrant|6|6|26|26|When one of your Monsters attacks, give it +20/+20 this brawl.|Golden|Character|Evil - Monster|
 SBB_SPELL_CROCBAIT|True|Croc Bait|6|6|0|0|Swallow a character to get a 10/10 Captain Croc with "<b>Last Breath</b>: Summon the character I swallowed."|Regular|Spell||
 SBB_SPELL_GIGANTIFY|True|Gigantify|4|6|0|0|Give a character +10 Health permanently.|Regular|Spell|RandomSpell - BeneficialSpell|
 SBB_SPELL_HUGIFY|True|Hugeify|4|6|0|0|Give a character +10 Attack permanently.|Regular|Spell|RandomSpell - BeneficialSpell|
@@ -389,3 +400,4 @@ SBB_TREASURE_THEHOLYGRAIL|True|The Holy Grail|7|7|0|0|After the next brawl, gain
 SBB_TREASURE_MIRRORUNIVERSE|True|Mirror Mirror|7|7|0|0|When one of your starting characters in your front row dies, summon a 1/1 plain copy of it.|Regular|Treasure||
 SBB_TREASURE_FAIRYQUEENSWAND|True|Fairy Queen's Wand|7|7|0|0|Your characters have +5/+5. Whoever gets first place this game gets +100 bonus Fairy Dust.|Regular|Treasure||
 SBB_TREASURE_MAGICSWORD+100|True|Magic Sword +100|7|7|0|0|Your first character has +100 Attack.|Regular|Treasure||
+SBB_TREASURE_RADIANTPRISM|True|Radiant Prism|7|7|0|0|Your characters count as all types.|Regular|Treasure||
