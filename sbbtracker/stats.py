@@ -164,14 +164,11 @@ class PlayerStats:
         stats = []
         for hero_type in ["StartingHero", "EndingHero"]:
             data = []
-            heroes_done = []
             for value in asset_utils.content_id_lookup.values():
                 hero = value['Name']
                 heroid = value['Id']
-                if heroid.startswith("SBB_HERO") and hero != "Big Bad Wolf":
-                    if hero in heroes_done:
-                        continue
-                    heroes_done.append(hero)
+                in_pool = value['InPool']
+                if heroid.startswith("SBB_HERO") and in_pool:
                     bool_df = df[hero_type] == hero
                     total_matches = sum(bool_df)
                     avg = round(df.loc[bool_df, 'Placement'].mean(), 2)
