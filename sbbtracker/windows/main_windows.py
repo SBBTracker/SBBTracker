@@ -70,8 +70,8 @@ def update_table(table: QTableWidget, data: list[list]):
 
 
 all_matches = tr("All Matches")
-latest_patch = tr("Latest Patch") + " (70.6)"
-prev_patch = tr("Previous Patch") + " (69)"
+latest_patch = tr("Latest Patch") + " (71.12)"
+prev_patch = tr("Previous Patch") + " (70.6)"
 today_ = tr("Today")
 yesterday = tr("Yesterday")
 last_7 = tr("Last 7 days")
@@ -93,9 +93,9 @@ def get_date_range(key):
     if key == all_matches:
         return "1970-01-01", today.isoformat()
     elif key == latest_patch:
-        return "2022-05-02", today.isoformat()
+        return "2022-06-09", today.isoformat()
     elif key == prev_patch:
-        return "2022-04-05", "2022-05-02"
+        return "2022-05-02", "2022-06-09"
     elif key == today_:
         return today.isoformat(), today.isoformat()
     elif key == yesterday:
