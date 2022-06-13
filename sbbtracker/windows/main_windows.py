@@ -125,7 +125,7 @@ def upload_data(payload):
 
 
 class SimulationThread(QThread):
-    end_simulation = Signal(float, float, float, float, float, int)
+    end_simulation = Signal(float, float, float, float, float, int, dict)
     error_simulation = Signal(str, int)
 
     def __init__(self, comp_queue):
@@ -162,8 +162,14 @@ class SimulationThread(QThread):
                 if simulation_stats:
                     results = simulation_stats.results
                     aggregated_results = defaultdict(list)
+                    action_counts = defaultdict(int)
                     for result in results:
                         aggregated_results[result.win_id].append(result.damage)
+
+                        for action_reason, count in result.action_counters[playerid].items():
+                            action_counts[action_reason] += count
+
+                    action_counts = sorted(action_counts.items(), key=lambda kv: kv[1])
 
                     keys = set(aggregated_results.keys()) - {playerid, None}
                     win_damages = aggregated_results.get(playerid, [])
@@ -178,10 +184,10 @@ class SimulationThread(QThread):
                     # loss_10th_percentile, loss_90th_percentile = (0, 0) if (len(loss_damages) == 0) \
                     #     else np.percentile(loss_damages, [10, 90])
 
-                    win_dmg= round(mean(win_damages), 1) if win_percent > 0 else 0
+                    win_dmg = round(mean(win_damages), 1) if win_percent > 0 else 0
                     loss_dmg = round(mean(loss_damages), 1) if loss_percent > 0 else 0
 
-                    self.end_simulation.emit(win_percent, tie_percent, loss_percent, win_dmg, loss_dmg, round_number)
+                    self.end_simulation.emit(win_percent, tie_percent, loss_percent, win_dmg, loss_dmg, round_number, action_counts)
             else:
                 self.error_simulation.emit(tr("Couldn't get player id (try reattaching)"), round_number)
             time.sleep(1)
