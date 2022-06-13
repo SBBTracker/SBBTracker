@@ -15,8 +15,9 @@ packaging~=21.0
 PySide6~=6.2.1
 qt-material~=2.8.13
 pyinstaller~=4.7
-bumpversion~=0.6.0 
-sbbbattlesim~=0.1
+bumpversion~=0.6.0
 setuptools~=57.0.0
 pywin32==302
 construct~=2.10.67
+
+git+https://github.com/SBBTracker/SBBBattleSim@main
