@@ -40,6 +40,7 @@ auto_switch_to_hero_select = Setting('auto-switch-to-hero-select', True)
 language = Setting("lang", "en")
 live_palette = Setting("live-palette", "paired")
 matchmaking_only = Setting("matchmaking-only", False)
+track_sbb99 = Setting("track-sbb99", False)
 save_stats = Setting("save-stats", True)
 #data
 upload_data = Setting("upload-data", False)

@@ -171,10 +171,16 @@ and Lunco
 
         save_stats_checkbox.stateChanged.connect(lambda state: matchmaking_only_checkbox.setEnabled(bool(state)))
 
+        track_sbb99 = SettingsCheckbox(settings.track_sbb99)
+        track_sbb99.setEnabled(bool(save_stats_checkbox.checkState()))
+
+        save_stats_checkbox.stateChanged.connect(lambda state: track_sbb99.setEnabled(bool(state)))
+
         auto_switch_hero_select_checkbox = SettingsCheckbox(settings.auto_switch_to_hero_select)
 
         general_layout.addRow(tr("Language"), language_select)
         general_layout.addRow(tr("Save match results"), save_stats_checkbox)
+        general_layout.addRow(tr("Save SBB99 Results"), track_sbb99)
         general_layout.addRow(tr("Ignore practice and group lobbies"), matchmaking_only_checkbox)
         general_layout.addRow(tr("Graph color palette"), self.graph_color_chooser)
         general_layout.addRow(tr("Auto Switch to Hero Select"), auto_switch_hero_select_checkbox)

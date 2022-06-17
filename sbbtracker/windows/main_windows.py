@@ -194,7 +194,7 @@ class LogThread(QThread):
     stats_update = Signal(str, object, str, object)
     player_info_update = Signal(graphs.LivePlayerStates)
     health_update = Signal(object)
-    new_game = Signal(bool)
+    new_game = Signal(str)
     update_card = Signal(object)
     end_combat = Signal(bool)
     hero_discover = Signal(list)
@@ -209,7 +209,7 @@ class LogThread(QThread):
         current_player = None
         counter = 0
         states = graphs.LivePlayerStates()
-        matchmaking = False
+        matchmaking = None
         after_first_combat = False
         session_id = None
         build_id = None
@@ -220,7 +220,7 @@ class LogThread(QThread):
             job = update.job
             state = update.state
             if job == log_parser.JOB_MATCHMAKING:
-                matchmaking = True
+                matchmaking = state.game_mode
             elif job == log_parser.JOB_NEWGAME and state.session_id != session_id:
                 states.clear()
                 match_data.clear()
@@ -228,7 +228,7 @@ class LogThread(QThread):
                 round_number = 0
                 self.new_game.emit(matchmaking)
                 self.round_update.emit(0)
-                matchmaking = False
+                matchmaking = None
                 after_first_combat = False
                 session_id = state.session_id
                 build_id = state.build_id
@@ -296,7 +296,7 @@ class SBBTracker(QMainWindow):
         self.player_stats = stats.PlayerStats()
         self.player_ids = []
         self.most_recent_combat = None
-        self.in_matchmaking = False
+        self.matchmaking_mode = None
         self.sim_results = {}
         self.shop_display = ShopDisplay()
         if settings.get(settings.show_id_window):
@@ -444,7 +444,7 @@ class SBBTracker(QMainWindow):
         return self.player_ids.index(player_id)
 
     def new_game(self, matchmaking):
-        self.in_matchmaking = matchmaking
+        self.matchmaking_mode = matchmaking
         self.player_ids.clear()
         self.sim_results.clear()
         self.shop_display.clear()
@@ -526,15 +526,16 @@ class SBBTracker(QMainWindow):
                                       settings.get(settings.number_threads, 3), round_number))
 
     def update_stats(self, starting_hero: str, player, session_id: str, match_data):
-        if settings.get(settings.upload_data) and self.in_matchmaking and session_id not in self.player_stats.df['SessionId'].values:
+        if settings.get(settings.upload_data) and self.matchmaking_mode == "Normal" and session_id not in self.player_stats.df['SessionId'].values:
             # upload only matchmade games
             for round_num in self.sim_results:
                 index = round_num - 1
                 if "combat-info" in match_data and index < len(match_data["combat-info"]):
                     match_data["combat-info"][index]["sim-results"] = self.sim_results[round_num]
             upload_data(match_data)
+        track99 = settings.get(settings.track_sbb99);
         if settings.get(settings.save_stats, True) and (
-                not settings.get(settings.matchmaking_only) or self.in_matchmaking):
+                not settings.get(settings.matchmaking_only) or self.matchmaking_mode == "Normal" or (self.matchmaking_mode == "SBB99" and track99)):
             place = player.place if int(player.health) <= 0 else "1"
             self.player_stats.update_stats(starting_hero, asset_utils.get_card_name(player.heroid),
                                            place, player.mmr, session_id)
