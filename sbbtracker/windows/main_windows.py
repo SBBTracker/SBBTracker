@@ -169,7 +169,8 @@ class SimulationThread(QThread):
                         for action_reason, count in result.action_counters[playerid].items():
                             action_counts[action_reason] += count
 
-                    action_counts = sorted(action_counts.items(), key=lambda kv: kv[1])
+                    action_counts = dict(sorted(action_counts.items(), key=lambda kv: kv[1], reverse=True))
+                    action_reason = {action: count/num_simulations for action, count in action_counts.items()}
 
                     keys = set(aggregated_results.keys()) - {playerid, None}
                     win_damages = aggregated_results.get(playerid, [])

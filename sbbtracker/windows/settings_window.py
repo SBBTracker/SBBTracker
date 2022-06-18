@@ -248,6 +248,11 @@ and Lunco
         simulator_section.addRow(QLabel(tr("More threads = faster simulation but takes more computing power")))
         simulator_section.addRow(tr("Adjust simulator transparency"), self.simulator_transparency_slider)
         simulator_section.addRow(tr("Simulator scale"), self.simulator_scale_slider)
+
+        enable_additional_sim_stats_checkbox = SettingsCheckbox(settings.enabled_advanced_simulator_stats)
+        enable_additional_sim_stats_checkbox.setEnabled(enable_overlay_checkbox.checkState())
+        enable_additional_sim_stats_checkbox.stateChanged.connect(lambda state: enable_sim_checkbox.setEnabled(bool(state)))
+        simulator_section.addRow(tr("Additional Simulation Stats (EXPERIMENTAL)"), enable_additional_sim_stats_checkbox)
         overlay_layout.addWidget(simulator_section)
         # Comps
         comps_section = SettingSection(tr("Board Comps"))

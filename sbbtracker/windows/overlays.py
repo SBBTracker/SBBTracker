@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (
     QLayout, QMainWindow,
     QPushButton, QSizePolicy, QStackedLayout,
     QVBoxLayout,
-    QWidget,
+    QWidget, QToolButton,
 )
 
 from sbbtracker import settings
@@ -499,10 +499,13 @@ class OverlayCompWidget(MovableWidget):
     def get_comp(self, index):
         return self.comps[index]
 
+
 class SimulatorStats(MovableWidget):
     def __init__(self, parent):
         super().__init__(parent, settings.simulator_position)
         self.parent = parent
+
+        self.setFixedSize(400, 400)
 
         self.layout = QStackedLayout(self)
         background = QFrame(self)
@@ -513,15 +516,18 @@ class SimulatorStats(MovableWidget):
         self.tie_label = QLabel("-", background)
         self.loss_label = QLabel("-", background)
         self.loss_dmg_label = QLabel("-", background)
+        self.adv_stats_lable = QLabel("-", background)
 
         self.win_dmg = "-"
         self.win = "-"
         self.loss = "-"
         self.tie = "-"
         self.loss_dmg = "-"
+        self.adv_stats = "-"
         self.displayable = False
 
         label_layout = QGridLayout(background)
+        print(label_layout.rowCount())
 
         win_dmg_title = QLabel("DMG")
         win_percent_title = QLabel("WIN")
@@ -533,6 +539,8 @@ class SimulatorStats(MovableWidget):
         loss_dmg_title.setStyleSheet("QLabel { color : #e3365c }")
         loss_percent_title.setStyleSheet("QLabel { color : #e3365c }")
 
+        adv_stats_title = QLabel("Advanced Stats")
+
         tie_title = QLabel("TIE")
 
         self.error_widget = QFrame(self)
@@ -540,28 +548,32 @@ class SimulatorStats(MovableWidget):
         self.error_msg = QLabel("Error in simulation!")
         error_layout.addWidget(self.error_msg, alignment=Qt.AlignCenter)
         error_layout.setContentsMargins(0, 0, 0, 0)
-        self.error_msg.setStyleSheet(
-            "QLabel#sim-error { text-align: center; font-size: 20px; background-color: rgba(0,0,0,0%); }")
+        self.error_msg.setStyleSheet("QLabel#sim-error { text-align: center; font-size: 20px; background-color: rgba(0,0,0,0%); }")
         self.error_msg.setObjectName("sim-error")
         self.error_msg.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
-        label_layout.addWidget(SimStatWidget(background, win_dmg_title, self.win_dmg_label), 0, 0)
-        label_layout.addWidget(SimStatWidget(background, win_percent_title, self.win_label), 0, 1)
-        label_layout.addWidget(SimStatWidget(background, tie_title, self.tie_label), 0, 2)
-        label_layout.addWidget(SimStatWidget(background, loss_percent_title, self.loss_label), 0, 3)
-        label_layout.addWidget(SimStatWidget(background, loss_dmg_title, self.loss_dmg_label), 0, 4)
+        label_layout.addWidget(SimStatWidget(background, win_dmg_title, self.win_dmg_label), 0, 0, 1, 1)
+        label_layout.addWidget(SimStatWidget(background, win_percent_title, self.win_label), 0, 1, 1, 1)
+        label_layout.addWidget(SimStatWidget(background, tie_title, self.tie_label), 0, 2, 1, 1)
+        label_layout.addWidget(SimStatWidget(background, loss_percent_title, self.loss_label), 0, 3, 1, 1)
+        label_layout.addWidget(SimStatWidget(background, loss_dmg_title, self.loss_dmg_label), 0, 4, 1, 1)
+        print(label_layout.rowCount())
+        label_layout.addWidget(SimStatWidget(background, adv_stats_title, self.adv_stats_lable), 1, 0, 1, 5)
+        print(label_layout.rowCount())
+
+        label_layout.setSpacing(0)
+        # label_layout.setRowMinimumHeight(1, 1)
+        # label_layout.setRowStretch(0, 1)
+        # label_layout.setRowStretch(1, 1)
+        # label_layout.setRowStretch(2, 4)
+        label_layout.setContentsMargins(0, 0, 0, 0)
 
         self.layout.addWidget(self.error_widget)
         self.error_widget.setMinimumSize(background.minimumSize())
 
-        label_layout.setSpacing(0)
-        label_layout.setRowStretch(0, 1)
-        label_layout.setRowStretch(1, 1)
-        label_layout.setContentsMargins(0, 0, 0, 0)
-
         self.background = background
-        self.labels = [self.tie_label, self.win_label, self.loss_label, self.win_dmg_label, self.loss_dmg_label,
-                       tie_title, win_dmg_title, win_percent_title, loss_percent_title, loss_dmg_title]
+        self.labels = [self.tie_label, self.win_label, self.loss_label, self.win_dmg_label, self.loss_dmg_label, self.adv_stats_lable,
+                       tie_title, win_dmg_title, win_percent_title, loss_percent_title, loss_dmg_title, adv_stats_title]
 
     def reset_chances(self):
         self.win_dmg = "-"
@@ -574,15 +586,17 @@ class SimulatorStats(MovableWidget):
         self.loss_label.setText(self.loss)
         self.tie_label.setText(self.tie)
         self.loss_dmg_label.setText(self.loss_dmg)
+        self.adv_stats_lable.setText(self.adv_stats)
         self.displayable = False
         self.layout.setCurrentIndex(0)
 
-    def update_chances(self, win, tie, loss, win_dmg, loss_dmg, round_num):
+    def update_chances(self, win, tie, loss, win_dmg, loss_dmg, round_num, adv_stats):
         self.win_dmg = str(win_dmg)
         self.win = str(win) + "%"
         self.loss = str(loss) + "%"
         self.tie = str(tie) + "%"
         self.loss_dmg = str(loss_dmg)
+        self.adv_stats = '\n'.join(f'{s}-{v}' for s, v in adv_stats.items())
         if self.displayable:
             self.update_labels()
         self.displayable = False
@@ -597,6 +611,7 @@ class SimulatorStats(MovableWidget):
         self.loss_label.setText(self.loss)
         self.tie_label.setText(self.tie)
         self.loss_dmg_label.setText(self.loss_dmg)
+        self.adv_stats_lable.setText(self.adv_stats)
         self.displayable = True
 
     def resizeEvent(self, event: QtGui.QResizeEvent):
