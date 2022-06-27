@@ -674,17 +674,6 @@ class AdvSimulatorStats(MovableWidget):
         self.adjustSize()
         self.update_labels()
 
-    # def resizeEvent(self, event: QtGui.QResizeEvent):
-    #     print('RESIZE')
-    #     w = event.size().width()
-    #     h = event.size().height()
-    #     for child in self.background.children():
-    #         if isinstance(child, AdvSimulatorStatWidget):
-    #             child.setFixedWidth(200)
-    #             child.setFixedHeight(int(h/2))
-        # for label in self.labels:
-        #     label.setFont(QFont("Roboto", 12*settings.get(settings.simulator_scale)/100))
-
     def reset_chances(self):
         for widget, _, _ in self.widgets.values():
             widget.setVisible(False)
@@ -692,11 +681,9 @@ class AdvSimulatorStats(MovableWidget):
         self.update_labels()
 
     def update_chances(self, win, tie, loss, win_dmg, loss_dmg, round_num, adv_stats):
-        print('Updating chances', adv_stats or self.adv_stats)
         self.adv_stats = adv_stats or self.adv_stats
 
     def update_labels(self):
-        print(f'Updating with {self.adv_stats}')
         for i, (name, stat) in enumerate(self.adv_stats.items()):
             if i > len(self.widgets):
                 break
