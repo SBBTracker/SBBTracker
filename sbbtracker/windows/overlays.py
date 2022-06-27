@@ -112,6 +112,8 @@ class OverlayWindow(QMainWindow):
             range(0, 8)]
         self.simulation_stats = SimulatorStats(main_widget)
         self.simulation_stats.setVisible(settings.get(settings.enable_sim))
+        self.adv_simulation_stats = AdvSimulatorStats(main_widget)
+        self.adv_simulation_stats.setVisible(settings.get(settings.enable_adv_sim_stats))
         self.turn_display = TurnDisplay(main_widget)
         self.turn_display.setVisible(False)
 
@@ -254,6 +256,12 @@ class OverlayWindow(QMainWindow):
             if not self.centralWidget().geometry().contains(sim_pos):
                 sim_pos = QPoint(0, 0)
             self.simulation_stats.move(sim_pos * self.dpi_scale)
+
+            adv_sim_pos = QPoint(*settings.get(settings.simulator_adv_position, (self.sbb_rect.top() / 2 - 100, 0)))
+            if not self.centralWidget().geometry().contains(sim_pos):
+                adv_sim_pos = QPoint(0, 0)
+            self.adv_simulation_stats.move(adv_sim_pos * self.dpi_scale)
+
             turn_pos = QPoint(*settings.get(settings.turn_indicator_position, (self.sbb_rect.top() - 300, 0)))
             if not self.centralWidget().geometry().contains(turn_pos):
                 turn_pos = QPoint(0, 0)
@@ -302,7 +310,7 @@ class OverlayWindow(QMainWindow):
         self.turn_display.setStyleSheet(style)
 
     def get_alpha(self, setting):
-        return  (100 - settings.get(setting, 0)) / 100
+        return (100 - settings.get(setting, 0)) / 100
 
     def toggle_transparency(self):
         if settings.get(settings.streaming_mode):
@@ -499,6 +507,7 @@ class OverlayCompWidget(MovableWidget):
     def get_comp(self, index):
         return self.comps[index]
 
+
 class SimulatorStats(MovableWidget):
     def __init__(self, parent):
         super().__init__(parent, settings.simulator_position)
@@ -577,7 +586,7 @@ class SimulatorStats(MovableWidget):
         self.displayable = False
         self.layout.setCurrentIndex(0)
 
-    def update_chances(self, win, tie, loss, win_dmg, loss_dmg, round_num):
+    def update_chances(self, win, tie, loss, win_dmg, loss_dmg, round_num, adv_stats):
         self.win_dmg = str(win_dmg)
         self.win = str(win) + "%"
         self.loss = str(loss) + "%"
@@ -603,11 +612,101 @@ class SimulatorStats(MovableWidget):
         w = event.size().width()
         h = event.size().height()
         for child in self.background.children():
-            if type(child) is SimStatWidget:
+            if isinstance(child, SimStatWidget):
                 child.setFixedWidth(int(80 * w / 400))
                 child.setFixedHeight(h)
         for label in self.labels:
             label.setFont(QFont("Roboto", 12*settings.get(settings.simulator_scale)/100))
+
+
+class AdvSimulatorStatWidget(QFrame):
+    def __init__(self, parent, title: QLabel, value: QLabel = None):
+        super().__init__(parent)
+        self.title = title
+        self.value = value
+        self.setObjectName("AdvSimStatWidget")
+
+        layout = QHBoxLayout(self)
+
+        if not value:
+            layout.addWidget(title, alignment=Qt.AlignCenter)
+        else:
+            layout.addWidget(title, alignment=Qt.AlignLeft)
+            layout.addWidget(value, alignment=Qt.AlignRight)
+            value.setAttribute(Qt.WA_TranslucentBackground)
+
+        layout.setSpacing(70)
+        title.setAttribute(Qt.WA_TranslucentBackground)
+        title.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.setStyleSheet("background-color: rgba(0,0,0,0%);")
+
+
+class AdvSimulatorStats(MovableWidget):
+    def __init__(self, parent):
+        super().__init__(parent, settings.simulator_adv_position)
+        self.parent = parent
+
+        self.widgets = {}
+        self.adv_stats = {'-': '-'}
+
+        # Create a Vertical Box Layout
+        self.background = QFrame(self)
+        self.layout = QVBoxLayout(self.background)
+
+        # Setup Title
+        title_label = QLabel('Advanced Simulator Stats', self)
+        title_label.setAttribute(Qt.WA_TranslucentBackground)
+        self.layout.addWidget(AdvSimulatorStatWidget(self.background, title_label))
+
+        for i in range(7):
+            name_label = QLabel('-')
+            stat_label = QLabel('-')
+            widget = AdvSimulatorStatWidget(self.background, name_label, stat_label)
+            widget.setVisible(False)
+            self.widgets[i] = (widget, name_label, stat_label)
+            self.layout.addWidget(widget)
+
+        self.layout.setSpacing(0)
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        # self.layout.setSizeConstraint(QLayout.SetMinimumSize)
+        # self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.background.adjustSize()
+        self.adjustSize()
+        self.update_labels()
+
+    # def resizeEvent(self, event: QtGui.QResizeEvent):
+    #     print('RESIZE')
+    #     w = event.size().width()
+    #     h = event.size().height()
+    #     for child in self.background.children():
+    #         if isinstance(child, AdvSimulatorStatWidget):
+    #             child.setFixedWidth(200)
+    #             child.setFixedHeight(int(h/2))
+        # for label in self.labels:
+        #     label.setFont(QFont("Roboto", 12*settings.get(settings.simulator_scale)/100))
+
+    def reset_chances(self):
+        for widget, _, _ in self.widgets.values():
+            widget.setVisible(False)
+        self.adv_stats = {'-': '-'}
+        self.update_labels()
+
+    def update_chances(self, win, tie, loss, win_dmg, loss_dmg, round_num, adv_stats):
+        print('Updating chances', adv_stats or self.adv_stats)
+        self.adv_stats = adv_stats or self.adv_stats
+
+    def update_labels(self):
+        print(f'Updating with {self.adv_stats}')
+        for i, (name, stat) in enumerate(self.adv_stats.items()):
+            if i > len(self.widgets):
+                break
+            widget, name_label, stat_label = self.widgets[i]
+            name_label.setText(name)
+            stat_label.setText(stat)
+            widget.setVisible(True)
+        #     widget.adjustSize()
+        self.background.adjustSize()
+        self.adjustSize()
 
 
 class TurnDisplay(MovableWidget):
