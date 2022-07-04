@@ -248,13 +248,19 @@ and Lunco
         enable_comps = SettingsCheckbox(settings.enable_comps)
         enable_comps.setEnabled(enable_overlay_checkbox.checkState())
 
+        enable_adv_sim_stats_checkbox = SettingsCheckbox(settings.enable_adv_sim_stats)
+        enable_adv_sim_stats_checkbox.setEnabled(enable_overlay_checkbox.checkState())
+        enable_overlay_checkbox.stateChanged.connect(lambda state: enable_adv_sim_stats_checkbox.setEnabled(bool(state)))
+
         simulator_section.addRow(tr("Enable simulator"), enable_sim_checkbox)
         simulator_section.addRow(tr("Number of simulations"), self.num_sims_silder)
         simulator_section.addRow(tr("Number of threads"), self.num_threads_slider)
         simulator_section.addRow(QLabel(tr("More threads = faster simulation but takes more computing power")))
         simulator_section.addRow(tr("Adjust simulator transparency"), self.simulator_transparency_slider)
         simulator_section.addRow(tr("Simulator scale"), self.simulator_scale_slider)
+        simulator_section.addRow(tr("Advanced Simulator Stats (EXPERIMENTAL)"), enable_adv_sim_stats_checkbox)
         overlay_layout.addWidget(simulator_section)
+
         # Comps
         comps_section = SettingSection(tr("Board Comps"))
         enable_overlay_checkbox.stateChanged.connect(lambda state: enable_comps.setEnabled(bool(state)))
@@ -376,6 +382,7 @@ and Lunco
         self.main_window.overlay.simulation_stats.setVisible(settings.get(settings.enable_sim))
         self.main_window.overlay.show_button.setVisible(settings.get(settings.show_tracker_button))
         self.main_window.overlay.turn_display.setVisible(settings.get(settings.enable_turn_display))
+        self.main_window.overlay.adv_simulation_stats.setVisible(settings.get(settings.enable_adv_sim_stats))
         self.main_window.export_comp_action.setVisible(settings.get(settings.export_comp_button))
 
     def import_stats(self):

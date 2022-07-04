@@ -125,7 +125,7 @@ def upload_data(payload):
 
 
 class SimulationThread(QThread):
-    end_simulation = Signal(float, float, float, float, float, int)
+    end_simulation = Signal(float, float, float, float, float, int, dict)
     error_simulation = Signal(str, int)
 
     def __init__(self, comp_queue):
@@ -178,10 +178,12 @@ class SimulationThread(QThread):
                     # loss_10th_percentile, loss_90th_percentile = (0, 0) if (len(loss_damages) == 0) \
                     #     else np.percentile(loss_damages, [10, 90])
 
-                    win_dmg= round(mean(win_damages), 1) if win_percent > 0 else 0
+                    win_dmg = round(mean(win_damages), 1) if win_percent > 0 else 0
                     loss_dmg = round(mean(loss_damages), 1) if loss_percent > 0 else 0
 
-                    self.end_simulation.emit(win_percent, tie_percent, loss_percent, win_dmg, loss_dmg, round_number)
+                    adv_stats = simulation_stats.adv_stats.get(playerid)
+                    print(simulation_stats.adv_stats)
+                    self.end_simulation.emit(win_percent, tie_percent, loss_percent, win_dmg, loss_dmg, round_number, adv_stats)
             else:
                 self.error_simulation.emit(tr("Couldn't get player id (try reattaching)"), round_number)
             time.sleep(1)
@@ -422,6 +424,8 @@ class SBBTracker(QMainWindow):
         self.simulation = SimulationThread(self.board_queue)
         self.simulation.end_simulation.connect(self.overlay.simulation_stats.update_chances)
         self.simulation.end_simulation.connect(self.streamer_overlay.simulation_stats.update_chances)
+        self.simulation.end_simulation.connect(self.overlay.adv_simulation_stats.update_chances)
+        self.simulation.end_simulation.connect(self.streamer_overlay.adv_simulation_stats.update_chances)
         self.simulation.end_simulation.connect(self.end_simulation)
         self.simulation.error_simulation.connect(self.overlay.simulation_stats.show_error)
         self.simulation.error_simulation.connect(self.streamer_overlay.simulation_stats.show_error)
@@ -463,10 +467,13 @@ class SBBTracker(QMainWindow):
         for overlay in [self.overlay, self.streamer_overlay]:
             overlay.comp_widget.reset()
             overlay.simulation_stats.reset_chances()
+            overlay.adv_simulation_stats.reset_chances()
 
     def end_combat(self, end_of_game):
         self.overlay.simulation_stats.update_labels()
+        self.overlay.adv_simulation_stats.update_labels()
         self.streamer_overlay.simulation_stats.update_labels()
+        self.streamer_overlay.adv_simulation_stats.update_labels()
         if end_of_game:
             self.overlay.hide_hero_rates()
             self.overlay.disable_hovers()
@@ -518,7 +525,10 @@ class SBBTracker(QMainWindow):
             self.update()
 
         self.overlay.simulation_stats.reset_chances()
+        self.overlay.adv_simulation_stats.reset_chances()
         self.streamer_overlay.simulation_stats.reset_chances()
+        self.streamer_overlay.adv_simulation_stats.reset_chances()
+
         self.most_recent_combat = state
         if settings.get(settings.enable_sim):
             if self.board_queue.qsize() == 0:
