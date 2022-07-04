@@ -382,6 +382,7 @@ and Lunco
         self.main_window.overlay.simulation_stats.setVisible(settings.get(settings.enable_sim))
         self.main_window.overlay.show_button.setVisible(settings.get(settings.show_tracker_button))
         self.main_window.overlay.turn_display.setVisible(settings.get(settings.enable_turn_display))
+        self.main_window.overlay.adv_simulation_stats.setVisible(settings.get(settings.enable_adv_sim_stats))
         self.main_window.export_comp_action.setVisible(settings.get(settings.export_comp_button))
 
     def import_stats(self):
