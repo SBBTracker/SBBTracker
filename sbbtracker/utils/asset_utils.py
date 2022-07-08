@@ -26,7 +26,7 @@ with open(get_asset("CardFile.txt"), "r") as card_file:
     cardfile_df = pd.read_csv(card_file, delimiter='|')
     content_id_lookup = {}
     for index, row in cardfile_df.iterrows():
-        content_id_lookup[str(index)] = { "Id": row["Id"], "Name": row["Name"], "InPool": row["InPool"] }
+        content_id_lookup[str(index+1)] = { "Id": row["Id"], "Name": row["Name"], "InPool": row["InPool"] }
 
 def get_card_art_name(template_id: str, is_golden: bool):
     """

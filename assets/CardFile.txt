@@ -43,6 +43,10 @@ SBB_HERO_MAIDMARIAN3|False|Snow Angel|0|2|0|40|Buy 3 Good characters to get a le
 SBB_HERO_MAIDMARIAN4|False|Snow Angel|0|2|0|40|Buy 4 Good characters to get a level 4 Good character, then increase this ability by one.|Regular|Hero||
 SBB_HERO_MAIDMARIAN5|False|Snow Angel|0|2|0|40|Buy 5 Good characters to get a level 5 Good character, then increase this ability by one.|Regular|Hero||
 SBB_HERO_MAIDMARIAN6|False|Snow Angel|0|2|0|40|Buy 6 Good characters to get a level 6 Good character.|Regular|Hero||
+TST_CHARACTER_TEST_DUMMY|False|Test Dummy|1|1|1|1|I'm a vanilla character for tests, and I can't be tripled.|Regular|Character||
+GOLDEN_TST_CHARACTER_TEST_DUMMY|False|Test Dummy|1|1|2|2|I'm a vanilla character for tests, and I can't be tripled.|Golden|Character||
+TST_HERO_ZERO|False|Hero Zero|0|2|0|40|I'm a vanilla hero for tests, with no power.|Regular|Hero||
+TST_TEST_SPELL|False|Test Spell|0|1|0|0|This test spell does nothing but increase internal counters.|Regular|Spell||
 SBB_HERO_MRSCLAUS|True|Mrs. Claus|0|1|0|40|Your Good characters have +1/+1.|Regular|Hero||
 SBB_HERO_KRAMPUS|True|Krampus|0|1|0|40|Your Evil characters have +1/+1.|Regular|Hero||
 SBB_HERO_GEPETTO|True|Geppetto|0|1|0|40|When you summon a character during a brawl, give it Attack and Health equal to your level.|Regular|Hero||
@@ -71,7 +75,7 @@ SBB_HERO_CHARON|True|Charon|0|2|0|40|Give your first character that dies each br
 SBB_HERO_SIRGALAHAD|True|Sir Galahad|0|2|0|40|When you find a treasure, give your characters +1/+1 permanently.|Regular|Hero||
 SBB_HERO_LOKI|True|Loki|0|2|0|40|Cast a random spell each round. (Instead of being able to buy spells)|Regular|Hero||
 SBB_HERO_THECOLLECTOR|True|Celestial Tiger|0|2|0|40|Double the abilities of your level 2 and 3 treasures.|Regular|Hero||
-SBB_HERO_MAIDMARIAN|True|Snow Angel|0|2|0|40|BWhen you level up, get a random Good character of your level.|Regular|Hero||
+SBB_HERO_MAIDMARIAN|True|Snow Angel|0|2|0|40|When you level up, get a random Good character of your level.|Regular|Hero||
 SBB_HERO_MASK|True|Mask|0|2|0|40|When you reach level 3, you get two spells that let you pick a new hero.|Regular|Hero||
 SBB_HERO_MILITARYLEADER|True|Trophy Hunter|0|2|0|40|Your <b>Last Breath</b> abilities are also <b>Slay</b> abilities.Your <b>Last Breath</b> characters have +2 Attack.|Regular|Hero||LastBreath - Slay
 SBB_HERO_WONDERWADDLE|True|Wonder Waddle|0|2|0|40|You need just two copies to Upgrade level 2 and 3 Animals.|Regular|Hero||
@@ -179,8 +183,8 @@ SBB_CHARACTER_TIM|True|Spell Weaver|3|3|1|3|<b>Ranged</b>When you cast a spell, 
 GOLDEN_SBB_CHARACTER_TIM|True|Spell Weaver|3|3|2|6|<b>Ranged</b>When you cast a spell, I gain +2 Attack permanently.|Golden|Character|Evil - Mage|Ranged
 SBB_CHARACTER_SHADOWASSASSIN|True|Shadow Assassin|3|3|2|4|<b>Ranged</b>When one of your characters triggers a <b>Slay </b>ability, I gain +1 Attack permanently.|Regular|Character|Evil - Monster|Ranged
 GOLDEN_SBB_CHARACTER_SHADOWASSASSIN|True|Shadow Assassin|3|3|4|8|<b>Ranged</b>When one of your characters triggers a <b>Slay </b>ability, I gain +2 Attack permanently.|Golden|Character|Evil - Monster|Ranged
-SBB_CHARACTER_SLEEPINGPRINCESS|True|Sleeping Princess|3|3|0|8|I wake up when you cast a spell on me. (8/8)|Regular|Character|Good - Royal|
-GOLDEN_SBB_CHARACTER_SLEEPINGPRINCESS|True|Sleeping Princess|3|3|0|16|I wake up when you cast a spell on me. (+16 Attack)|Golden|Character|Good - Royal|
+SBB_CHARACTER_SLEEPINGPRINCESS|True|Sleeping Princess|3|3|0|8|I wake up when you cast a spell directly on me. (8/8)|Regular|Character|Good - Royal|
+GOLDEN_SBB_CHARACTER_SLEEPINGPRINCESS|True|Sleeping Princess|3|3|0|16|I wake up when you cast a spell directly on me. (+16 Attack)|Golden|Character|Good - Royal|
 SBB_CHARACTER_DARKWOODCREEPER|True|Darkwood Creeper|3|3|0|3|When one of your characters survives damage, give it +1 Attack permanently.|Regular|Character|Evil - Treant|
 GOLDEN_SBB_CHARACTER_DARKWOODCREEPER|True|Darkwood Creeper|3|3|0|6|When one of your characters survives damage, give it +2 Attack permanently.|Golden|Character|Evil - Treant|
 SBB_CHARACTER_MONSTAR|True|Ogre Princess|3|3|4|2|<b>Slay:</b> Add a random character to your hand.|Regular|Character|Good - Royal - Monster|Slay
@@ -228,7 +232,7 @@ SBB_TREASURE_CLOAKOFTHEASSASSIN|True|Cloak of the Assassin|3|3|0|0|Your characte
 SBB_TREASURE_MERLIN'SHAT|True|Merlin's Hat|3|3|0|0|Spells cost you 2 less.|Regular|Treasure||
 SBB_TREASURE_CRYSTALBALL|True|Crystal Ball|3|3|0|0|When you cast a spell directly on a character, add a spell to your shop and you can cast another spell this round.|Regular|Treasure||
 SBB_TREASURE_CURSEDTHRONE|True|Cursed Throne|3|3|0|0|Your Royals are also Monsters and have "<b>Slay:</b> +1/+1 permanently."|Regular|Treasure||
-SBB_TREASURE_SKIPSPHONEBOOTH|True|Enchanted Clocktower|3|3|0|0|After your next brawl, you become level 6 for the round.|Regular|Treasure||
+SBB_TREASURE_SKIPSPHONEBOOTH|False|Enchanted Clocktower|3|3|0|0|After your next brawl, you become level 6 for the round.|Regular|Treasure||
 SBB_CHARACTER_JULIET|True|Juliet|4|4|7|7||Regular|Character|Good - Royal|
 GOLDEN_SBB_CHARACTER_JULIET|True|Juliet|4|4|14|14||Golden|Character|Good - Royal|
 SBB_CHARACTER_LADYOFTHELAKE|True|Lady of the Lake|4|4|3|3|<b>Ranged</b><b>Support: </b>+5 Health|Regular|Character|Good - Mage|Ranged - Support
@@ -394,7 +398,7 @@ SBB_TREASURE_PHOENIXFEATHER|True|Phoenix Feather|6|6|0|0|The first time your hig
 SBB_TREASURE_THENINTHBOOKOFMERLIN|True|The 9th Book of Merlin|6|6|0|0|Your Mages have "<b>Last Breath:</b> Cast a random spell."|Regular|Treasure||LastBreath
 SBB_TREASURE_TREASURECHEST|True|Mimic|6|6|0|0|Double the abilities of your other treasures.|Regular|Treasure||
 SBB_TREASURE_THEROUNDTABLE|True|The Round Table|7|7|0|0|At the start of each brawl, your characters Attack and Health both become the highest of the two.|Regular|Treasure||
-SBB_TREASURE_BLACKPRISM|True|Black Prism|7|7|0|0|When you cast a spell directly on one of your characters, cast it on all of them.|Regular|Treasure||
+SBB_TREASURE_BLACKPRISM|True|Black Prism|7|7|0|0|When you buy and cast a spell directly on one of your characters, cast it on all of them.|Regular|Treasure||
 SBB_TREASURE_EXCALIBUR|True|Excalibur|7|7|0|0|All characters in your shop are Upgraded.|Regular|Treasure||
 SBB_TREASURE_THEHOLYGRAIL|True|The Holy Grail|7|7|0|0|After the next brawl, gain more gold than you could ever spend.|Regular|Treasure||
 SBB_TREASURE_MIRRORUNIVERSE|True|Mirror Mirror|7|7|0|0|When one of your starting characters in your front row dies, summon a 1/1 plain copy of it.|Regular|Treasure||
