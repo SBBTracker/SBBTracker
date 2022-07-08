@@ -71,7 +71,7 @@ SBB_HERO_CHARON|True|Charon|0|2|0|40|Give your first character that dies each br
 SBB_HERO_SIRGALAHAD|True|Sir Galahad|0|2|0|40|When you find a treasure, give your characters +1/+1 permanently.|Regular|Hero||
 SBB_HERO_LOKI|True|Loki|0|2|0|40|Cast a random spell each round. (Instead of being able to buy spells)|Regular|Hero||
 SBB_HERO_THECOLLECTOR|True|Celestial Tiger|0|2|0|40|Double the abilities of your level 2 and 3 treasures.|Regular|Hero||
-SBB_HERO_MAIDMARIAN|True|Snow Angel|0|2|0|40|Buy 2 Good characters to get a level 2 Good character, then increase this ability by one.|Regular|Hero||
+SBB_HERO_MAIDMARIAN|True|Snow Angel|0|2|0|40|BWhen you level up, get a random Good character of your level.|Regular|Hero||
 SBB_HERO_MASK|True|Mask|0|2|0|40|When you reach level 3, you get two spells that let you pick a new hero.|Regular|Hero||
 SBB_HERO_MILITARYLEADER|True|Trophy Hunter|0|2|0|40|Your <b>Last Breath</b> abilities are also <b>Slay</b> abilities.Your <b>Last Breath</b> characters have +2 Attack.|Regular|Hero||LastBreath - Slay
 SBB_HERO_WONDERWADDLE|True|Wonder Waddle|0|2|0|40|You need just two copies to Upgrade level 2 and 3 Animals.|Regular|Hero||
@@ -237,8 +237,8 @@ SBB_CHARACTER_MAGEMASTER|True|Sporko|4|4|3|3|<b>RangedSupport: </b>+5 Attack|Reg
 GOLDEN_SBB_CHARACTER_MAGEMASTER|True|Sporko|4|4|6|6|<b>Ranged</b><b>Support:</b> +10 Attack|Golden|Character|Evil - Mage|Ranged - Support
 SBB_CHARACTER_ELDERTREANT|True|Heartwood Elder|4|4|5|7|<b>Treant Support:</b> At the start of each brawl, +2/+2 permanently.|Regular|Character|Good - Treant|Support
 GOLDEN_SBB_CHARACTER_ELDERTREANT|True|Heartwood Elder|4|4|10|14|<b>Treant Support:</b> At the start of each brawl, +4/+4 permanently.|Golden|Character|Good - Treant|Support
-SBB_CHARACTER_THECHUPACABRA|True|The Chupacabra|4|4|7|5|<b>Slay:</b> Give me and the characters behind me +2 Attack permanently.|Regular|Character|Evil - Monster|Slay
-GOLDEN_SBB_CHARACTER_THECHUPACABRA|True|The Chupacabra|4|4|14|10|<b>Slay:</b> Give me and the characters behind me +4 Attack permanently.|Golden|Character|Evil - Monster|Slay
+SBB_CHARACTER_THECHUPACABRA|True|The Chupacabra|4|4|8|6|<b>Slay:</b> Give me and the characters behind me +2 Attack permanently.|Regular|Character|Evil - Monster|Slay
+GOLDEN_SBB_CHARACTER_THECHUPACABRA|True|The Chupacabra|4|4|16|12|<b>Slay:</b> Give me and the characters behind me +4 Attack permanently.|Golden|Character|Evil - Monster|Slay
 SBB_CHARACTER_LIGHTNINGDRAGON|True|Lightning Dragon|4|4|10|1|<b>Flying</b>At the start of each brawl, I make a bonus attack.|Regular|Character|Dragon|Flying - Ambush
 GOLDEN_SBB_CHARACTER_LIGHTNINGDRAGON|True|Lightning Dragon|4|4|20|2|<b>Flying</b>At the start of each brawl, I make a bonus attack.|Golden|Character|Dragon|Flying - Ambush
 SBB_CHARACTER_COURTWIZARD|True|Court Wizard|4|4|4|2|<b>Ranged</b>When one of your Royals is attacked and killed, I make a bonus attack.|Regular|Character|Good - Mage|Ranged
@@ -271,8 +271,8 @@ SBB_CHARACTER_MONSTERBOOK|True|Monster Book|4|4|7|3|<b>Last Breath:</b> Cast a r
 GOLDEN_SBB_CHARACTER_MONSTERBOOK|True|Monster Book|4|4|14|6|<b>Last Breath</b>: Cast two random spells.|Golden|Character|Evil - Monster|LastBreath
 SBB_CHARACTER_GINGERBREADKNIGHT|True|Gingerbread Knight|4|4|7|7|+7/+7 if you have 20 or less health.|Regular|Character|Good - Royal|
 GOLDEN_SBB_CHARACTER_GINGERBREADKNIGHT|True|Gingerbread Knight|4|4|14|14|+14/+14 if you have 20 or less health.|Golden|Character|Good - Royal|
-SBB_CHARACTER_FATDRAGON|True|Feasting Dragon|4|4|5|8|<b>Slay:</b> For the rest of the game, characters in your shop have +1/+1.|Regular|Character|Dragon|Slay
-GOLDEN_SBB_CHARACTER_FATDRAGON|True|Feasting Dragon|4|4|10|16|<b>Slay:</b> For the rest of the game, characters in your shop have +2/+2.|Golden|Character|Dragon|Slay
+SBB_CHARACTER_FATDRAGON|True|Feasting Dragon|4|4|6|8|<b>Slay:</b> For the rest of the game, characters in your shop have +1/+1.|Regular|Character|Dragon|Slay
+GOLDEN_SBB_CHARACTER_FATDRAGON|True|Feasting Dragon|4|4|12|16|<b>Slay:</b> For the rest of the game, characters in your shop have +2/+2.|Golden|Character|Dragon|Slay
 SBB_CHARACTER_LEAPFROG|True|Time Flies|4|4|2|2|When one of your characters dies, summon me from your hand.|Regular|Character|Animal|
 GOLDEN_SBB_CHARACTER_LEAPFROG|True|Time Flies|4|4|4|4|When one of your characters dies, summon me from your hand.|Golden|Character|Animal|
 SBB_CHARACTER_AIMY|True|Amy|4|4|5|5|<b>Ranged</b>|Regular|Character|Dwarf|Ranged
@@ -322,8 +322,8 @@ SBB_CHARACTER_LOBO|True|Southern Siren|5|5|10|10|<b>Slay</b>: Summon an exact co
 GOLDEN_SBB_CHARACTER_LOBO|True|Southern Siren|5|5|20|20|<b>Slay:</b> Summon two exact copies of the slain character.|Golden|Character|Evil - Monster|Slay
 SBB_CHARACTER_ROTTENAPPLETREE|True|Rotten Appletree|5|5|0|18|When I'm attacked, first reduce the attacker's Health to 1.|Regular|Character|Evil - Treant|
 GOLDEN_SBB_CHARACTER_ROTTENAPPLETREE|True|Rotten Appletree|5|5|0|36|When I'm attacked, first reduce the attacker's Health to 1.|Golden|Character|Evil - Treant|
-SBB_CHARACTER_CUPID|True|Cupid|5|5|1|10|<b>Flying, Ranged</b>When I attack a character, it attacks a character on its own side.|Regular|Character|Evil - Fairy|Flying - Ranged
-GOLDEN_SBB_CHARACTER_CUPID|True|Cupid|5|5|2|20|<b>Flying, Ranged</b>When I attack a character, it attacks a character on its own side.|Golden|Character|Evil - Fairy|Flying - Ranged
+SBB_CHARACTER_CUPID|True|Cupid|5|5|1|10|<b>Flying, Ranged</b>When I attack and damage a character, it attacks a character on its own side.|Regular|Character|Evil - Fairy|Flying - Ranged
+GOLDEN_SBB_CHARACTER_CUPID|True|Cupid|5|5|2|20|<b>Flying, Ranged</b>When I attack and damage a character, it attacks a character on its own side.|Golden|Character|Evil - Fairy|Flying - Ranged
 SBB_CHARACTER_SUMMONER|True|Aon|5|5|6|12|When you cast a spell, give your Mages +1 Attack permanently.<b>Slay:</b> Your spells cost 1 less next round.|Regular|Character|Evil - Mage|Slay
 GOLDEN_SBB_CHARACTER_SUMMONER|True|Aon|5|5|12|24|When you cast a spell, give your Mages +2 Attack permanently.<b>Slay:</b> Your spells cost 2 less next round.|Golden|Character|Evil - Mage|Slay
 SBB_CHARACTER_BABAYAGA|True|Baba Yaga|5|5|3|6|<b>RangedSupport:</b> +3 Attack and double <b>Slay</b> abilities.|Regular|Character|Evil - Monster - Mage|Ranged - Support
@@ -339,7 +339,7 @@ SBB_SPELL_POISONAPPLE|True|Poison Apple|2|5|0|0|Reduce a random enemy's Health t
 SBB_SPELL_LUCKYCOIN|True|Lucky Coin|0|5|0|0|+1 Gold. You can cast another spell this round.|Regular|Spell||
 SBB_TREASURE_SWORDOFFIREANDICE|True|Sword of Fire and Ice|5|5|0|0|Characters in your front row have +6 Health. Characters in your back row have +6 Attack.|Regular|Treasure||
 SBB_TREASURE_AMBROSIA|True|Ambrosia|5|5|0|0|At the start of each brawl, Upgrade your last character for this brawl only.|Regular|Treasure||
-SBB_TREASURE_DRACULA'SSABER|True|Dracula's Saber|5|5|0|0|When an enemy character dies, give your characters +2/+1 this brawl.|Regular|Treasure||
+SBB_TREASURE_DRACULA'SSABER|True|Dracula's Saber|5|5|0|0|When an enemy character dies, give your characters +1/+1 this brawl.|Regular|Treasure||
 SBB_TREASURE_MIDASHAND|True|Hand of Midas|5|5|0|0|The next time you buy a character, Upgrade it and destroy this.|Regular|Treasure||
 SBB_TREASURE_SCROLLOFTHEELDERS|True|Staff of the Old Toad|5|5|0|0|Level 2 and 3 characters no longer appear in your shop.|Regular|Treasure||
 SBB_TREASURE_HELMOFCOMMAND|True|Evil Eye|5|5|0|0|Double your <b>Support</b> bonuses.|Regular|Treasure||Support
@@ -347,8 +347,8 @@ SBB_TREASURE_HEXINGWAND|True|Monkey's Paw|5|5|0|0|Your characters have +5/+5 if 
 SBB_TREASURE_HELMOFTHEUGLYGOSLING|True|Ugly Gosling Helm|5|5|0|0|At the start of each brawl, give your lowest attack character +15/+15 this brawl.|Regular|Treasure||
 SBB_CHARACTER_WORLDSERPENT|True|Jormungand|6|6|20|20|When another one of your characters triggers a <b>Slay</b> ability, +20/+20 this brawl.<b>Slay:</b> +20/+20<b> </b>this brawl.|Regular|Character|Monster|Slay
 GOLDEN_SBB_CHARACTER_WORLDSERPENT|True|Jormungand|6|6|40|40|When another one of your characters triggers a <b>Slay</b> ability, +40/+40 this brawl.<b>Slay:</b> +40/+40 this brawl.|Golden|Character|Monster|Slay
-SBB_CHARACTER_GRUMBLEGORE|True|Grumblegore|6|6|10|5|<b>RangedSupport:</b> +10 Attack|Regular|Character|Evil - Monster|Ranged - Support
-GOLDEN_SBB_CHARACTER_GRUMBLEGORE|True|Grumblegore|6|6|20|10|<b>RangedSupport:</b> +20 Attack|Golden|Character|Evil - Monster|Ranged - Support
+SBB_CHARACTER_GRUMBLEGORE|True|Boom Hilda|6|6|10|5|<b>RangedSupport:</b> +10 Attack|Regular|Character|Evil - Monster|Ranged - Support
+GOLDEN_SBB_CHARACTER_GRUMBLEGORE|True|Boom Hilda|6|6|20|10|<b>RangedSupport:</b> +20 Attack|Golden|Character|Evil - Monster|Ranged - Support
 SBB_CHARACTER_THEGREENKNIGHT|True|The Green Knight|6|6|10|30|<b>Support: </b>+10 Health|Regular|Character|Good - Treant|Support
 GOLDEN_SBB_CHARACTER_THEGREENKNIGHT|True|The Green Knight|6|6|20|60|<b>Support: </b>+20 Health|Golden|Character|Good - Treant|Support
 SBB_CHARACTER_FORGEMASTERDWARF|True|Lordy|6|6|7|7|At the start of each brawl, give your Dwarves +2/+2 this brawl for each Dwarf you have.|Regular|Character|Dwarf|
@@ -398,6 +398,6 @@ SBB_TREASURE_BLACKPRISM|True|Black Prism|7|7|0|0|When you cast a spell directly 
 SBB_TREASURE_EXCALIBUR|True|Excalibur|7|7|0|0|All characters in your shop are Upgraded.|Regular|Treasure||
 SBB_TREASURE_THEHOLYGRAIL|True|The Holy Grail|7|7|0|0|After the next brawl, gain more gold than you could ever spend.|Regular|Treasure||
 SBB_TREASURE_MIRRORUNIVERSE|True|Mirror Mirror|7|7|0|0|When one of your starting characters in your front row dies, summon a 1/1 plain copy of it.|Regular|Treasure||
-SBB_TREASURE_FAIRYQUEENSWAND|True|Fairy Queen's Wand|7|7|0|0|Your characters have +5/+5. Whoever gets first place this game gets +100 bonus Fairy Dust.|Regular|Treasure||
+SBB_TREASURE_FAIRYQUEENSWAND|True|Fairy Queen's Wand|7|7|0|0|Your characters have +7/+7. Whoever gets first place this game gets +100 bonus Fairy Dust.|Regular|Treasure||
 SBB_TREASURE_MAGICSWORD+100|True|Magic Sword +100|7|7|0|0|Your first character has +100 Attack.|Regular|Treasure||
 SBB_TREASURE_RADIANTPRISM|True|Radiant Prism|7|7|0|0|Your characters count as all types.|Regular|Treasure||
