@@ -178,12 +178,16 @@ and Lunco
 
         auto_switch_hero_select_checkbox = SettingsCheckbox(settings.auto_switch_to_hero_select)
 
+        check_for_updates_button = QPushButton(tr("Check for Updates"))
+        check_for_updates_button.clicked.connect(main_window.manual_update_check)
+
         general_layout.addRow(tr("Language"), language_select)
         general_layout.addRow(tr("Save match results"), save_stats_checkbox)
         general_layout.addRow(tr("Save SBB99 Results"), track_sbb99)
         general_layout.addRow(tr("Ignore practice and group lobbies"), matchmaking_only_checkbox)
         general_layout.addRow(tr("Graph color palette"), self.graph_color_chooser)
         general_layout.addRow(tr("Auto Switch to Hero Select"), auto_switch_hero_select_checkbox)
+        general_layout.addRow(check_for_updates_button)
 
         data_layout = QFormLayout(data_tab)
         export_button = QPushButton(tr("Export Stats"))

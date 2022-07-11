@@ -610,6 +610,9 @@ class SBBTracker(QMainWindow):
         except Exception:
             logging.exception("Couldn't read patch notes file!")
 
+    def manual_update_check(self):
+        self.handle_update(*updater.check_updates())
+
     def handle_update(self, update_avail, patch_notes):
         if update_avail:
             self.update_banner.show()
@@ -936,7 +939,7 @@ class HeroSelection(QWidget):
             hero_id = hero_ids[i]
             hero_name = asset_utils.get_card_name(hero_id)
             hero_names.append(hero_name)
-            placement, matches, histogram = player_stats.get_stats_for_hero(*get_date_range(latest_patch), hero_name)
+            placement, matches, histogram = player_stats.get_stats_for_hero(*get_date_range(settings.get(settings.filter_)), hero_name)
             self.heroes[i].update_hero(placement, matches, histogram, hero_id)
             overlay.update_hero_rates(i, placement, matches)
         overlay.update_data_url(hero_names)
