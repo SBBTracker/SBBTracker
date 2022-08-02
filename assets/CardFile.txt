@@ -232,6 +232,7 @@ SBB_TREASURE_CLOAKOFTHEASSASSIN|True|Cloak of the Assassin|3|3|0|0|Your characte
 SBB_TREASURE_MERLIN'SHAT|True|Merlin's Hat|3|3|0|0|Spells cost you 2 less.|Regular|Treasure||
 SBB_TREASURE_CRYSTALBALL|True|Crystal Ball|3|3|0|0|When you cast a spell directly on a character, add a spell to your shop and you can cast another spell this round.|Regular|Treasure||
 SBB_TREASURE_CURSEDTHRONE|True|Cursed Throne|3|3|0|0|Your Royals are also Monsters and have "<b>Slay:</b> +1/+1 permanently."|Regular|Treasure||
+SBB_TREASURE_DUMMYTREASURE|False|Dummy Treasure|3|3|0|0|I added this in because there's some stupid treasure missing here and causing an off by one|Regular|Treasure||
 SBB_CHARACTER_JULIET|True|Juliet|4|4|7|7||Regular|Character|Good - Royal|
 GOLDEN_SBB_CHARACTER_JULIET|True|Juliet|4|4|14|14||Golden|Character|Good - Royal|
 SBB_CHARACTER_LADYOFTHELAKE|True|Lady of the Lake|4|4|3|3|<b>Ranged</b><b>Support: </b>+5 Health|Regular|Character|Good - Mage|Ranged - Support
