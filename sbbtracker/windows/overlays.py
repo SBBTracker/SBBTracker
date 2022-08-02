@@ -674,6 +674,7 @@ class AdvSimulatorStats(MovableWidget):
         self.adjustSize()
         self.update_labels()
 
+
     def reset_chances(self):
         for widget, _, _ in self.widgets.values():
             widget.setVisible(False)

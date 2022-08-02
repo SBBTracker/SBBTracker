@@ -247,7 +247,7 @@ def parse(ifs):
     """
     for line in ifs:
         if 'REQUEST MATCHMAKER FOR' in line:
-            game_mode = "SBB99" if "100P_BLUE" in line else "Normal"
+            game_mode = "SBB99" if "100P" in line else "Normal"
             yield Action(info=game_mode, game_state=GameState.MATCHMAKING)
         elif 'Writing binary data to recorder for action:' in line:
             chop_idx = line.find('-') + 1
