@@ -11,39 +11,38 @@ from queue import Queue
 from pygtail import Pygtail
 from sbbtracker.paths import logfile, offsetfile
 
-
 VERYLARGE = 2 ** 20
 NOTFOUND = -1
 
 EVENT_CHARACTER = 'Character'
-EVENT_ADDPLAYER = 'GLG.Transport.Actions.ActionAddPlayer'
-EVENT_ATTACK = 'GLG.Transport.Actions.ActionAttack'
-EVENT_BRAWLCOMPLETE = 'GLG.Transport.Actions.ActionBrawlComplete'
-EVENT_CASTSPELL = 'GLG.Transport.Actions.ActionCastSpell'
-EVENT_CONNINFO = 'GLG.Transport.Actions.ActionConnectionInfo'
-EVENT_CREATECARD = 'GLG.Transport.Actions.ActionCreateCard'
-EVENT_DEALDAMAGE = 'GLG.Transport.Actions.ActionDealDamage'
-EVENT_DEATH = 'GLG.Transport.Actions.ActionDeath'
-EVENT_DEATHTRIGGER = 'GLG.Transport.Actions.ActionDeathTrigger'
-EVENT_ENTERBRAWLPHASE = 'GLG.Transport.Actions.ActionEnterBrawlPhase'
-EVENT_ENTERINTROPHASE = 'GLG.Transport.Actions.ActionEnterIntroPhase'
-EVENT_ENTERRESULTSPHASE = 'GLG.Transport.Actions.ActionEnterResultsPhase'
-EVENT_ENTERSHOPPHASE = 'GLG.Transport.Actions.ActionEnterShopPhase'
-EVENT_MODIFYGOLD = 'GLG.Transport.Actions.ActionModifyGold'
-EVENT_MODIFYLEVEL = 'GLG.Transport.Actions.ActionModifyLevel'
-EVENT_MODIFYNEXTLEVELXP = 'GLG.Transport.Actions.ActionModifyNextLevelXP'
-EVENT_MODIFYXP = 'GLG.Transport.Actions.ActionModifyXP'
-EVENT_MOVECARD = 'GLG.Transport.Actions.ActionMoveCard'
-EVENT_PLAYFX = 'GLG.Transport.Actions.ActionPlayFX'
-EVENT_PRESENTDISCOVER = 'GLG.Transport.Actions.ActionPresentDiscover'
-EVENT_PRESENTHERODISCOVER = 'GLG.Transport.Actions.ActionPresentHeroDiscover'
-EVENT_REMOVECARD = 'GLG.Transport.Actions.ActionRemoveCard'
-EVENT_ROLL = 'GLG.Transport.Actions.ActionRoll'
-EVENT_SLAYTRIGGER = 'GLG.Transport.Actions.ActionSlayTrigger'
-EVENT_SUMMONCHARACTER = 'GLG.Transport.Actions.ActionSummonCharacter'
-EVENT_UPDATECARD = 'GLG.Transport.Actions.ActionUpdateCard'
-EVENT_UPDATEEMOTES = 'GLG.Transport.Actions.ActionUpdateEmotes'
-EVENT_UPDATETURNTIMER = 'GLG.Transport.Actions.ActionUpdateTurnTimer'
+EVENT_ADDPLAYER = 'ActionAddPlayer'
+EVENT_ATTACK = 'ActionAttack'
+EVENT_BRAWLCOMPLETE = 'ActionBrawlComplete'
+EVENT_CASTSPELL = 'ActionCastSpell'
+EVENT_CONNINFO = 'ActionConnectionInfo'
+EVENT_CREATECARD = 'ActionCreateCard'
+EVENT_DEALDAMAGE = 'ActionDealDamage'
+EVENT_DEATH = 'ActionDeath'
+EVENT_DEATHTRIGGER = 'ActionDeathTrigger'
+EVENT_ENTERBRAWLPHASE = 'ActionEnterBrawlPhase'
+EVENT_ENTERINTROPHASE = 'ActionEnterIntroPhase'
+EVENT_ENTERRESULTSPHASE = 'ActionEnterResultsPhase'
+EVENT_ENTERSHOPPHASE = 'ActionEnterShopPhase'
+EVENT_MODIFYGOLD = 'ActionModifyGold'
+EVENT_MODIFYLEVEL = 'ActionModifyLevel'
+EVENT_MODIFYNEXTLEVELXP = 'ActionModifyNextLevelXP'
+EVENT_MODIFYXP = 'ActionModifyXP'
+EVENT_MOVECARD = 'ActionMoveCard'
+EVENT_PLAYFX = 'ActionPlayFX'
+EVENT_PRESENTDISCOVER = 'ActionPresentDiscover'
+EVENT_PRESENTHERODISCOVER = 'ActionPresentHeroDiscover'
+EVENT_REMOVECARD = 'ActionRemoveCard'
+EVENT_ROLL = 'ActionRoll'
+EVENT_SLAYTRIGGER = 'ActionSlayTrigger'
+EVENT_SUMMONCHARACTER = 'ActionSummonCharacter'
+EVENT_UPDATECARD = 'ActionUpdateCard'
+EVENT_UPDATEEMOTES = 'ActionUpdateEmotes'
+EVENT_UPDATETURNTIMER = 'ActionUpdateTurnTimer'
 EVENT_SPELL = 'Spell'
 
 TASK_ADDPLAYER = "AddPlayer"
@@ -72,165 +71,120 @@ JOB_CARDUPDATE = "CardUpdate"
 JOB_HERODISCOVER = "HeroDiscover"
 
 
-def parse_list(line, delimiter):
-    """
-    Transforms weird delimited sections of logfile into nice lists.
-    Can also be used to operate on badly formatted section of log that
-    are missing their pipes.
+def process_line(line, ifs):
+    dt = {}
 
-    Parameters
-    ----------
-    line : str
-        The current line of text being operated on
-    delimiter : str
-        The delimiter we're expecting to see in the 
-        line separating list elements
+    line_data = line.split(' ')
+    event = line_data[0].lstrip('[').rstrip(']')
+    dt['event'] = event
+    if event == EVENT_CONNINFO:
+        session_id = line_data[1].split(':')[1]
+        build_id = line_data[2].split(':')[1]
+        return {**dt, **{'build_id': build_id, 'session_id': session_id}}
+    elif event in [EVENT_ADDPLAYER, EVENT_ENTERRESULTSPHASE]:
+        part = line.split('>==')[1].split('\'==')
+        lookupname = line.split(f"[{event}]")[1].split('<')[0]
+        displayname = part[0].lstrip('\'')
+        playerid = part[1].split(' ')[0]
+        line_data = line.split('\'==')[1].split()
 
-    Returns
-    -------
-    specval : list(str)
-        A list of values derived from the line
-    new_line : TYPE
-        The line, shortened after the point of the list
+        health = line_data[1].split(':')[-1]
+        experience = line_data[3].split(':')[-1]
+        place = line_data[6].split(':')[-1]
+        level = line_data[5].split(':')[-1]
+        heroid = line_data[7].split('<')[0]
 
-    """
-    find = ':'
-    dis = line.find(find)
-    if dis == -1:
-        dis = len(line)
-    reverb = ''.join(reversed(line[:dis]))
-    lastpipe = reverb.find(delimiter)
-    items = line[:dis][:-lastpipe].split(delimiter)
-    specval = [i.strip() for i in items]
-
-    new_line = line[dis - lastpipe:].strip()
-
-    return new_line, specval
-
-
-def parse_complicated_list(line):
-    pattern = re.compile('CardTemplateId: ([0-9]*)')
-    return '', pattern.findall(line)
-
-
-def process_line(line, ifs, dt=None, path=[]):
-    """
-    A fun recursive function for turning a log line into a dictionary.
-    Log lines are kind of like flattened YAML, except they have mistakes
-    and have random newlines inside of them and are all around
-    a fantastic time. We handle those edge cases here.
-    
-    Parameters
-    ----------
-    line : str
-        The current line of text being operated on
-    ifs : input file stream
-        We need this when we find aberrant newlines...
-    dt : dict
-        This is where the state of the dictionary is being held. Exists
-        to be passed through the recursive function
-    path : list(str)
-        The ordered set of keys that bring us to our current "locatiom" in
-        the dict. There may be a better way to do this, I don't know
-    """
-    specval = None
-    brick = None
-
-    current_key = None if not path else path[-1]  # last item of path if exists
-
-    # State dictionary invocation
-    if dt is None:
-        lb_dt = lambda: defaultdict(lb_dt)
-        dt = defaultdict(lb_dt)
-
-    # Get to the correct depth of the dictionary for state
-    _dt = dt
-    for p in path[:len(path) - 1]:
-        _dt = _dt[p]
-
-        # If we're handling a list gather it here
-    if current_key in ['Keywords', 'Subtypes', 'ValidTargets']:
-        line, specval = parse_list(line=line, delimiter='|')
-        specval = specval[:-2]
-    # If we need to hunt for the next val do it here
-    elif current_key in ['FrameOverride']:
-        line, specval = parse_list(line=line, delimiter=' ')
-    elif current_key in ["Choices"]:
-        line, specval = parse_complicated_list(line)
-    else:
-        # First find the distance to the first colon or pipe
-        # colon means we go "in" a level
-        # pipe means we go "up" a level
-        coldis = line.find(':')
-        pipedis = line.find('|')
-
-        if current_key == 'GameText' or current_key == 'DisplayName':
-            coldis = VERYLARGE
-            # I hope to god this code never does anything
-            healthstr = '| Health:'
-            if current_key == 'DisplayName' and line.find(healthstr) != line.rfind(healthstr):
-                instances = []
-                cpy = line
-                while cpy.find(healthstr) != -1:
-                    loc = cpy.find(healthstr)
-                    instances.append(loc + len(instances) * len(healthstr))
-                    cpy = cpy.replace(healthstr, '', 1)
-
-                pipedis = instances[-2]
-
-        # Handle game text having newlines
-        # By grabbing the next line and attaching it if we
-        # Can't find a colon OR a pipe
-        if coldis in [NOTFOUND, VERYLARGE] and pipedis in [NOTFOUND]:
-            if current_key == 'GameText':
-                line = line + ifs.next()
-                coldis = VERYLARGE
-                pipedis = line.find('|')
-
-        # Make sure -1s are handled appropriately for minmath
-        if coldis == NOTFOUND:
-            coldis = VERYLARGE
-        if pipedis == NOTFOUND:
-            pipedis = VERYLARGE
-
-    if specval is not None:
-        val = specval
-    else:
-        chop = min(coldis, pipedis)
-        brick = line[:chop].strip()
-        line = line[chop + 1:]
-        val = brick
-
-    if specval is None and pipedis == coldis:
-        if path and val:
-            _dt[current_key] = val
-
+        dt = {**dt, **{'lookupname':lookupname, 'displayname': displayname, 'playerid': playerid, 'experience': experience, 'health': health,
+                       'place': place, 'level': level, 'heroid': heroid}}
+        if event == EVENT_ENTERRESULTSPHASE:
+            mmr = line_data[12].split(':')[-1]
+            dt = {**dt, **{'mmr': mmr}}
         return dt
-    if specval is not None or pipedis < coldis:
-        # If we have a special value, then add it to the value
-        # of the current key. If we've found a pipe before a colon
-        # then we also have a value to record.
-        if val:
-            _dt[current_key] = val
+    elif event == EVENT_ENTERBRAWLPHASE:
+        parts = line.split('==\'')
+        player1id = line.split(f"[{event}]")[1].split('<')[0] #   ] raschy    <U>
+        player2id = line.split(f"-->")[1].split('<')[0] # --> raschy    <x>
+        dt = {**dt, **{'player1id': player1id, 'player2id': player2id}}
+        return dt
+    elif event == EVENT_ENTERSHOPPHASE:
+        for part in line_data:
+            if part.startswith('Round:'):
+                r = part.split(':')[1]
+        return {**dt, 'round': r}
 
+    elif event in [EVENT_CREATECARD, EVENT_UPDATECARD]:
+        if '>:Shop[' in line or 'UNKNOWN' in line:
+            return
+
+        is_golden = False
+        counter = None
+        content_id = line_data[1].split('<')[0]
+
+        linestart = []
+        works = None
+        for e, v in enumerate(line_data):
+            if '/' in v:
+                if len(v.split("/")) == 2:
+                    works = True
+                    try:
+                        x = v.split("(")[0].split("/")
+                        int(x[0])
+                        int(x[1])
+                    except ValueError:
+                        works = False
+                    if works:
+                        break
+
+        if not works:
+            if '>:Spell[' in line:
+                e = len(line_data) - 1
+
+        linestart = ' '.join(line_data[2:e])
+        line_data = [linestart, *line_data[e:]]
+        playerlookup = line.split(">")[1].split('<')[0]
+        cost = 0
+        subtypes = []
+        if '>:Treasure[' in line:
+            slot = line.split('>:Treasure[')[1].rstrip(']')
+            zone = 'Treasure'
+        if '>:Spell[' in line or '>:NONE[' in line:
+            slot = line.split('>:Spell[')[1].rstrip(']') if '>:Spell[' in line else line.split('>:NONE[')[1].rstrip(']')
+            zone = 'Spell'
         else:
-            # Frame overrides can have no discernible value sometimes
-            if current_key == 'FrameOverride':
-                _dt[current_key] = val
+            zone = line_data[0].split(':')[1].split('[')[0]
+            slot = line_data[0].split('[')[1].rstrip(']')
+        if '>:Spell[' in line or '>:Treasure[' in line or '>:NONE[' in line:
+            cardattack = 0
+            cardhealth = 0
+        else:
+            try:
+                cardattack = line_data[1].split('/')[0]
+                cardhealth = line_data[1].split('/')[1]
+            except IndexError:
+                return
 
-        path = path[:-1]
-        process_line(line, ifs, dt, path)
-    else:
-        # we've found a colon, we must go deeper
-        process_line(line, ifs, dt, [*path, brick])
+            subtypes = [i.lower() for i in line_data[2].split(':')[1].split(',')]
+            for line_datum in line_data:
+                if 'Cost' in line_datum:
+                    cost = line_datum.split(':')[1]
+                    break
+        if len(line_data) > 4:
+            for d in line_data:
+                if d.startswith('Flag'):
+                    is_golden = 'G' in d.split(':')[1]
+                elif d.startswith('Counter'):
+                    counter = d.split(':')[1]
 
-    # base case
+        dt = {**dt, **{'is_golden': is_golden, 'counter': counter, 'content_id': content_id, 'playerlookup': playerlookup,
+                       'zone': zone, 'slot': slot, 'cardattack': cardattack, 'cardhealth': cardhealth,
+                       'subtypes': subtypes, 'cost': cost}}
+
     return dt
 
 
 def parse(ifs):
     """
-    Parse the log file into workable dictionaries. A nice function to 
+    Parse the log file into workable dictionaries. A nice function to
     separate the business logic from the parsing logic
 
     Parameters
@@ -249,12 +203,11 @@ def parse(ifs):
         if 'REQUEST MATCHMAKER FOR' in line:
             game_mode = "SBB99" if "100P" in line else "Normal"
             yield Action(info=game_mode, game_state=GameState.MATCHMAKING)
-        elif 'Writing binary data to recorder for action:' in line:
-            chop_idx = line.find('-') + 1
-            line = line[chop_idx:]
+        elif line.startswith('[RECV]'):
+            line = ' '.join(line.split()[2:])
             info = process_line(line, ifs)
-
-            yield Action(info)
+            if info:
+                yield Action(info)
 
 
 class GameState(Enum):
@@ -270,55 +223,58 @@ class Action:
         if game_state == GameState.MATCHMAKING:
             self.task = TASK_MATCHMAKING
             self.game_mode = info
+            self.attrs = ['task', 'game_mode']
             return
 
         if info is not None:
 
-            self.action_type = info['Action']['Type']
+            self.action_type = info['event']
             if self.action_type == EVENT_ADDPLAYER or self.action_type == EVENT_ENTERRESULTSPHASE:
                 self.task = TASK_ADDPLAYER
-                self.displayname = info['DisplayName']
-                self.heroid = info['Hero']['Card']['CardTemplateId']
-                self.health = int(info['Health'])
-                self.playerid = info.get("Player", "").replace("Id ", "")
-                self.place = info['Place']
-                self.experience = info['Experience']
-                self.level = info['Level']
+                self.displayname = info['displayname'].strip()
+                self.heroid = info['heroid']
+                self.health = int(info['health'])
+                self.playerid = info.get("lookupname", "")
+                self.place = info['place']
+                self.experience = info['experience']
+                self.level = info['level']
                 self.attrs = ['displayname', 'playerid', 'health', 'heroid', 'place', 'level', 'experience']
 
                 if self.action_type == EVENT_ENTERRESULTSPHASE:
                     self.task = TASK_ENDGAME
-                    self.mmr = info['Hero']['Card']['RankReward']
-                    self.playerid = info["PlayerData"].replace("Id ", "")
+                    self.mmr = info['mmr']
                     self.attrs.append('mmr')
 
             elif self.action_type == EVENT_PRESENTHERODISCOVER:
+                # TODO broken on glg side
+                self.attrs = []
                 self.task = TASK_HERODISCOVER
-                self.choices = info['Choices']
-                self.attrs = ['choices']
+            #                self.choices = info['Choices']
+            #                self.attrs = ['choices']
 
             elif self.action_type == EVENT_ENTERBRAWLPHASE:
                 self.task = TASK_GATHERIDS
-                self.player1 = info['Action']['FirstPlayerId']
-                self.player2 = info['Action']['SecondPlayerId']
+                self.player1 = info['player1id']
+                self.player2 = info['player2id']
                 self.attrs = ['player1', 'player2']
 
             elif self.action_type == EVENT_CREATECARD or self.action_type == EVENT_UPDATECARD:
                 self.task = TASK_GETROUNDGATHER if self.action_type == EVENT_CREATECARD else TASK_UPDATECARD
-                cardinfo = info['Action']['Card']['[ClientCardCard]']['CardTemplate']['Card']['Delta']['[CardDelta]']
+                cardinfo = info
 
-                self.playerid = cardinfo['PlayerId']
-                self.cardattack = cardinfo['Attack']
-                self.cardhealth = cardinfo['Health']
-                self.is_golden = cardinfo['IsGolden']
-                self.slot = cardinfo['Slot']
-                self.zone = cardinfo['Zone']
-                self.cost = cardinfo['Cost']
-                self.subtypes = cardinfo['Subtypes']
-                self.counter = cardinfo['Counter']
+                self.playerid = cardinfo['playerlookup']
+                self.cardattack = cardinfo['cardattack']
+                self.cardhealth = cardinfo['cardhealth']
+                self.is_golden = cardinfo['is_golden']
+                self.slot = cardinfo['slot']
+                self.zone = cardinfo['zone']
+                self.cost = cardinfo['cost']
+                self.subtypes = cardinfo['subtypes']
+                self.counter = cardinfo['counter']
 
-                self.content_id = info['Action']['Card']['[ClientCardCard]']['CardTemplate']['Card']['CardTemplateId']
-                self.attrs = ['cardattack', 'cardhealth', 'is_golden', 'slot', 'zone', 'cost', 'subtypes', 'counter', 'content_id']
+                self.content_id = info['content_id']
+                self.attrs = ['cardattack', 'cardhealth', 'is_golden', 'slot', 'zone', 'cost', 'subtypes', 'counter',
+                              'content_id']
 
             elif self.action_type in [EVENT_BRAWLCOMPLETE, EVENT_SUMMONCHARACTER, EVENT_ATTACK, EVENT_DEALDAMAGE]:
                 self.task = TASK_ENDROUNDGATHER
@@ -326,7 +282,7 @@ class Action:
 
             elif self.action_type == EVENT_ENTERSHOPPHASE:
                 self.task = TASK_GETROUND
-                self.round_num = int(info['Round'])
+                self.round_num = int(info['round'])
                 self.attrs = ['round_num']
 
             elif self.action_type == EVENT_UPDATETURNTIMER:
@@ -335,16 +291,14 @@ class Action:
 
             elif self.action_type == EVENT_CONNINFO:
                 self.task = TASK_NEWGAME
-                self.session_id = info['SessionId']
-                self.build_id = info['BuildId']
+                self.session_id = info['session_id']
+                self.build_id = info['build_id']
                 self.attrs = ['session_id', 'build_id']
 
             else:
                 self.task = None
                 self.attrs = []
 
-            self.timestamp = info["Action"]["Timestamp"]
-            self.attrs.append("timestamp")
             self.attrs.append("action_type")
 
     def __repr__(self):
@@ -405,7 +359,8 @@ def run(queue: Queue, log=logfile):
                     current_player_stats = action
                     queue.put(Update(JOB_INITCURRENTPLAYER, current_player_stats))
                 elif action.task == TASK_ADDPLAYER and prev_action is not None \
-                        and (prev_action.action_type not in [EVENT_ENTERRESULTSPHASE, EVENT_ADDPLAYER, EVENT_UPDATETURNTIMER]):
+                        and (prev_action.action_type not in [EVENT_ENTERRESULTSPHASE, EVENT_ADDPLAYER,
+                                                             EVENT_UPDATETURNTIMER]):
                     queue.put(Update(JOB_HEALTHUPDATE, action))
                 elif not inbrawl and action.task == TASK_ADDPLAYER:
                     queue.put(Update(JOB_PLAYERINFO, action))
@@ -418,13 +373,18 @@ def run(queue: Queue, log=logfile):
                     lastupdated[action.player1] = current_round
                     lastupdated[action.player2] = current_round
                 elif inbrawl and action.task == TASK_GETROUNDGATHER:
-                    if action.zone in ['Spell', 'Treasure', 'Character', 'Hero', 'Hand', 'None']:
-                        if action.zone == 'Character':
-                            if action.slot not in character_slots[action.playerid]:
-                                character_slots[action.playerid].add(action.slot)
-                                brawldt[action.playerid].append(action)
-                        else:
+                    if action.zone == 'Char':
+                        if action.slot not in character_slots[action.playerid]:
+                            character_slots[action.playerid].add(action.slot)
                             brawldt[action.playerid].append(action)
+                    else:
+                        playerid = action.playerid
+                        # if action.playerid.startswith('[Action'):
+                        #     playerlookup = ' '.join(action.playerid.split(' ')[2:])
+                        try:
+                            brawldt[playerid].append(action)
+                        except KeyError:
+                            print(brawldt.keys(), playerid, action)
                 elif inbrawl and action.task != TASK_GETROUNDGATHER:
                     queue.put(Update(JOB_BOARDINFO, brawldt))
                     inbrawl = False
@@ -444,4 +404,8 @@ def run(queue: Queue, log=logfile):
                         current_player_stats = action
 
             prev_action = action
-        time.sleep(0.1)
+        time.sleep(0.01)
+
+
+queue = Queue()
+

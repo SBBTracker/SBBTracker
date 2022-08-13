@@ -26,7 +26,9 @@ with open(get_asset("CardFile.txt"), "r") as card_file:
     cardfile_df = pd.read_csv(card_file, delimiter='|')
     content_id_lookup = {}
     for index, row in cardfile_df.iterrows():
-        content_id_lookup[str(index+1)] = { "Id": row["Id"], "Name": row["Name"], "InPool": row["InPool"] }
+        if row['Golden or regular'] != 'Regular':
+            continue
+        content_id_lookup[row["Name"].replace(' ', '')] = { "Id": row["Id"], "Name": row["Name"], "InPool": row["InPool"] }
 
 def get_card_art_name(template_id: str, is_golden: bool):
     """
@@ -36,7 +38,7 @@ def get_card_art_name(template_id: str, is_golden: bool):
     :return: the base card art name
     """
     try:
-        return content_id_lookup.get(str(int(template_id) - int(is_golden)))["Id"]
+        return content_id_lookup.get(template_id)["Id"]
     except TypeError:
         logging.error(template_id)
         return ""
@@ -44,7 +46,7 @@ def get_card_art_name(template_id: str, is_golden: bool):
 
 def get_card_name(template_id: str, is_golden=False):
     try:
-        return content_id_lookup.get(str(int(template_id) - int(is_golden)))["Name"]
+        return content_id_lookup.get(template_id)["Name"]
     except TypeError:
         logging.error(template_id)
         return ""

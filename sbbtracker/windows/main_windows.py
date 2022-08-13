@@ -236,9 +236,9 @@ class LogThread(QThread):
                 build_id = state.build_id
                 combats.clear()
                 match_data.clear()
-            elif job == log_parser.JOB_HERODISCOVER:
-                if round_number < 1:
-                    self.hero_discover.emit(state.choices)
+            # elif job == log_parser.JOB_HERODISCOVER:
+            #     if round_number < 1:
+                    # self.hero_discover.emit(state.choices)
             elif job == log_parser.JOB_INITCURRENTPLAYER:
                 if not after_first_combat:
                     current_player = state

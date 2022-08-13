@@ -112,7 +112,7 @@ class BoardComp(QWidget):
         if 7 > int(slot) or int(slot) > 9:
             painter.drawPixmap(card_loc[0], card_loc[1], border)
         self.update_card_stats(painter, int(slot), str(health), str(attack))
-        if int(counter) > 0:
+        if counter and int(counter) > 0:
             quest_loc = tuple(map(operator.add, card_loc, (120, -10)))
             self.draw_quest(painter, counter, quest_loc, .20)
 
@@ -182,7 +182,7 @@ class BoardComp(QWidget):
                     position = 10 if zone == 'Spell' else (7 + int(slot)) if zone == "Treasure" else slot
                     self.update_card(painter, position, action.content_id, action.cardhealth,
                                      action.cardattack, action.is_golden, action.subtypes, action.counter)
-                elif action.zone == "Hero" and int(action.counter) > 0:
+                elif action.zone == "Hero" and action.counter and int(action.counter) > 0:
                     hero_loc = self.get_image_location(11)
                     quest_loc = tuple(map(operator.add, hero_loc, hero_quest_loc))
                     self.draw_quest(painter, action.counter, quest_loc, .30)
