@@ -98,7 +98,7 @@ class BoardComp(QWidget):
         path = asset_utils.get_card_path(content_id, actually_is_golden)
         pixmap = QPixmap(path)
         painter.setPen(QPen(QColor("white"), 1))
-        painter.drawText(card_loc[0] + 75, card_loc[1] + 100, str(content_id))
+        # painter.drawText(card_loc[0] + 75, card_loc[1] + 100, str(content_id))
         if not settings.get(settings.show_ids):
             painter.drawPixmap(card_loc[0], card_loc[1], pixmap)
         if "Good" in tribes:

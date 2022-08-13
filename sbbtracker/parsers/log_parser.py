@@ -97,8 +97,11 @@ def process_line(line, ifs):
         dt = {**dt, **{'lookupname':lookupname, 'displayname': displayname, 'playerid': playerid, 'experience': experience, 'health': health,
                        'place': place, 'level': level, 'heroid': heroid}}
         if event == EVENT_ENTERRESULTSPHASE:
-            mmr = line_data[12].split(':')[-1]
-            dt = {**dt, **{'mmr': mmr}}
+            for line_datum in line_data:
+                if 'Rank' in line_datum:
+                    mmr = line_datum.split(':')[-1]
+                    dt = {**dt, **{'mmr': mmr}}
+                    break
         return dt
     elif event == EVENT_ENTERBRAWLPHASE:
         parts = line.split('==\'')
@@ -145,14 +148,14 @@ def process_line(line, ifs):
         cost = 0
         subtypes = []
         if '>:Treasure[' in line:
-            slot = line.split('>:Treasure[')[1].rstrip(']')
+            slot = line.split('>:Treasure[')[1].split(']')[0]
             zone = 'Treasure'
         if '>:Spell[' in line or '>:NONE[' in line:
             slot = line.split('>:Spell[')[1].rstrip(']') if '>:Spell[' in line else line.split('>:NONE[')[1].rstrip(']')
             zone = 'Spell'
         else:
             zone = line_data[0].split(':')[1].split('[')[0]
-            slot = line_data[0].split('[')[1].rstrip(']')
+            slot = line_data[0].split('[')[1].split(']')[0]
         if '>:Spell[' in line or '>:Treasure[' in line or '>:NONE[' in line:
             cardattack = 0
             cardhealth = 0
