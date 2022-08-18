@@ -19,13 +19,15 @@ else:
 def get_asset(asset_name: str):
     return str(application_path.joinpath(f"../assets/{asset_name}"))
 
-
+content_id_lookup = {}
+hero_list = []
 # headers:
 # Id|InPool|Name|Cost|Level|Attack|Health|Game Text|Golden or regular|Type|Subtypes|Keywords
 with open(get_asset("CardFile.txt"), "r") as card_file:
     cardfile_df = pd.read_csv(card_file, delimiter='|')
-    content_id_lookup = {}
     for index, row in cardfile_df.iterrows():
+        if "Hero" == row["Type"]:
+            hero_list.append({ "Id": row["Id"], "Name": row["Name"], "InPool": row["InPool"] })
         name = row["Name"].replace(' ', '')
         if name in content_id_lookup:
             continue

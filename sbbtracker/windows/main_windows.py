@@ -239,12 +239,6 @@ class LogThread(QThread):
             # elif job == log_parser.JOB_HERODISCOVER:
             #     if round_number < 1:
                     # self.hero_discover.emit(state.choices)
-            elif job == log_parser.JOB_INITCURRENTPLAYER:
-                if not after_first_combat:
-                    current_player = state
-                    settings.get(settings.player_id, state.playerid)
-                    # only save the first time
-                self.player_update.emit(state, round_number)
             elif job == log_parser.JOB_ROUNDINFO:
                 round_number = state.round_num
                 self.round_update.emit(round_number)
@@ -253,6 +247,9 @@ class LogThread(QThread):
                 xp = f"{state.level}.{state.experience}"
                 states.update_player(state.playerid, round_number, state.health, xp,
                                      asset_utils.get_card_name(state.heroid), state.heroid)
+                if state.current_player:
+                    current_player = state
+                    settings.set_(settings.player_id, state.playerid)
                 counter += 1
                 if counter == 8:
                     self.player_info_update.emit(states)
@@ -297,6 +294,7 @@ class SBBTracker(QMainWindow):
         self.round_indicator.setFont(round_font)
         self.player_stats = stats.PlayerStats()
         self.player_ids = []
+        self.current_player = None
         self.most_recent_combat = None
         self.matchmaking_mode = None
         self.sim_results = {}
@@ -489,6 +487,8 @@ class SBBTracker(QMainWindow):
         self.overlay.hide_hero_rates()
 
     def update_player(self, player, round_number):
+        if player.current_player:
+            self.current_player = player
         index = self.get_player_index(player.playerid)
         real_hero_name = asset_utils.get_card_name(player.heroid)
         title = f"{real_hero_name}"
@@ -532,7 +532,9 @@ class SBBTracker(QMainWindow):
         self.most_recent_combat = state
         if settings.get(settings.enable_sim):
             if self.board_queue.qsize() == 0:
-                self.board_queue.put((state, self.player_ids[0], settings.get(settings.number_simulations, 1000),
+                current_player_id = self.current_player.playerid if self.current_player else None
+                print(current_player_id)
+                self.board_queue.put((state, current_player_id, settings.get(settings.number_simulations, 1000),
                                       settings.get(settings.number_threads, 3), round_number))
 
     def update_stats(self, starting_hero: str, player, session_id: str, match_data):

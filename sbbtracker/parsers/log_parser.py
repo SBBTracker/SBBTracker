@@ -93,9 +93,10 @@ def process_line(line, ifs):
         place = line_data[6].split(':')[-1]
         level = line_data[5].split(':')[-1]
         heroid = line_data[7].split('<')[0]
+        current_player = "<U>" in line
 
         dt = {**dt, **{'lookupname':lookupname, 'displayname': displayname, 'playerid': playerid, 'experience': experience, 'health': health,
-                       'place': place, 'level': level, 'heroid': heroid}}
+                       'place': place, 'level': level, 'heroid': heroid, 'current_player':current_player}}
         if event == EVENT_ENTERRESULTSPHASE:
             for line_datum in line_data:
                 if 'Rank' in line_datum:
@@ -241,6 +242,7 @@ class Action:
                 self.place = info['place']
                 self.experience = info['experience']
                 self.level = info['level']
+                self.current_player = info["current_player"]
                 self.attrs = ['displayname', 'playerid', 'health', 'heroid', 'place', 'level', 'experience']
 
                 if self.action_type == EVENT_ENTERRESULTSPHASE:
@@ -340,7 +342,6 @@ class SBBPygtail(Pygtail):
 def run(queue: Queue, log=logfile):
     inbrawl = False
     current_round = None
-    current_player_stats = None
     lastupdated = dict()
     while True:
         prev_action = None
@@ -353,14 +354,9 @@ def run(queue: Queue, log=logfile):
                 queue.put(Update(JOB_NEWGAME, action))
             elif action.task == TASK_ENDGAME:
                 queue.put(Update(JOB_ENDGAME, action))
-                current_player_stats = None
             else:
                 if action.task == TASK_HERODISCOVER:
                     queue.put(Update(JOB_HERODISCOVER, action))
-                elif not inbrawl and not current_player_stats and action.task == TASK_ADDPLAYER \
-                        and prev_action is not None and prev_action.action_type == EVENT_UPDATEEMOTES:
-                    current_player_stats = action
-                    queue.put(Update(JOB_INITCURRENTPLAYER, current_player_stats))
                 elif action.task == TASK_ADDPLAYER and prev_action is not None \
                         and (prev_action.action_type not in [EVENT_ENTERRESULTSPHASE, EVENT_ADDPLAYER,
                                                              EVENT_UPDATETURNTIMER]):
@@ -401,10 +397,6 @@ def run(queue: Queue, log=logfile):
                     queue.put(Update(JOB_CARDUPDATE, action))
                 else:
                     pass
-
-                if action.task == TASK_ADDPLAYER:
-                    if current_player_stats and action.displayname == current_player_stats.displayname:
-                        current_player_stats = action
 
             prev_action = action
         time.sleep(0.01)
