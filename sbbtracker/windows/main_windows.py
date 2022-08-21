@@ -182,7 +182,6 @@ class SimulationThread(QThread):
                     loss_dmg = round(mean(loss_damages), 1) if loss_percent > 0 else 0
 
                     adv_stats = simulation_stats.adv_stats.get(playerid)
-                    print(simulation_stats.adv_stats)
                     self.end_simulation.emit(win_percent, tie_percent, loss_percent, win_dmg, loss_dmg, round_number, adv_stats)
             else:
                 self.error_simulation.emit(tr("Couldn't get player id (try reattaching)"), round_number)
@@ -250,11 +249,9 @@ class LogThread(QThread):
                 if state.current_player:
                     current_player = state
                     settings.set_(settings.player_id, state.playerid)
-                counter += 1
-                if counter == 8:
-                    self.player_info_update.emit(states)
-                    if after_first_combat:
-                        self.end_combat.emit(False)
+                self.player_info_update.emit(states)
+                if after_first_combat:
+                    self.end_combat.emit(False)
                 if not after_first_combat:
                     after_first_combat = True
             elif job == log_parser.JOB_BOARDINFO:
@@ -277,7 +274,7 @@ class LogThread(QThread):
                     match_data["combat-info"] = combats
                     match_data["placement"] = state.place
                     match_data["players"] = states.json_friendly()
-                    self.stats_update.emit(asset_utils.get_card_name(current_player.heroid), state, session_id, match_data)
+                    self.stats_update.emit(states.ids_to_heroes[current_player.playerid][0], state, session_id, match_data)
             elif job == log_parser.JOB_HEALTHUPDATE:
                 self.health_update.emit(state)
             elif job == log_parser.JOB_CARDUPDATE:
@@ -410,8 +407,6 @@ class SBBTracker(QMainWindow):
         self.log_updates.round_update.connect(self.update_round_num)
         self.log_updates.stats_update.connect(self.update_stats)
         self.log_updates.player_info_update.connect(self.live_graphs.update_graph)
-        self.log_updates.player_info_update.connect(self.overlay.update_placements)
-        self.log_updates.player_info_update.connect(self.streamer_overlay.update_placements)
         self.log_updates.new_game.connect(self.new_game)
         self.log_updates.health_update.connect(self.update_health)
         self.log_updates.end_combat.connect(self.end_combat)
@@ -533,7 +528,6 @@ class SBBTracker(QMainWindow):
         if settings.get(settings.enable_sim):
             if self.board_queue.qsize() == 0:
                 current_player_id = self.current_player.playerid if self.current_player else None
-                print(current_player_id)
                 self.board_queue.put((state, current_player_id, settings.get(settings.number_simulations, 1000),
                                       settings.get(settings.number_threads, 3), round_number))
 

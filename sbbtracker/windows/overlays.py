@@ -203,7 +203,9 @@ class OverlayWindow(QMainWindow):
         comp = self.comp_widget.get_comp(index)
         comp.current_round = round_num
         comp.update_history(xp, health)
-        self.new_places[int(place) - 1] = index
+        self.places[int(place) - 1] = index
+        #  fixes bug where hovering over the hero at the end of combat gets the overlay stuck
+        self.comp_widget.setVisible(False)
         if round_num == 0:
             self.hide_hero_rates()
         if self.stream_overlay:
@@ -220,12 +222,6 @@ class OverlayWindow(QMainWindow):
         self.comp_widget.set_scale(scale)
         self.comp_widget.setFixedSize(self.base_comp_size * scale)
         self.comp_widget.updateGeometry()
-
-    def update_placements(self):
-        self.places = self.new_places.copy()
-        self.new_places = list(range(0, 8))
-        #  fixes bug where hovering over the hero at the end of combat gets the overlay stuck
-        self.comp_widget.setVisible(False)
 
     def set_rect(self, left, top, right, bottom, dpi):
         self.dpi_scale = 1 / round(dpi / 96 - .24)  # round .75 and up to nearest int

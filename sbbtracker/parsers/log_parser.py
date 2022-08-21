@@ -1,3 +1,4 @@
+import sys
 import gzip
 import json
 import os
@@ -10,6 +11,10 @@ from queue import Queue
 
 from pygtail import Pygtail
 from sbbtracker.paths import logfile, offsetfile
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 VERYLARGE = 2 ** 20
 NOTFOUND = -1
@@ -59,7 +64,7 @@ TASK_MATCHMAKING = "TaskMatchmaking"
 TASK_HERODISCOVER = "TaskHeroDiscover"
 
 JOB_PLAYERINFO = "PlayerInfo"
-JOB_INITCURRENTPLAYER = "InitCurrentPlayer"
+JOB_PLAYERINFODONE = "PlayerInfoDone"
 JOB_BOARDINFO = "BoardInfo"
 JOB_ROUNDINFO = "RoundInfo"
 JOB_NEWGAME = "StateNewgame"
@@ -71,117 +76,180 @@ JOB_CARDUPDATE = "CardUpdate"
 JOB_HERODISCOVER = "HeroDiscover"
 
 
+def process_line_wrapper(line, ifs):
+    try:
+        return process_line(line, ifs)
+    except:
+        logger.error(f'ERROR processing line: {line}')
+        raise
+
+
+def readuntil(string, substr, clean=True):
+    """Find substr, chop off all before and including, and return everything afterwards"""
+    find = string.find(substr)
+    if find == -1:
+        return string, ''
+
+    cut = find + len(substr)
+    car, cdr = string[:cut], string[cut:]
+    if clean:
+        car = car[:-1 * len(substr)]
+    return car, cdr
+
+
+def get_shortname(string):
+    """ The logfile uses a truncated name system """
+    shortname = string[:10]
+    currentplayer = string[10:13] == '<U>'
+    cdr = string[13:]
+    logger.info(f'From line ||{string[:-1]}|| extracted shortname {shortname} currentplayer {currentplayer}')
+    return shortname, currentplayer, cdr
+
+
+def process_fullname(string):
+    """ Process data of the format =='fullname'==0123456789012345 ' """
+    # TODO what happens if a user has an apostrophe in their name
+    displayname = ''
+    _line = string[3:]
+    annoyingstr = '\'=='
+    while True:
+        _displayname, _line = readuntil(_line, annoyingstr)
+        displayname += _displayname
+        linefind = _line.find(annoyingstr)
+        if annoyingstr in _line and linefind < _line.find('Health:') and linefind < _line.find(
+                'Gold:') and linefind < _line.find('NextLevelXP'):
+            displayname += annoyingstr
+        else:
+            glg_id, _line = readuntil(_line, ' ')
+            break
+
+    logger.info(f'From line ||{string.strip()}|| extracted displayname {displayname} glg_id {glg_id}')
+    return displayname, glg_id, _line
+
+
 def process_line(line, ifs):
     dt = {}
 
-    line_data = line.split(' ')
-    event = line_data[0].lstrip('[').rstrip(']')
+    event, _line = readuntil(line, ' ')
+    event = event.strip('[]')
     dt['event'] = event
     if event == EVENT_CONNINFO:
+        line_data = line.split(' ')
         session_id = line_data[1].split(':')[1]
         build_id = line_data[2].split(':')[1]
         return {**dt, **{'build_id': build_id, 'session_id': session_id}}
     elif event in [EVENT_ADDPLAYER, EVENT_ENTERRESULTSPHASE]:
-        part = line.split('>==')[1].split('\'==')
-        lookupname = line.split(f"[{event}]")[1].split('<')[0]
-        displayname = part[0].lstrip('\'')
-        playerid = part[1].split(' ')[0]
-        line_data = line.split('\'==')[1].split()
+        playerid, current_player, _line = get_shortname(_line)
+        displayname, glg_id, _line = process_fullname(_line)
+        heroid = None
+        while True:
+            data, _line = readuntil(_line, ' ')
+            if not data:
+                break
+            if heroid is None and '<' in data and '>' in data:
+                heroid = data.split('<')[0]
+            if not ':' in data:
+                continue
 
-        health = line_data[1].split(':')[-1]
-        experience = line_data[3].split(':')[-1]
-        place = line_data[6].split(':')[-1]
-        level = line_data[5].split(':')[-1]
-        heroid = line_data[7].split('<')[0]
-        current_player = "<U>" in line
+            k, v = data.split(':')
+            v = v.strip()
+            if k == 'Health':
+                health = v
+            elif k == 'XP':
+                experience = v
+            elif k == 'Place':
+                place = v
+            elif k == 'Level':
+                level = v
+            elif k == 'Rank':  # This will only happen with ENTERRESULTSPHASE
+                mmr = v
 
-        dt = {**dt, **{'lookupname':lookupname, 'displayname': displayname, 'playerid': playerid, 'experience': experience, 'health': health,
-                       'place': place, 'level': level, 'heroid': heroid, 'current_player':current_player}}
+        dt = {**dt,
+              **{'displayname': displayname, 'displayname': displayname, 'playerid': playerid, 'experience': experience,
+                 'health': health,
+                 'place': place, 'level': level, 'heroid': heroid, 'current_player': current_player, 'glg_id': glg_id}}
         if event == EVENT_ENTERRESULTSPHASE:
-            for line_datum in line_data:
-                if 'Rank' in line_datum:
-                    mmr = line_datum.split(':')[-1]
-                    dt = {**dt, **{'mmr': mmr}}
-                    break
+            dt = {**dt, **{'mmr': mmr}}
+
         return dt
     elif event == EVENT_ENTERBRAWLPHASE:
-        parts = line.split('==\'')
-        player1id = line.split(f"[{event}]")[1].split('<')[0] #   ] raschy    <U>
-        player2id = line.split(f"-->")[1].split('<')[0] # --> raschy    <x>
+        player1id, _, _line = get_shortname(_line)
+        _, _, _line = process_fullname(_line)
+        junk, _line = readuntil(_line, '--> ')
+        player2id, _, _line = get_shortname(_line)
         dt = {**dt, **{'player1id': player1id, 'player2id': player2id}}
         return dt
     elif event == EVENT_ENTERSHOPPHASE:
-        for part in line_data:
-            if part.startswith('Round:'):
-                r = part.split(':')[1]
+        _, _, _line = get_shortname(_line)
+        _, _, _line = process_fullname(_line)
+        _, _line = readuntil(_line, '--> ')
+        _, _, _line = get_shortname(_line)
+        while True:
+            _line = _line.lstrip(' ')
+            data, _line = readuntil(_line, ' ')
+            if not data:
+                break
+            if not ':' in data:
+                continue
+
+            k, v = data.split(':')
+            v = v.strip()
+            if k == 'Round':
+                r = v
+                break  # this is the only thing we care about
+
         return {**dt, 'round': r}
 
     elif event in [EVENT_CREATECARD, EVENT_UPDATECARD]:
-        if '>:Shop[' in line or 'UNKNOWN' in line:
-            return
 
         is_golden = False
-        counter = None
-        content_id = line_data[1].split('<')[0]
-
-        linestart = []
-        works = None
-        for e, v in enumerate(line_data):
-            if '/' in v:
-                if len(v.split("/")) == 2:
-                    works = True
-                    try:
-                        x = v.split("(")[0].split("/")
-                        int(x[0])
-                        int(x[1])
-                    except ValueError:
-                        works = False
-                    if works:
-                        break
-
-        if not works:
-            if '>:Spell[' in line:
-                e = len(line_data) - 1
-
-        linestart = ' '.join(line_data[2:e])
-        line_data = [linestart, *line_data[e:]]
-        playerlookup = line.split(">")[1].split('<')[0]
-        cost = 0
+        counter = -1
+        cardattack = None
+        cardhealth = None
         subtypes = []
-        if '>:Treasure[' in line:
-            slot = line.split('>:Treasure[')[1].split(']')[0]
-            zone = 'Treasure'
-        if '>:Spell[' in line or '>:NONE[' in line:
-            slot = line.split('>:Spell[')[1].rstrip(']') if '>:Spell[' in line else line.split('>:NONE[')[1].rstrip(']')
-            zone = 'Spell'
-        else:
-            zone = line_data[0].split(':')[1].split('[')[0]
-            slot = line_data[0].split('[')[1].split(']')[0]
-        if '>:Spell[' in line or '>:Treasure[' in line or '>:NONE[' in line:
-            cardattack = 0
-            cardhealth = 0
-        else:
-            try:
-                cardattack = line_data[1].split('/')[0]
-                cardhealth = line_data[1].split('/')[1]
-            except IndexError:
-                return
 
-            subtypes = [i.lower() for i in line_data[2].split(':')[1].split(',')]
-            for line_datum in line_data:
-                if 'Cost' in line_datum:
-                    cost = line_datum.split(':')[1]
-                    break
-        if len(line_data) > 4:
-            for d in line_data:
-                if d.startswith('Flag'):
-                    is_golden = 'G' in d.split(':')[1]
-                elif d.startswith('Counter'):
-                    counter = d.split(':')[1]
+        content_data, _line = readuntil(_line, ' ')
+        content_id = content_data.split('<')[0]
 
-        dt = {**dt, **{'is_golden': is_golden, 'counter': counter, 'content_id': content_id, 'playerlookup': playerlookup,
+        playerid, currentplayer, _line = get_shortname(_line)
+
+        _line = _line[1:]  # remove the leading :
+        zoneinfo, _line = readuntil(_line, ' ', clean=False)
+        zone, slotinfo = zoneinfo.split('[')
+        slot = slotinfo[:-2]
+
+        while True:
+            _line = _line.lstrip(' ')
+            data, _line = readuntil(_line, ' ')
+            if not data:
+                break
+            if '/' in data and not ':' in data:
+                try:
+                    _cardattack, _cardhealth = map(str.strip, data.split('/'))
+                    _cardattack = int(_cardattack)
+                    _cardhealth = int(_cardhealth)
+                    cardattack = _cardattack
+                    cardhealth = _cardhealth
+                except ValueError:
+                    pass
+            if not ':' in data:
+                continue
+
+            k, v = data.split(':')
+            v = v.strip()
+            if k == 'Subtypes':
+                subtypes = list(map(str.lower, v.split(',')))
+            elif k == 'Cost':
+                cost = v
+            elif k == 'Flag':
+                is_golden = 'G' in v
+            elif k == 'Counter':
+                counter = v
+
+        dt = {**dt, **{'is_golden': is_golden, 'counter': counter, 'content_id': content_id, 'playerid': playerid,
                        'zone': zone, 'slot': slot, 'cardattack': cardattack, 'cardhealth': cardhealth,
                        'subtypes': subtypes, 'cost': cost}}
+        return dt
 
     return dt
 
@@ -208,8 +276,9 @@ def parse(ifs):
             game_mode = "SBB99" if "100P" in line else "Normal"
             yield Action(info=game_mode, game_state=GameState.MATCHMAKING)
         elif line.startswith('[RECV]'):
-            line = ' '.join(line.split()[2:])
-            info = process_line(line, ifs)
+            _, line = readuntil(line, ' ')
+            _, line = readuntil(line, ' ')
+            info = process_line_wrapper(line, ifs)
             if info:
                 yield Action(info)
 
@@ -238,7 +307,7 @@ class Action:
                 self.displayname = info['displayname'].strip()
                 self.heroid = info['heroid']
                 self.health = int(info['health'])
-                self.playerid = info.get("lookupname", "")
+                self.playerid = info.get("playerid", "")
                 self.place = info['place']
                 self.experience = info['experience']
                 self.level = info['level']
@@ -263,11 +332,11 @@ class Action:
                 self.player2 = info['player2id']
                 self.attrs = ['player1', 'player2']
 
-            elif self.action_type == EVENT_CREATECARD or self.action_type == EVENT_UPDATECARD:
+            elif self.action_type in [EVENT_CREATECARD, EVENT_UPDATECARD]:
                 self.task = TASK_GETROUNDGATHER if self.action_type == EVENT_CREATECARD else TASK_UPDATECARD
                 cardinfo = info
 
-                self.playerid = cardinfo['playerlookup']
+                self.playerid = cardinfo['playerid']
                 self.cardattack = cardinfo['cardattack']
                 self.cardhealth = cardinfo['cardhealth']
                 self.is_golden = cardinfo['is_golden']
@@ -343,8 +412,8 @@ def run(queue: Queue, log=logfile):
     inbrawl = False
     current_round = None
     lastupdated = dict()
+    prev_action = None
     while True:
-        prev_action = None
         ifs = SBBPygtail(filename=str(log), offset_file=offsetfile, every_n=100)
         for action in parse(ifs):
             if action.task == TASK_NEWGAME:
@@ -378,8 +447,6 @@ def run(queue: Queue, log=logfile):
                             brawldt[action.playerid].append(action)
                     else:
                         playerid = action.playerid
-                        # if action.playerid.startswith('[Action'):
-                        #     playerlookup = ' '.join(action.playerid.split(' ')[2:])
                         try:
                             brawldt[playerid].append(action)
                         except KeyError:
@@ -403,4 +470,3 @@ def run(queue: Queue, log=logfile):
 
 
 queue = Queue()
-
