@@ -241,7 +241,7 @@ def process_line(line, ifs):
                 subtypes = list(map(str.lower, v.split(',')))
             elif k == 'Cost':
                 cost = v
-            elif k == 'Flag':
+            elif k == 'Flags':
                 is_golden = 'G' in v
             elif k == 'Counter':
                 counter = v
