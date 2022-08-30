@@ -21,11 +21,11 @@ def resize():
 
                 # Load image and mask
                 image = cv2.imread(f + '.png', cv2.IMWRITE_PNG_STRATEGY_RLE)
-                if item.startswith("SBB_HERO"):
+                if "_HERO_" in item:
                     scale = 15
                     mask = cv2.imread('..\\assets\\hero_mask.png', cv2.IMREAD_UNCHANGED)
                     border = cv2.imread('..\\assets\\hero_portrait.png', cv2.IMREAD_UNCHANGED)
-                elif item.startswith("SBB_TREASURE"):
+                elif "_TREASURE_" in item:
                     scale = 11.5
                     mask = cv2.imread('..\\assets\\treasure_mask.png', cv2.IMREAD_UNCHANGED)
                     border = cv2.imread('..\\assets\\treasure_portrait.png', cv2.IMREAD_UNCHANGED)
@@ -59,10 +59,10 @@ def resize():
                 dim = (width, height)
                 resized = cv2.resize(crop_img, dim, interpolation=cv2.INTER_AREA)
 
-                if item.startswith("SBB_HERO"):
+                if "_HERO_" in item:
                     portrait = cv2.copyMakeBorder(resized, 24, 24, 23, 22, cv2.BORDER_CONSTANT)
                     resized = cv2.add(border, portrait)
-                elif item.startswith("SBB_TREASURE"):
+                elif "_TREASURE_" in item:
                     portrait = cv2.copyMakeBorder(resized, 0, 0, 10, 12, cv2.BORDER_CONSTANT)
                     roi = portrait[0:portrait.shape[0], 0:portrait.shape[1]]
                     greyscale_border = cv2.cvtColor(border, cv2.COLOR_BGR2GRAY)
