@@ -101,9 +101,9 @@ class BoardComp(QWidget):
         # painter.drawText(card_loc[0] + 75, card_loc[1] + 100, str(content_id))
         if not settings.get(settings.show_ids):
             painter.drawPixmap(card_loc[0], card_loc[1], pixmap)
-        if "Good" in tribes:
+        if "good" in tribes:
             border = self.good_border
-        elif "Evil" in tribes:
+        elif "evil" in tribes:
             border = self.evil_border
         else:
             border = self.neutral_border
