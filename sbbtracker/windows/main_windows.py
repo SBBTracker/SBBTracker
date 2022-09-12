@@ -235,9 +235,9 @@ class LogThread(QThread):
                 build_id = state.build_id
                 combats.clear()
                 match_data.clear()
-            # elif job == log_parser.JOB_HERODISCOVER:
-            #     if round_number < 1:
-                    # self.hero_discover.emit(state.choices)
+            elif job == log_parser.JOB_HERODISCOVER:
+                if round_number < 1:
+                    self.hero_discover.emit(state.choices)
             elif job == log_parser.JOB_ROUNDINFO:
                 round_number = state.round_num
                 self.round_update.emit(round_number)

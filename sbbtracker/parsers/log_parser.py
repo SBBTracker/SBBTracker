@@ -251,6 +251,15 @@ def process_line(line, ifs):
                        'subtypes': subtypes, 'cost': cost}}
         return dt
 
+    elif event == EVENT_PRESENTHERODISCOVER:
+        line_data = line.replace(',', ' ').split(' ')
+        choices = []
+        for datum in line_data:
+            if re.match('^.+<.+>$', datum):
+                choices.append(datum.split('<')[0])
+
+        dt = {**dt, **{ 'choices': choices }}
+
     return dt
 
 
@@ -323,8 +332,8 @@ class Action:
                 # TODO broken on glg side
                 self.attrs = []
                 self.task = TASK_HERODISCOVER
-            #                self.choices = info['Choices']
-            #                self.attrs = ['choices']
+                self.choices = info['choices']
+                self.attrs = ['choices']
 
             elif self.action_type == EVENT_ENTERBRAWLPHASE:
                 self.task = TASK_GATHERIDS
