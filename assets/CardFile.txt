@@ -78,7 +78,7 @@ UUID|Id|InPool|Name|Cost|Level|Attack|Health|Game Text|Golden or regular|Type|Su
 77|SBB_HERO_MAIDMARIAN|True|Snow Angel|0|2|0|40|When you level up, get a random Good character of your level.|Regular|Hero||
 78|SBB_HERO_MASK|True|Mask|0|2|0|40|When you reach level 3, you get two spells that let you pick a new hero.|Regular|Hero||
 79|SBB_HERO_MILITARYLEADER|True|Trophy Hunter|0|2|0|40|Your <b>Last Breath</b> abilities are also <b>Slay</b> abilities.Your <b>Last Breath</b> characters have +2 Attack.|Regular|Hero||LastBreath - Slay
-80|SBB_HERO_WONDERWADDLE|True|Wonder Waddle|0|2|0|40|You need just two copies to Upgrade level 2 and 3 Animals.|Regular|Hero||
+80|SBB_HERO_WONDERWADDLE|True|Wonder Waddle|0|2|0|40|You need just two copies to Upgrade level 2 Animals.|Regular|Hero||
 81|SBB_HERO_FALLENANGEL|True|Fallen Angel|0|2|0|40|Your characters have +2 Attack if you start with three Evil characters, and +2 Health if you start with three Good characters.|Regular|Hero||
 82|SBB_HERO_KINGLION|True|Mihri, King Lion|0|2|0|40|Your Royals have +1/+2 for each Royal you've Upgraded.|Regular|Hero||
 83|SBB_HERO_BLACKKNIGHT|True|The Headless Horseman|0|2|0|40|You start with 3 <b>Kidnaps</b>. (Get an exact copy of the first enemy character that dies this brawl.)|Regular|Hero||
@@ -158,7 +158,7 @@ UUID|Id|InPool|Name|Cost|Level|Attack|Health|Game Text|Golden or regular|Type|Su
 157|SBB_TREASURE_QUESTINGPET|True|Noble Steed|2|2|0|0|Your <b>Questing</b> characters have +1/+1 and reward treasures one level higher.|Regular|Treasure||Quest
 158|SBB_TREASURE_SHARPENINGSTONE|True|Dancing Sword|2|2|0|0|Your Evil characters have +1/+1.|Regular|Treasure||
 159|SBB_TREASURE_FOUNTAINOFYOUTH|True|Fountain of Youth|2|2|0|0|Your Good characters have +1/+1.|Regular|Treasure||
-160|SBB_TREASURE_POTIONCAULDRON|True|Potion Master's Cookbook|2|2|0|0|When you cast a spell directly on a character, give it +2/+2 permanently.|Regular|Treasure||
+160|SBB_TREASURE_POTIONCAULDRON|True|Boiling Beaker|2|2|0|0|When you cast a spell directly on a character, give it +2/+2 permanently.|Regular|Treasure||
 161|SBB_TREASURE_GREATLIBRARYCARD|True|Merlin's Slippers|2|2|0|0|Your shop sells an extra spell.|Regular|Treasure||
 162|SBB_TREASURE_SKIPSPUZZLECUBE|True|Skip's Puzzle Rune|2|2|0|0|When you replace this, you gain +2 <b>XP </b>and +2 Health.|Regular|Treasure||XP
 163|SBB_CHARACTER_THEWHITESTAG|True|The White Stag|3|3|3|3|When I attack, give the characters behind me +3/+3 this brawl.|Regular|Character|Good - Animal|
@@ -196,12 +196,12 @@ UUID|Id|InPool|Name|Cost|Level|Attack|Health|Game Text|Golden or regular|Type|Su
 195|SBB_CHARACTER_NIGHTSTALKER|True|Vain-Pire|3|3|4|4|<b>Slay:</b> +1/+1 permanently.|Regular|Character|Evil - Monster|Slay
 196|GOLDEN_SBB_CHARACTER_NIGHTSTALKER|True|Vain-Pire|3|3|8|8|<b>Slay:</b> +2/+2 permanently.|Golden|Character|Evil - Monster|Slay
 197|SBB_CHARACTER_PRINCESSNIGHT|True|Princess Wight|3|3|3|5|Dwarves in your shop have +1/+1.<b>Quest</b>: Buy 7 Dwarves.|Regular|Character|Evil - Royal|Quest
-198|GOLDEN_SBB_CHARACTER_PRINCESSNIGHT|True|Princess Wight|3|3|6|10|Dwarves in your shop have +2/+2.|Golden|Character|Evil - Royal|Quest
+198|GOLDEN_SBB_CHARACTER_PRINCESSNIGHT|True|Princess Wight|3|3|6|10|Dwarves in your shop have +2/+2.<b>Quest</b>: Buy 7 Dwarves.|Golden|Character|Evil - Royal|Quest
 199|SBB_CHARACTER_WRETCHEDMUMMY|True|Wretched Mummy|3|3|2|1|<b>Last Breath:</b> Deal damage equal to my Attack to a random enemy.|Regular|Character|Evil - Monster|LastBreath
 200|GOLDEN_SBB_CHARACTER_WRETCHEDMUMMY|True|Wretched Mummy|3|3|4|2|<b>Last Breath:</b> Deal damage equal to double my Attack to a random enemy.|Golden|Character|Evil - Monster|LastBreath
 201|SBB_CHARACTER_WATERWRAITH|True|Water Wraith|3|3|3|3|When a character next to me dies, I gain +1/+1 permanently.|Regular|Character|Evil - Monster|
 202|GOLDEN_SBB_CHARACTER_WATERWRAITH|True|Water Wraith|3|3|6|6|When a character next to me dies, I gain +2/+2 permanently.|Golden|Character|Evil - Monster|
-203|SBB_SPELL_DOUBLEDOWN|True|Spinning Gold|1|3|0|0|+3 Gold if you win this brawl.|Regular|Spell|RandomSpell|
+203|SBB_SPELL_DOUBLEDOWN|True|Reckless Wager|1|3|0|0|+3 Gold if you win this brawl.|Regular|Spell|RandomSpell|
 204|SBB_SPELL_TRANSFORMATION|True|True Love's Kiss|3|3|0|0|Choose a character. Transform it into a random character that is one level higher.|Regular|Spell||
 205|SBB_SPELL_DRINKMEPOTION|True|Luna's Grace|1|3|0|0|Give a character +3/+3 this brawl.|Regular|Spell|RandomSpell - BeneficialSpell|
 206|SBB_SPELL_BLESSEDTOME|True|Turkish Delight|4|3|0|0|+1 <b>XP</b>.|Regular|Spell|RandomSpell|XP
@@ -232,6 +232,7 @@ UUID|Id|InPool|Name|Cost|Level|Attack|Health|Game Text|Golden or regular|Type|Su
 231|SBB_TREASURE_MERLIN'SHAT|True|Merlin's Hat|3|3|0|0|Spells cost you 2 less.|Regular|Treasure||
 232|SBB_TREASURE_CRYSTALBALL|True|Crystal Ball|3|3|0|0|When you cast a spell directly on a character, add a spell to your shop and you can cast another spell this round.|Regular|Treasure||
 233|SBB_TREASURE_CURSEDTHRONE|True|Cursed Throne|3|3|0|0|Your Royals are also Monsters and have "<b>Slay:</b> +1/+1 permanently."|Regular|Treasure||
+234|SPK_SPELL_POTOGOLD|False|Spinning Gold|0|1|0|0|Double your gold. You can cast another spell this round.|Regular|Spell||
 235|SBB_CHARACTER_JULIET|True|Juliet|4|4|7|7||Regular|Character|Good - Royal|
 236|GOLDEN_SBB_CHARACTER_JULIET|True|Juliet|4|4|14|14||Golden|Character|Good - Royal|
 237|SBB_CHARACTER_LADYOFTHELAKE|True|Lady of the Lake|4|4|3|3|<b>Ranged</b><b>Support: </b>+5 Health|Regular|Character|Good - Mage|Ranged - Support
@@ -254,8 +255,8 @@ UUID|Id|InPool|Name|Cost|Level|Attack|Health|Game Text|Golden or regular|Type|Su
 254|GOLDEN_SBB_CHARACTER_VULTURE|True|Bearded Vulture|4|4|6|6|When one of your Animals dies, I gain +6/+6 this brawl.|Golden|Character|Evil - Animal|
 255|SBB_CHARACTER_GOLDENGOOSE|True|Greedy|4|4|5|9|When I survive damage, +1 Gold.|Regular|Character|Dwarf|
 256|GOLDEN_SBB_CHARACTER_GOLDENGOOSE|True|Greedy|4|4|10|18|When I survive damage, +2 Gold.|Golden|Character|Dwarf|
-257|SBB_CHARACTER_FAIRYGODMOTHER|True|Fairy Godmother|4|4|4|4|When one of your Good characters dies, give your Good characters +2 Health this brawl.|Regular|Character|Good - Fairy|
-258|GOLDEN_SBB_CHARACTER_FAIRYGODMOTHER|True|Fairy Godmother|4|4|8|8|When one of your Good characters dies, give your Good characters +4 Health this brawl.|Golden|Character|Good - Fairy|
+257|SBB_CHARACTER_FAIRYGODMOTHER|True|Fairy Godmother|4|4|4|4|When one of your Good characters dies, give your Good characters +2 Health this brawl.|Regular|Character|Good - Fairy - Mage|
+258|GOLDEN_SBB_CHARACTER_FAIRYGODMOTHER|True|Fairy Godmother|4|4|8|8|When one of your Good characters dies, give your Good characters +4 Health this brawl.|Golden|Character|Good - Fairy - Mage|
 259|SBB_CHARACTER_FRIENDLYGHOST|True|Friendly Spirit|4|4|3|4|<b>Last Breath:</b> Give my Attack and Health to one of your other characters this brawl.|Regular|Character|Good - Monster|LastBreath
 260|GOLDEN_SBB_CHARACTER_FRIENDLYGHOST|True|Friendly Spirit|4|4|6|8|<b>Last Breath:</b> Give double my Attack and Health to one of your other characters this brawl.|Golden|Character|Good - Monster|LastBreath
 261|SBB_CHARACTER_PUFFPUFF|True|Puff Puff|4|4|7|7|Puff Puffs don't triple.<b>Last Breath:</b> Give all your Puff Puffs everywhere +1/+1 permanently.|Regular|Character|Good - Puff - Puff|LastBreath
@@ -404,5 +405,10 @@ UUID|Id|InPool|Name|Cost|Level|Attack|Health|Game Text|Golden or regular|Type|Su
 404|SBB_TREASURE_FAIRYQUEENSWAND|True|Fairy Queen's Wand|7|7|0|0|Your characters have +7/+7. Whoever gets first place this game gets +100 bonus Fairy Dust.|Regular|Treasure||
 405|SBB_TREASURE_MAGICSWORD+100|True|Magic Sword +100|7|7|0|0|Your first character has +100 Attack.|Regular|Treasure||
 406|SBB_TREASURE_RADIANTPRISM|True|The World Tree|7|7|0|0|Your characters count as all types.|Regular|Treasure||
-407|SPK_CHARACTER_PRINCESSPEA|True|Princess Pea|6|6|10|10|I get double bonuses from <b>Supports</b>.<b>Last Breath: </b>Give the characters Supporting me my Attack and Health this brawl.|Regular|Character|Good - Royal|LastBreath
-408|GOLDEN_SPK_CHARACTER_PRINCESSPEA|True|Princess Pea|6|6|20|20|I get triple bonuses from <b>Supports</b>.<b>Last Breath: </b>Give the characters Supporting me double my Attack and Health this brawl.|Golden|Character|Good - Royal|LastBreath
+407|SPK_CHARACTER_PRINCESSPEA|True|Empress Pea|6|6|5|5|I get double bonuses from <b>Supports</b>.<b>Last Breath: </b>Give the characters Supporting me my Attack and Health this brawl.|Regular|Character|Good - Royal|LastBreath
+408|GOLDEN_SPK_CHARACTER_PRINCESSPEA|True|Empress Pea|6|6|10|10|I get triple bonuses from <b>Supports</b>.<b>Last Breath: </b>Give the characters Supporting me double my Attack and Health this brawl.|Golden|Character|Good - Royal|LastBreath
+409|SBB_SPELL_EVILTWIN2|False|Evil Twin|0|6|0|0|Create a plain copy of a Good character, but it's Evil! You can cast another spell this round.|Regular|Spell||
+410|SPK_HERO_LUCKYLEPRECHAUN|True|Rumplestiltskin|0|3|0|40|You start with <b>Spinning Gold</b>. (Double your gold.)|Regular|Hero||
+413|SBB_HERO_ZIPPYTHEZOMBEE|True|Zippee the Zombee|0|3|0|40|You get an <b>Evil Twin</b> every 15 enemies you kill. (Create a plain copy of a Good character, but it's Evil!)|Regular|Hero||
+416|SBB_CHARACTER_ANGRYDWARF|True|Fanny|4|4|4|4|<b>Dwarf Support</b>: +4/+4|Regular|Character|Dwarf|Support
+417|GOLDEN_SBB_CHARACTER_ANGRYDWARF|True|Fanny|4|4|8|8|<b>Dwarf Support:</b> +8/+8|Golden|Character|Dwarf|Support
