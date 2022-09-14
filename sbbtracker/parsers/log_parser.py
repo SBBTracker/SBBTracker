@@ -252,7 +252,7 @@ def process_line(line, ifs):
         return dt
 
     elif event == EVENT_PRESENTHERODISCOVER:
-        line_data = line.replace(',', ' ').split(' ')
+        line_data = line.replace(', ', '  ').split(' ')
         choices = []
         for datum in line_data:
             if re.match('^.+<.+>$', datum):
