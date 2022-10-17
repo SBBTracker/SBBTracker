@@ -423,7 +423,7 @@ def run(queue: Queue, log=logfile):
     lastupdated = dict()
     prev_action = None
     while True:
-        ifs = SBBPygtail(filename=str(log), offset_file=offsetfile, every_n=100)
+        ifs = SBBPygtail(filename=str(log), offset_file=offsetfile, every_n=100, full_lines=True)
         for action in parse(ifs):
             if action.task == TASK_NEWGAME:
                 inbrawl = False
