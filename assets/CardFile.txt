@@ -75,7 +75,7 @@ UUID|Id|InPool|Name|Cost|Level|Attack|Health|Game Text|Golden or regular|Type|Su
 74|SBB_HERO_SIRGALAHAD|True|Sir Galahad|0|2|0|40|When you find a treasure, give your characters +1/+1 permanently.|Regular|Hero||
 75|SBB_HERO_LOKI|True|Loki|0|2|0|40|Cast a random spell each round. (Instead of being able to buy spells)|Regular|Hero||
 76|SBB_HERO_THECOLLECTOR|True|Celestial Tiger|0|2|0|40|Double the abilities of your level 2 and 3 treasures.|Regular|Hero||
-77|SBB_HERO_MAIDMARIAN|True|Snow Angel|0|2|0|40|When you level up, get a random Good character of your level.|Regular|Hero||
+77|SBB_HERO_MAIDMARIAN|True|Phoenix Angel|0|2|0|40|When you level up, get a random Good character of your level.|Regular|Hero||
 78|SBB_HERO_MASK|True|Mask|0|2|0|40|When you reach level 3, you get two spells that let you pick a new hero.|Regular|Hero||
 79|SBB_HERO_MILITARYLEADER|True|Trophy Hunter|0|2|0|40|Your <b>Last Breath</b> abilities are also <b>Slay</b> abilities.Your <b>Last Breath</b> characters have +2 Attack.|Regular|Hero||LastBreath - Slay
 80|SBB_HERO_WONDERWADDLE|True|Wonder Waddle|0|2|0|40|You need just two copies to Upgrade level 2 Animals.|Regular|Hero||
@@ -128,7 +128,7 @@ UUID|Id|InPool|Name|Cost|Level|Attack|Health|Game Text|Golden or regular|Type|Su
 127|GOLDEN_SBB_CHARACTER_POLYWOGGLE|True|Polywoggle|2|2|2|2|<b>Slay:</b> I transform into an Upgraded character that is one level higher than your hero.|Golden|Character|Animal|Slay
 128|SBB_SPELL_SHARDOFTHEICEQUEEN|True|Shard of the Ice Queen|0|2|0|0|Transform a Good character into a new random Evil character of the same level. Give it +1/+1 permanently.|Regular|Spell||
 129|SBB_SPELL_FORBIDDENFRUIT|True|Forbidden Fruit|0|2|0|0|+1 Gold. Take 2 damage.|Regular|Spell|RandomSpell|
-130|SBB_SPELL_SHRINKRAY|True|Shrink Ray|2|2|0|0|Reduce the cost of all characters in the shop by 1.|Regular|Spell|RandomSpell|
+130|SBB_SPELL_SHRINKRAY|True|Shrink Drink|2|2|0|0|Reduce the cost of all characters in the shop by 1.|Regular|Spell|RandomSpell|
 131|SBB_SPELL_FREEROLL|True|Free Roll|0|2|0|0|Roll.|Regular|Spell|RandomSpell|
 132|SBB_SPELL_TESTYOURMIGHT|True|Magic Research|1|2|0|0|Give a character +1/+1 this brawl. If you win, this bonus is permanent.|Regular|Spell|RandomSpell - BeneficialSpell|
 133|SBB_SPELL_EENIEMEENIEMINEYMO|True|Roll the Dice|2|2|0|0|Get a random character from the shop and give it +1/+1 permanently.|Regular|Spell|RandomSpell|
@@ -209,8 +209,8 @@ UUID|Id|InPool|Name|Cost|Level|Attack|Health|Game Text|Golden or regular|Type|Su
 208|SBB_SPELL_GINGERBREADPARTY|True|Gingerbread Party|3|3|0|0|For the rest of the game, characters in your shop have +1/+1.|Regular|Spell|RandomSpell|
 209|SBB_SPELL_FALLINGSTARS|True|Falling Stars|0|3|0|0|Deal 1 damage to all enemy AND friendly characters.|Regular|Spell|BrawlSpell - DamageSpell - RandomSpell|
 210|SBB_SPELL_EARTHQUAKE|True|Earthquake|1|3|0|0|Deal 2 damage to front row enemies.|Regular|Spell|BrawlSpell - DamageSpell - RandomSpell|
-211|SBB_SPELL_SAPMAGIC|True|Flourish|2|3|0|0|Give a Treant +7 Health permanently. |Regular|Spell|RandomSpell - BeneficialSpell|
-212|SBB_SPELL_MONSTERMASH|True|Worm Root|2|3|0|0|Give a Monster +3/+3 permanently.|Regular|Spell|RandomSpell - BeneficialSpell|
+211|SBB_SPELL_SAPMAGIC|True|Expo-Natural Growth|2|3|0|0|Give a Treant +7 Health permanently. |Regular|Spell|RandomSpell - BeneficialSpell|
+212|SBB_SPELL_MONSTERMASH|True|Jekyll's Concoction|2|3|0|0|Give a Monster +3/+3 permanently.|Regular|Spell|RandomSpell - BeneficialSpell|
 213|SBB_SPELL_BELLE'SINFLUENCE|True|Beauty's Influence|1|3|0|0|Turn an Evil character Good and give it +4 Health permanently. |Regular|Spell|RandomSpell - BeneficialSpell|
 214|SBB_SPELL_KIDNAP|True|Kidnap|2|3|0|0|Get an exact copy of the first enemy character that dies this brawl.|Regular|Spell|RandomSpell|
 215|SBB_SPELL_MAGE'SCANTRIP|True|Healing Potion|1|3|0|0|You gain +1 Health. You can cast another spell this round.|Regular|Spell||
@@ -239,8 +239,8 @@ UUID|Id|InPool|Name|Cost|Level|Attack|Health|Game Text|Golden or regular|Type|Su
 238|GOLDEN_SBB_CHARACTER_LADYOFTHELAKE|True|Lady of the Lake|4|4|4|4|<b>Ranged</b><b>Support:</b> +8 Health|Golden|Character|Good - Mage|Ranged - Support
 239|SBB_CHARACTER_MAGEMASTER|True|Sporko|4|4|2|2|<b>RangedSupport: </b>+4 Attack|Regular|Character|Evil - Mage|Ranged - Support
 240|GOLDEN_SBB_CHARACTER_MAGEMASTER|True|Sporko|4|4|4|4|<b>Ranged</b><b>Support:</b> +8 Attack|Golden|Character|Evil - Mage|Ranged - Support
-241|SBB_CHARACTER_ELDERTREANT|True|Heartwood Elder|4|4|5|7|<b>Treant Support:</b> At the start of each brawl, +2/+2 permanently.|Regular|Character|Good - Treant|Support
-242|GOLDEN_SBB_CHARACTER_ELDERTREANT|True|Heartwood Elder|4|4|10|14|<b>Treant Support:</b> At the start of each brawl, +4/+4 permanently.|Golden|Character|Good - Treant|Support
+241|SBB_CHARACTER_ELDERTREANT|True|Heartwood Guardian|4|4|5|7|<b>Treant Support:</b> At the start of each brawl, +2/+2 permanently.|Regular|Character|Good - Treant|Support
+242|GOLDEN_SBB_CHARACTER_ELDERTREANT|True|Heartwood Guardian|4|4|10|14|<b>Treant Support:</b> At the start of each brawl, +4/+4 permanently.|Golden|Character|Good - Treant|Support
 243|SBB_CHARACTER_THECHUPACABRA|True|The Chupacabra|4|4|8|6|<b>Slay:</b> Give me and the characters behind me +2 Attack permanently.|Regular|Character|Evil - Monster|Slay
 244|GOLDEN_SBB_CHARACTER_THECHUPACABRA|True|The Chupacabra|4|4|16|12|<b>Slay:</b> Give me and the characters behind me +4 Attack permanently.|Golden|Character|Evil - Monster|Slay
 245|SBB_CHARACTER_LIGHTNINGDRAGON|True|Lightning Dragon|4|4|10|1|<b>Flying</b>At the start of each brawl, I make a bonus attack.|Regular|Character|Dragon|Flying - Ambush
@@ -263,8 +263,8 @@ UUID|Id|InPool|Name|Cost|Level|Attack|Health|Game Text|Golden or regular|Type|Su
 262|GOLDEN_SBB_CHARACTER_PUFFPUFF|True|Puff Puff|4|4|14|14|<b>Last Breath:</b> Give all your Puff Puffs everywhere +2/+2 permanently.|Golden|Character|Good - Puff - Puff|LastBreath
 263|SBB_CHARACTER_VENGEFULGODMOTHER|True|The Nutcracker|4|4|4|10|<b>Quest: </b>I survive damage 4 times.|Regular|Character|Good - Royal - Treant|Quest
 264|GOLDEN_SBB_CHARACTER_VENGEFULGODMOTHER|True|The Nutcracker|4|4|8|20|<b>Quest: </b>I survive damage 4 times.|Golden|Character|Good - Royal - Treant|Quest
-265|SBB_CHARACTER_COPYCAT|True|Copycat|4|4|2|10|After I attack, trigger the <b>Last Breath</b> abilities of the characters behind me.|Regular|Character|Animal - Mage|
-266|GOLDEN_SBB_CHARACTER_COPYCAT|True|Copycat|4|4|4|20|After I attack, trigger the <b>Last Breath</b> abilities of the characters behind me twice.|Golden|Character|Animal - Mage|
+265|SBB_CHARACTER_COPYCAT|True|Copycat|4|4|2|10|After I attack, trigger the <b>Last Breath</b> abilities of the characters behind me.|Regular|Character|Animal|
+266|GOLDEN_SBB_CHARACTER_COPYCAT|True|Copycat|4|4|4|20|After I attack, trigger the <b>Last Breath</b> abilities of the characters behind me twice.|Golden|Character|Animal|
 267|SBB_CHARACTER_HUNGRYHUNGRYHIPPOCAMPUS|True|Hungry Hungry Hippocampus|4|4|10|1|When you buy or summon an Animal, I gain +2 Health permanently.|Regular|Character|Good - Animal|
 268|GOLDEN_SBB_CHARACTER_HUNGRYHUNGRYHIPPOCAMPUS|True|Hungry Hungry Hippocampus|4|4|20|2|When you buy or summon an Animal, I gain +4 Health permanently.|Golden|Character|Good - Animal|
 269|SBB_CHARACTER_KINGARTHUR|True|King Arthur|4|4|5|5|At the start of each brawl, give your Upgraded Royals +2/+2 permanently.|Regular|Character|Good - Royal|
@@ -395,7 +395,7 @@ UUID|Id|InPool|Name|Cost|Level|Attack|Health|Game Text|Golden or regular|Type|Su
 394|SBB_TREASURE_DRAGONSHOARD|True|Pandora's Box|6|6|0|0|After next brawl, this transforms into a random level 7 treasure.|Regular|Treasure||
 395|SBB_TREASURE_THEARK|True|The Ark|6|6|0|0|Your starting characters have +12/+12 if you have a character of each level.|Regular|Treasure||
 396|SBB_TREASURE_PHOENIXFEATHER|True|Phoenix Feather|6|6|0|0|The first time your highest Attack character dies, summon it.|Regular|Treasure||
-397|SBB_TREASURE_THENINTHBOOKOFMERLIN|True|The 9th Book of Merlin|6|6|0|0|Your Mages have "<b>Last Breath:</b> Cast a random spell."|Regular|Treasure||LastBreath
+397|SBB_TREASURE_THENINTHBOOKOFMERLIN|True|The 9th Book of Merlin|6|6|0|0|Your Mages have "<b>Last Breath:</b> Cast a random spell."|Regular|Treasure||
 398|SBB_TREASURE_TREASURECHEST|True|Mimic|6|6|0|0|Double the abilities of your other treasures.|Regular|Treasure||
 399|SBB_TREASURE_THEROUNDTABLE|True|The Round Table|7|7|0|0|At the start of each brawl, your characters' Attack and Health both become the highest of the two.|Regular|Treasure||
 400|SBB_TREASURE_BLACKPRISM|True|Black Prism|7|7|0|0|When you buy and cast a spell directly on one of your characters, cast it on all of them.|Regular|Treasure||
@@ -408,12 +408,12 @@ UUID|Id|InPool|Name|Cost|Level|Attack|Health|Game Text|Golden or regular|Type|Su
 407|SPK_CHARACTER_PRINCESSPEA|True|Empress Pea|6|6|5|5|I get double bonuses from <b>Supports</b>.<b>Last Breath: </b>Give the characters Supporting me my Attack and Health this brawl.|Regular|Character|Good - Royal|LastBreath
 408|GOLDEN_SPK_CHARACTER_PRINCESSPEA|True|Empress Pea|6|6|10|10|I get triple bonuses from <b>Supports</b>.<b>Last Breath: </b>Give the characters Supporting me double my Attack and Health this brawl.|Golden|Character|Good - Royal|LastBreath
 409|SBB_SPELL_EVILTWIN2|False|Evil Twin|0|6|0|0|Create a plain copy of a Good character, but it's Evil! You can cast another spell this round.|Regular|Spell||
-410|SPK_HERO_LUCKYLEPRECHAUN|True|Rumplestiltskin|0|3|0|40|You start with <b>Spinning Gold</b>. (Double your gold.)|Regular|Hero||
-413|SBB_HERO_ZIPPYTHEZOMBEE|True|Zippee the Zombee|0|3|0|40|You get an <b>Evil Twin</b> every 15 enemies you kill. (Create a plain copy of a Good character, but it's Evil!)|Regular|Hero||
-414|SBB_HERO_TUTORIALHERO|False|Tutorial Hero|0|2|0|40|After each brawl, you gain +1 Health.|Regular|Hero||
+410|SPK_HERO_LUCKYLEPRECHAUN|True|Rumplestiltskin|0|2|0|40|You start with <b>Spinning Gold</b>. (Double your gold.)|Regular|Hero||
+413|SBB_HERO_ZIPPYTHEZOMBEE|True|Zippee the Zombee|0|2|0|40|You get an <b>Evil Twin</b> every 15 enemies you kill. (Create a plain copy of a Good character, but it's Evil!)|Regular|Hero||
+414|SBB_HERO_TUTORIALHERO|False|Tutorial Hero|0|2|0|40|You gain +1 Health each round.|Regular|Hero||
 416|SBB_CHARACTER_ANGRYDWARF|True|Fanny|4|4|4|4|<b>Dwarf Support</b>: +4/+4|Regular|Character|Dwarf|Support
 417|GOLDEN_SBB_CHARACTER_ANGRYDWARF|True|Fanny|4|4|8|8|<b>Dwarf Support:</b> +8/+8|Golden|Character|Dwarf|Support
-418|SBB_HERO_PUFFY|True|Puffy|0|3|0|40|You start with a 1/1 <b>Baby Puff Puff</b>. (Last Breath: Give all your Puff Puffs everywhere +1/+1 permanently.)|Regular|Hero||
-419|SBB_HERO_GOLDILOCKS2|True|Goldilocks|0|3|0|40|When you level up, you get +2 gold and your next shop is all characters of your level.|Regular|Hero||
+418|SBB_HERO_PUFFY|True|Puffy|0|2|0|40|You start with a 1/1 <b>Baby Puff Puff</b>. (Last Breath: Give all your Puff Puffs everywhere +1/+1 permanently.)|Regular|Hero||
+419|SBB_HERO_GOLDILOCKS2|True|Goldilocks|0|2|0|40|When you level up, you get +2 gold and your next shop is all characters of your level.|Regular|Hero||
 420|SBB_CHARACTER_PUFFYPUFF|False|Baby Puff Puff|2|2|1|1|Puff Puffs don't triple.<b>Last Breath:</b> Give all your Puff Puffs everywhere +1/+1 permanently.|Regular|Character|Good - Puff - Puff|LastBreath
 421|GOLDEN_SBB_CHARACTER_PUFFYPUFF|False|Baby Puff Puff|2|2|2|2|<b>Last Breath:</b> Give all your Puff Puffs everywhere +2/+2 permanently.|Golden|Character|Good - Puff - Puff|LastBreath

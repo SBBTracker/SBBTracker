@@ -60,6 +60,8 @@ def adjust_legacy_df(df: pd.DataFrame):
     for hero_type in ['StartingHero', 'EndingHero']:
         # The Sphinx was improperly named for a time
         df[hero_type] = df[hero_type].replace('Sphinx', 'The Sphinx')
+        # snow angel renamed to phoenix angel
+        df[hero_type] = df[hero_type].replace('Snow Angel', 'Phoenix Angel')
     return df
 
 
