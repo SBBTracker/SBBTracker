@@ -24,24 +24,18 @@ from sbbtracker.windows.board_comps import BoardComp
 from sbbtracker.windows.constants import default_bg_color, default_bg_color_rgb
 
 
-def portrait_location(resolution: (int, int)):
-    x, y = resolution
-    offset = y * .22
-    new_x = -.1 * x + offset
-    new_y = 0.0917 * y - 3
-    return new_x, new_y
-
 def get_hover_size(resolution: (int, int)):
     x, y = resolution
-    width = 0.0917 * y + 4
-    return width, width * 17 / 21
+    width = hover_size[0] * x / base_size[0]
+    height = hover_size[1] * y / base_size[1]
+    return width, height
 
 def get_hero_discover_location(resolution: (int, int), location: int):
     w, h = resolution
     scaled_w = int(h * 16 / 9)
     x = (scaled_w -  scaled_w / 3 * 2) / 2 - (scaled_w - w) / 2
     y = (h - (4 / 9 * h)) / 2 + (4 / 9 * h)
-    shift = (h * 19 / 64) * location + scaled_w / 40
+    shift = (h * 19 / 64) * location + scaled_w / 30
     return int(x + shift), int(y)
 
 def get_hero_discover_size(resolution: (int, int)):
@@ -51,7 +45,7 @@ def get_data_button_location(resolution: (int, int)):
     fourth_hero = get_hero_discover_location(resolution, 3)
     return fourth_hero[0] + 50, resolution[1] - resolution[1] / 10
 
-hover_size = (84, 68)
+hover_size = (100, 100)
 p1_loc = (38, 247)
 hover_distance = 38
 base_size = (1920, 1080)
@@ -105,6 +99,7 @@ class OverlayWindow(QMainWindow):
         self.stream_overlay = None
         self.visible = True
         self.scale_factor = 1
+        self.num_players = 8
         self.sbb_rect = QRect(0, 0, 1920, 1080)
         self.dpi_scale = 1
         self.hover_regions = [
@@ -133,7 +128,7 @@ class OverlayWindow(QMainWindow):
         self.new_places = list(range(0, 8))
         self.base_comp_size = QSize(1020, 665)
         self.comp_widget.setVisible(False)
-        self.comp_widget.move(round(self.size().width() / 2 - 100), 0)
+        self.comp_widget.move(0, self.sbb_rect.bottom() - self.comp_widget.height())
         self.set_transparency()
         self.update_comp_scaling()
 
@@ -246,7 +241,8 @@ class OverlayWindow(QMainWindow):
             self.move(left_edge, top_edge)
             self.scale_factor = self.sbb_rect.size().height() / base_size[1]
             self.update_hovers()
-            self.comp_widget.move(QPoint(round(self.size().width() / 2 - 100), 0) * self.dpi_scale)
+
+            self.comp_widget.move(0, self.sbb_rect.bottom() - self.comp_widget.height())
 
             sim_pos = QPoint(*settings.get(settings.simulator_position, (self.sbb_rect.top() / 2 - 100, 0)))
             if not self.centralWidget().geometry().contains(sim_pos):
@@ -274,20 +270,26 @@ class OverlayWindow(QMainWindow):
                 self.stream_overlay.set_rect(left, top, right, bottom, dpi)
 
     def update_hovers(self):
-        true_scale = self.scale_factor
         for i in range(len(self.hover_regions)):
             hover = self.hover_regions[i]
-            calced_loc = portrait_location((self.sbb_rect.size() / self.dpi_scale).toTuple())
+            calced_loc = self.portrait_location((self.sbb_rect.size() / self.dpi_scale).toTuple(), i)
             loc = QPoint(calced_loc[0] * self.dpi_scale,
-                         calced_loc[1] * self.dpi_scale +
-                         hover_distance * i * true_scale +
-                         hover_size[1] * true_scale * i)
+                         calced_loc[1] * self.dpi_scale)
             hover.move(loc)
             new_size = QSize(*get_hover_size(self.sbb_rect.size().toTuple()))
             hover.resize(new_size)
             hover.background.setFixedSize(new_size)
             hover.position = i
         self.update()
+
+    def portrait_location(self, resolution: (int, int), position):
+        x, y = resolution
+        center = x / 2
+        x_offset = (position - self.num_players / 2) * (100 * self.scale_factor)
+
+        new_x = center + x_offset
+        new_y = 0
+        return new_x, new_y
 
     def set_transparency(self):
         alpha = self.get_alpha(settings.boardcomp_transparency)
@@ -393,7 +395,7 @@ class OverlayBoardComp(BoardComp):
     def get_image_location(self, position: int):
         if 7 <= position <= 9:
             x = (161 * (position - 7)) + 20
-            y = 440 + 15
+            y = 440 + 45
         else:
             x, y = super().get_image_location(position)
         return x, y
@@ -402,12 +404,17 @@ class OverlayBoardComp(BoardComp):
         pass
 
     def draw_history(self, painter: QPainter):
-        border = QRect(18, 40, 265, 390)
+        border = QRect(18, 40, 265, 397)
         painter.setPen(QPen(QColor("white"), 2))
         painter.drawRoundedRect(border, 25, 25)
         for i in reversed(range(0, len(self.xps))):
             self.draw_xp(painter, (30, 50 + 130 * (len(self.xps) - 1 - i)), self.xps[i])
-            self.draw_health(painter, (140, 45 + 130 * (len(self.healths) - 1 - i)), self.healths[i])
+            self.draw_health(painter, (140, 53 + 130 * (len(self.healths) - 1 - i)), self.healths[i])
+
+    def draw_treasure(self, painter, location, pixmap):
+        scaled_pixmap = pixmap.scaled(pixmap.size() * .9)
+        super().draw_treasure(painter, location, scaled_pixmap)
+
 
     def paintEvent(self, event):
         super().paintEvent(event)

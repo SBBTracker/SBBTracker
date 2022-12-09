@@ -59,9 +59,9 @@ TASK_ENDROUNDGATHER = "EndRoundGather"
 TASK_NEWGAME = "TaskNewGame"
 TASK_ENDGAME = "TaskEndGame"
 TASK_ENDCOMBAT = "TaskEndCombat"
-TASK_GETTHISPLAYER = "GetThisPlayer"
 TASK_MATCHMAKING = "TaskMatchmaking"
 TASK_HERODISCOVER = "TaskHeroDiscover"
+TASK_ENDPLAYERUPDATES = "TaskEndPlayerUpdates"
 
 JOB_PLAYERINFO = "PlayerInfo"
 JOB_PLAYERINFODONE = "PlayerInfoDone"
@@ -206,7 +206,7 @@ def process_line(line, ifs):
         counter = -1
         cardattack = None
         cardhealth = None
-        subtypes = []
+        subtypes = None
 
         content_data, _line = readuntil(_line, ' ')
         content_id = content_data.split('<')[0]
@@ -378,6 +378,10 @@ class Action:
                 self.build_id = info['build_id']
                 self.attrs = ['session_id', 'build_id']
 
+            elif self.action_type == EVENT_MODIFYGOLD:
+                self.task = TASK_ENDPLAYERUPDATES
+                self.attrs = []
+
             else:
                 self.task = None
                 self.attrs = []
@@ -422,6 +426,7 @@ def run(queue: Queue, log=logfile):
     current_round = None
     lastupdated = dict()
     prev_action = None
+    updating_players = True
     while True:
         ifs = SBBPygtail(filename=str(log), offset_file=offsetfile, every_n=100, full_lines=True)
         for action in parse(ifs):
@@ -435,11 +440,11 @@ def run(queue: Queue, log=logfile):
             else:
                 if action.task == TASK_HERODISCOVER:
                     queue.put(Update(JOB_HERODISCOVER, action))
-                elif action.task == TASK_ADDPLAYER and prev_action is not None \
-                        and (prev_action.action_type not in [EVENT_ENTERRESULTSPHASE, EVENT_ADDPLAYER,
-                                                             EVENT_UPDATETURNTIMER]):
+                elif action.task == TASK_ENDPLAYERUPDATES:
+                    updating_players = False
+                elif action.task == TASK_ADDPLAYER and not updating_players:
                     queue.put(Update(JOB_HEALTHUPDATE, action))
-                elif not inbrawl and action.task == TASK_ADDPLAYER:
+                elif not inbrawl and action.task == TASK_ADDPLAYER and updating_players:
                     queue.put(Update(JOB_PLAYERINFO, action))
                 elif not inbrawl and action.task == TASK_GATHERIDS:
                     inbrawl = True
@@ -467,6 +472,7 @@ def run(queue: Queue, log=logfile):
                     queue.put(Update(JOB_ROUNDINFO, action))
                 elif action.task == TASK_ENDCOMBAT:
                     queue.put(Update(JOB_ENDCOMBAT, action))
+                    updating_players = True
                 elif action.task == TASK_MATCHMAKING:
                     queue.put(Update(JOB_MATCHMAKING, action))
                 elif not inbrawl and action.task == TASK_UPDATECARD:

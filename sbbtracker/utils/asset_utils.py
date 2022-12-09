@@ -31,7 +31,9 @@ with open(get_asset("CardFile.txt"), "r") as card_file:
         name = row["Name"].replace(' ', '')
         if name in content_id_lookup:
             continue
-        content_id_lookup[name] = { "Id": row["Id"].replace("GOLDEN_", ""), "Name": row["Name"], "InPool": row["InPool"] }
+        subtypes = row["Subtypes"].split(" - ") if isinstance(row["Subtypes"], str) else []
+        content_id_lookup[name] = { "Id": row["Id"].replace("GOLDEN_", ""), "Name": row["Name"], "InPool": row["InPool"],
+                                    "Subtypes": subtypes}
 
 def get_card_art_name(template_id: str, is_golden: bool):
     """
@@ -70,7 +72,7 @@ def get_card_path(content_id: str, is_golden: bool):
     actually_is_golden = is_golden if isinstance(is_golden, bool) else is_golden == "True"
     input_content_id = get_card_art_name(content_id, actually_is_golden)
     asset_name = input_content_id
-    path = cards_path.joinpath(asset_name.replace("'", "_") + ".png")
+    path = cards_path.joinpath(asset_name + ".png")
     if not path.exists() or asset_name == "empty":
         path = Path("../../assets/").joinpath("Empty.png")
     return str(path)
@@ -86,5 +88,14 @@ def replace_template_ids(state):
             character.content_id = get_card_art_name(templateid, actually_is_golden)
             if hasattr(character, "health") and character.health <= 0:
                 character.content_id = ""
+            if character.subtypes is None:
+                character.subtypes = get_subtypes(templateid)
     return copied
 
+
+def get_subtypes(template_id):
+    try:
+        return content_id_lookup.get(template_id)["Subtypes"]
+    except TypeError:
+        logging.error(template_id)
+        return ""

@@ -10,6 +10,7 @@ import cv2
 # root directory of the repo, named "ALL SBB ART"6
 
 path = Path("../All SBB ART")
+# path = Path("../TEST")
 dirs = os.listdir(path)
 
 
@@ -23,12 +24,16 @@ def resize():
                 image = cv2.imread(f + '.png', cv2.IMWRITE_PNG_STRATEGY_RLE)
                 if "_HERO_" in item:
                     scale = 15
-                    mask = cv2.imread('..\\assets\\hero_mask.png', cv2.IMREAD_UNCHANGED)
+                    mask = cv2.imread('..\\assets\\hero_mask.png', cv2.COLOR_BGR2RGB)
                     border = cv2.imread('..\\assets\\hero_portrait.png', cv2.IMREAD_UNCHANGED)
                 elif "_TREASURE_" in item:
-                    scale = 11.5
-                    mask = cv2.imread('..\\assets\\treasure_mask.png', cv2.IMREAD_UNCHANGED)
+                    scale = 7.7
+                    mask = cv2.imread('..\\assets\\treasure_mask.png', cv2.COLOR_BGR2RGB)
                     border = cv2.imread('..\\assets\\treasure_portrait.png', cv2.IMREAD_UNCHANGED)
+                elif "_SPELL_" in item:
+                    scale = 6
+                    mask = cv2.imread('..\\assets\\spell_mask.png', cv2.COLOR_BGR2RGB)
+                    border = cv2.imread('..\\assets\\spell_border.png', cv2.IMREAD_UNCHANGED)
                 else:
                     border = None
                     scale = 10
@@ -51,8 +56,13 @@ def resize():
                 result = cv2.merge(rgba, 4)
 
                 # crop the image
+                if "TREASURE" in item:
+                    crop_img = result[300:2100, 90:1930]
+                elif "_CHARACTER_" not in item:
+                    crop_img = result[2:2045, 2:2045]
+                else:
+                    crop_img = result[2:2045, 219:1836]#[48:48+904, 46:46+731]
 
-                crop_img = result[2:2045, 219:1836]#[48:48+904, 46:46+731]
                 scale_percent = scale  # percent of original size
                 width = int(crop_img.shape[1] * scale_percent / 100)
                 height = int(crop_img.shape[0] * scale_percent / 100)
@@ -60,18 +70,14 @@ def resize():
                 resized = cv2.resize(crop_img, dim, interpolation=cv2.INTER_AREA)
 
                 if "_HERO_" in item:
-                    portrait = cv2.copyMakeBorder(resized, 24, 24, 23, 22, cv2.BORDER_CONSTANT)
+                    portrait = cv2.copyMakeBorder(resized, 40, 4, 20, 19, cv2.BORDER_CONSTANT)
                     resized = cv2.add(border, portrait)
                 elif "_TREASURE_" in item:
-                    portrait = cv2.copyMakeBorder(resized, 0, 0, 10, 12, cv2.BORDER_CONSTANT)
-                    roi = portrait[0:portrait.shape[0], 0:portrait.shape[1]]
-                    greyscale_border = cv2.cvtColor(border, cv2.COLOR_BGR2GRAY)
-                    ret, mask = cv2.threshold(greyscale_border, 4, 255, cv2.THRESH_BINARY_INV)
-                    mask_inv = cv2.bitwise_not(mask)
-                    img_bg = cv2.bitwise_and(roi, roi, mask=mask)
-                    border_fg = cv2.bitwise_and(border, border, mask=mask_inv)
-                    output = cv2.add(img_bg, border_fg)
-                    resized = cv2.resize(output, (int(output.shape[1] * .7), int(output.shape[0] * .7)), interpolation=cv2.INTER_AREA)
+                    portrait = cv2.copyMakeBorder(resized, 22, 4, 13, 13, cv2.BORDER_CONSTANT)
+                    resized = cv2.add(border, portrait)
+                elif "_SPELL_" in item:
+                    portrait = cv2.copyMakeBorder(resized, 19,19, 27, 26, cv2.BORDER_CONSTANT)
+                    resized = cv2.add(border, portrait)
 
                 # save
                 cv2.imwrite('..\\cards\\' + item.replace("Card art - ", "").replace("'", "_"), resized)

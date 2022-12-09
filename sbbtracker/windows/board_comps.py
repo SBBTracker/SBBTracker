@@ -8,12 +8,12 @@ from sbbtracker import paths, settings
 from sbbtracker.languages import tr
 from sbbtracker.utils import asset_utils
 
-art_dim = (161, 204)
-att_loc = (26, 181)
-health_loc = (137, 181)
+art_dim = (165, 220)
+att_loc = (26, 201)
+health_loc = (137, 201)
 # 287 x 384
-xp_loc = (220, 10)
-hero_health_loc = (210, 280)
+xp_loc = (-30, 280)
+hero_health_loc = (190, 280)
 hero_quest_loc = (230, 134)
 display_font_family = "Impact" if paths.os_name == "Windows" else "Ubuntu Bold"
 
@@ -50,20 +50,20 @@ class BoardComp(QWidget):
 
     def get_image_location(self, position: int):
         if position < 4:  # slots 1 - 4
-            x = (161 * position) + 300 + (position * 20)
+            x = (art_dim[0] * position) + 300 + (position * 20)
             y = 0
         elif 4 <= position < 7:  # slots 5 - 7
-            x = (161 * (position - 4)) + 300 + (161 / 2) + ((position - 4) * 20)
-            y = 210
+            x = (art_dim[0] * (position - 4)) + 300 + (161 / 2) + ((position - 4) * 20)
+            y = art_dim[1] + 15
         elif 7 <= position < 9:  # treasures 1 + 2
-            x = (161 * (position - 7)) + 20
+            x = (171 * (position - 7)) + 10
             y = 440 - 175
         elif position == 9:  # treasure 3
             x = (161 / 2) + 20
             y = 440
         elif position == 10:  # spell
-            x = 850
-            y = 440
+            x = 650
+            y = 455
         elif position == 11:  # hero
             x = 940
             y = 240
@@ -98,23 +98,35 @@ class BoardComp(QWidget):
         path = asset_utils.get_card_path(content_id, actually_is_golden)
         pixmap = QPixmap(path)
         painter.setPen(QPen(QColor("white"), 1))
-        # painter.drawText(card_loc[0] + 75, card_loc[1] + 100, str(content_id))
-        if not settings.get(settings.show_ids):
-            painter.drawPixmap(card_loc[0], card_loc[1], pixmap)
-        if "good" in tribes:
-            border = self.good_border
-        elif "evil" in tribes:
-            border = self.evil_border
+        intslot = int(slot)
+        if intslot < 7:
+            self.draw_character(painter, card_loc, pixmap, tribes, actually_is_golden)
+        elif 7 <= intslot <= 9:
+            self.draw_treasure(painter, card_loc, pixmap)
         else:
-            border = self.neutral_border
-        if actually_is_golden:
-            painter.drawPixmap(card_loc[0], card_loc[1], self.golden_overlay)
-        if 7 > int(slot) or int(slot) > 9:
-            painter.drawPixmap(card_loc[0], card_loc[1], border)
+            painter.drawPixmap(*card_loc, pixmap)
+
         self.update_card_stats(painter, int(slot), str(health), str(attack))
         if counter and int(counter) > 0:
             quest_loc = tuple(map(operator.add, card_loc, (120, -10)))
             self.draw_quest(painter, counter, quest_loc, .20)
+
+
+    def draw_treasure(self, painter, location, pixmap):
+        painter.drawPixmap(*location, pixmap)
+
+
+    def draw_character(self, painter, location, pixmap, tribes, golden):
+        painter.drawPixmap(*location, pixmap)
+        if "good" in tribes or "Good" in tribes:
+            border = self.good_border
+        elif "evil" in tribes or "Evil" in tribes:
+            border = self.evil_border
+        else:
+            border = self.neutral_border
+        painter.drawPixmap(location[0], location[1], border)
+        if golden:
+            painter.drawPixmap(location[0], location[1], self.golden_overlay)
 
     def draw_xp(self, painter: QPainter, location=None, xp=None):
         if xp is None:
@@ -180,8 +192,9 @@ class BoardComp(QWidget):
                     slot = action.slot
                     zone = action.zone
                     position = 10 if zone == 'Spell' else (7 + int(slot)) if zone == "Treasure" else slot
+                    subtypes = action.subtypes if action.subtypes is not None else asset_utils.get_subtypes(action.content_id)
                     self.update_card(painter, position, action.content_id, action.cardhealth,
-                                     action.cardattack, action.is_golden, action.subtypes, action.counter)
+                                     action.cardattack, action.is_golden, subtypes, action.counter)
                 elif action.zone == "Hero" and action.counter and int(action.counter) > 0:
                     hero_loc = self.get_image_location(11)
                     quest_loc = tuple(map(operator.add, hero_loc, hero_quest_loc))

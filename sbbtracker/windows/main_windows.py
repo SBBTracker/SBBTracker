@@ -556,7 +556,7 @@ class SBBTracker(QMainWindow):
         index = self.get_player_index(player.playerid)
         new_place = int(player.place)
         places = self.overlay.places
-        places.remove(index)
+        del places[index]
         places.insert(new_place - 1, index)
 
     def end_simulation(self, win, tie, loss, win_dmg, loss_dmg, round_num):
