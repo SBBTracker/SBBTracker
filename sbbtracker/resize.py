@@ -80,6 +80,6 @@ def resize():
                     resized = cv2.add(border, portrait)
 
                 # save
-                cv2.imwrite('..\\cards\\' + item.replace("Card art - ", "").replace("'", "_"), resized)
+                cv2.imwrite('..\\cards\\' + item.replace("Card art - ", ""), resized)
 
 resize()
