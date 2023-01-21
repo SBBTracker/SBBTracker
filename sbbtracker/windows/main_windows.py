@@ -847,22 +847,24 @@ class AroundTheWorld(QWidget):
         self.parent = parent
         self.player_stats = player_stats
         
-        winner_list, to_win_list = player_stats.generate_around_the_world_stats()
+        self.winner_list, self.to_win_list = player_stats.generate_around_the_world_stats()
 
-
-        self.to_win_table = QTableWidget(len(to_win_list), 2)       
-        
-        self.to_win_table.setHorizontalHeaderLabels([tr("Hero"), tr("Tries")])
+        self.to_win_table = QTableWidget(len(self.to_win_list), 2)       
+        self.to_win_table_headings = [tr("Hero"), tr("Tries")]
+        self.to_win_table.setHorizontalHeaderLabels(self.to_win_table_headings)
         self.to_win_table.setColumnWidth(0, 140)
         self.to_win_table.setColumnWidth(1, 100)
         self.to_win_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
         self.to_win_table.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.to_win_table.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.to_win_table.horizontalHeader().sectionClicked.connect(self.sort_to_win_table)
+        self.to_win_table_sort_col = 0
+        self.to_win_table_sort_asc = False
 
-
-        self.winner_table = QTableWidget(len(winner_list), 5)
+        self.winner_table = QTableWidget(len(self.winner_list), 5)
         
-        self.winner_table.setHorizontalHeaderLabels([tr("Hero"), tr("Plays"), tr("Wins"), tr("First"), tr("Tries")])
+        self.winner_table_headings = [tr("Hero"), tr("Plays"), tr("Wins"), tr("First"), tr("Tries")]
+        self.winner_table.setHorizontalHeaderLabels(self.winner_table_headings)
         self.winner_table.setColumnWidth(0, 140)
         self.winner_table.setColumnWidth(1, 100)
         self.winner_table.setColumnWidth(2, 100)
@@ -872,6 +874,9 @@ class AroundTheWorld(QWidget):
         self.winner_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
         self.winner_table.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.winner_table.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.winner_table.horizontalHeader().sectionClicked.connect(self.sort_winner_table)
+        self.winner_table_sort_col = 0
+        self.winner_table_sort_asc = False
 
         tables_layout = QHBoxLayout(self)
         tables_layout.addWidget(self.to_win_table,30)
@@ -879,16 +884,40 @@ class AroundTheWorld(QWidget):
 
         table_font = QFont("Roboto")
         table_font.setPixelSize(14)
-        self.update_to_win_table(to_win_list)
-        self.update_winner_table(winner_list)
+        self.update_to_win_table()
+        self.update_winner_table()
         #import code
         #code.interact(local=locals())
 
-    def update_to_win_table(self, to_win_data):
-        update_table(self.to_win_table, to_win_data)
+    def update_to_win_table(self):
+        update_table(self.to_win_table, self.to_win_list)
 
-    def update_winner_table(self, win_data):
-        update_table(self.winner_table, win_data)
+    def update_winner_table(self):
+        update_table(self.winner_table, self.winner_list)
+
+    def sort_winner_table(self, index: int):
+        # ▼ ▲
+        self.winner_table_sort_asc = (self.winner_table_sort_col == index) and (not self.winner_table_sort_asc)
+        self.winner_table_sort_col = index
+        headings = self.winner_table_headings.copy()
+        headings[index] = headings[index] + ("▼" if self.winner_table_sort_asc else "▲")
+        self.winner_table.setHorizontalHeaderLabels(headings)
+
+        self.winner_list.sort(key = lambda x:x[self.winner_table_sort_col], reverse = self.winner_table_sort_asc)
+
+        self.update_winner_table()
+    
+    def sort_to_win_table(self, index: int):
+        # ▼ ▲
+        self.to_win_table_sort_asc = (self.to_win_table_sort_col == index) and (not self.to_win_table_sort_asc)
+        self.to_win_table_sort_col = index
+        headings = self.to_win_table_headings.copy()
+        headings[index] = headings[index] + ("▼" if self.to_win_table_sort_asc else "▲")
+        self.to_win_table.setHorizontalHeaderLabels(headings)
+
+        self.to_win_list.sort(key = lambda x:x[self.to_win_table_sort_col], reverse = self.to_win_table_sort_asc)
+
+        self.update_to_win_table()
 
 
 class LiveGraphs(QWidget):
