@@ -1018,8 +1018,18 @@ class HeroSelection(QWidget):
             hero_name = asset_utils.get_card_name(hero_id)
             hero_names.append(hero_name)
             placement, matches, histogram = player_stats.get_stats_for_hero(*get_date_range(settings.get(settings.filter_)), hero_name)
-            self.heroes[i].update_hero(placement, matches, histogram, hero_id)
-            overlay.update_hero_rates(i, placement, matches)
+            win_list, to_win_list = player_stats.generate_around_the_world_stats()
+            win_status = None
+            for record in win_list:
+                if record[0] == hero_name:
+                    win_status = f"{record[2]} wins"
+            if win_status == None:
+                for record in to_win_list:
+                    if record[0] == hero_name:
+                        win_status = f"{record[1]} attempts"
+
+            self.heroes[i].update_hero(placement, matches, histogram, hero_id, win_status)
+            overlay.update_hero_rates(i, placement, matches, win_status)
         overlay.update_data_url(hero_names)
 
 
@@ -1032,6 +1042,8 @@ class HeroStatsWidget(QWidget):
         self.placement.setFont(font)
         self.num_matches = QLabel("Matches: " + "0")
         self.num_matches.setFont(font)
+        self.atw_status = QLabel("ATW Status: " + "Winless")
+        self.atw_status.setFont(font)
         self.hero_label = QLabel()
         self.hero_label.setFont(font)
         self.hero_name_label = QLabel()
@@ -1044,16 +1056,19 @@ class HeroStatsWidget(QWidget):
         layout.addWidget(self.hero_label, alignment=Qt.AlignCenter)
         layout.addWidget(self.placement, alignment=Qt.AlignHCenter | Qt.AlignTop)
         layout.addWidget(self.num_matches, alignment=Qt.AlignCenter | Qt.AlignTop)
+        layout.addWidget(self.atw_status, alignment=Qt.AlignCenter | Qt.AlignTop)
         layout.addWidget(self.histogram, alignment=Qt.AlignCenter | Qt.AlignTop)
         layout.addStretch()
 
-    def update_hero(self, placement, matches, histogram, hero_id):
+    def update_hero(self, placement, matches, histogram, hero_id, win_status = None):
         hero_name = asset_utils.get_card_name(hero_id)
         pixmap = QPixmap(asset_utils.get_card_path(hero_id, False))
         self.hero_label.setPixmap(pixmap)
         self.hero_name_label.setText(hero_name)
         self.placement.setText(tr("Avg Place") + ": " + str(placement))
         self.num_matches.setText(tr("# Matches") + ": " + str(matches))
+        if win_status != None:
+            self.atw_status.setText(win_status)
         self.histogram.draw_hist(histogram)
 
 
