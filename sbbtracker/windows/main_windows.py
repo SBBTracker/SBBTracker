@@ -332,6 +332,7 @@ class SBBTracker(QMainWindow):
         self.live_graphs = LiveGraphs()
         self.stats_graph = StatsGraph(self.player_stats)
         self.hero_selection = HeroSelection(self)
+        self.around_the_world = AroundTheWorld(self, self.player_stats)
 
         main_tabs = QTabWidget()
         main_tabs.addTab(comps_widget, tr("Board Comps"))
@@ -339,6 +340,8 @@ class SBBTracker(QMainWindow):
         main_tabs.addTab(self.live_graphs, tr("Live Graphs"))
         main_tabs.addTab(self.match_history, tr("Match History"))
         main_tabs.addTab(self.stats_graph, tr("Stats Graphs"))
+        main_tabs.addTab(self.around_the_world, tr("Around the World"))
+
 
         self.main_tabs = main_tabs
 
@@ -836,6 +839,56 @@ QTabBar::tab:right{
         headings[index] = headings[index] + ("▼" if self.sort_asc else "▲")
         self.stats_table.setHorizontalHeaderLabels(headings)
         self.update_stats_table()
+
+class AroundTheWorld(QWidget):
+    def __init__(self, parent, player_stats: stats.PlayerStats):
+        super().__init__()
+
+        self.parent = parent
+        self.player_stats = player_stats
+        
+        winner_list, to_win_list = player_stats.generate_around_the_world_stats()
+
+
+        self.to_win_table = QTableWidget(len(to_win_list), 2)       
+        
+        self.to_win_table.setHorizontalHeaderLabels([tr("Hero"), tr("Tries")])
+        self.to_win_table.setColumnWidth(0, 140)
+        self.to_win_table.setColumnWidth(1, 100)
+        self.to_win_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.to_win_table.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.to_win_table.setContextMenuPolicy(Qt.CustomContextMenu)
+
+
+        self.winner_table = QTableWidget(len(winner_list), 5)
+        
+        self.winner_table.setHorizontalHeaderLabels([tr("Hero"), tr("Plays"), tr("Wins"), tr("First"), tr("Tries")])
+        self.winner_table.setColumnWidth(0, 140)
+        self.winner_table.setColumnWidth(1, 100)
+        self.winner_table.setColumnWidth(2, 100)
+        self.winner_table.setColumnWidth(3, 100)
+        self.winner_table.setColumnWidth(4, 100)
+        
+        self.winner_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.winner_table.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.winner_table.setContextMenuPolicy(Qt.CustomContextMenu)
+
+        tables_layout = QHBoxLayout(self)
+        tables_layout.addWidget(self.to_win_table,30)
+        tables_layout.addWidget(self.winner_table,70)
+
+        table_font = QFont("Roboto")
+        table_font.setPixelSize(14)
+        self.update_to_win_table(to_win_list)
+        self.update_winner_table(winner_list)
+        #import code
+        #code.interact(local=locals())
+
+    def update_to_win_table(self, to_win_data):
+        update_table(self.to_win_table, to_win_data)
+
+    def update_winner_table(self, win_data):
+        update_table(self.winner_table, win_data)
 
 
 class LiveGraphs(QWidget):

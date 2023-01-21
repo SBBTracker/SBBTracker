@@ -296,9 +296,18 @@ and Lunco
         enable_export_comp_checkbox = SettingsCheckbox(settings.export_comp_button)
         show_id_mode = SettingsCheckbox(settings.show_ids)
         show_id_window = SettingsCheckbox(settings.show_id_window)
+        atw_strict_mode = SettingsCheckbox(settings.atw_strict_mode)
+        atw_start_date = QLineEdit()
+        atw_start_date.setText(str(settings.get(settings.atw_start_date)))
+        atw_start_date.textChanged.connect(
+            lambda text: settings.set_(settings.atw_start_date, text) if text != '' else None)
+
         advanced_layout.addRow(tr("Enable export last comp button"), enable_export_comp_checkbox)
         advanced_layout.addRow(tr("Hide art and show template ids"), show_id_mode)
         advanced_layout.addRow(tr("Enable ID window"), show_id_window)
+        advanced_layout.addRow(tr("Around the World Strict Mode"), atw_strict_mode)
+        advanced_layout.addRow(tr("Around the World Start Date"), atw_start_date)
+
 
         streaming_layout = QFormLayout(streaming_tab)
         enable_stream_overlay = QCheckBox()
