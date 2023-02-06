@@ -95,7 +95,7 @@ class BoardComp(QWidget):
                     attack: str, is_golden, tribes, counter):
         card_loc = self.get_image_location(int(slot))
         actually_is_golden = is_golden if isinstance(is_golden, bool) else is_golden == "True"
-        path = asset_utils.get_card_path(content_id, actually_is_golden)
+        path = asset_utils.get_card_path(content_id)
         pixmap = QPixmap(path)
         painter.setPen(QPen(QColor("white"), 1))
         intslot = int(slot)
@@ -169,7 +169,7 @@ class BoardComp(QWidget):
     def draw_hero(self, painter: QPainter):
         if self.player:
             card_loc = self.get_image_location(11)
-            path = asset_utils.get_card_path(self.player.heroid, False)
+            path = asset_utils.get_card_path(self.player.heroid)
             pixmap = QPixmap(path)
             painter.setPen(QPen(QColor("white"), 1))
             painter.drawText(card_loc[0] + 75, card_loc[1] + 100, str(self.player.heroid))

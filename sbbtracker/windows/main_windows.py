@@ -967,7 +967,7 @@ class HeroStatsWidget(QWidget):
 
     def update_hero(self, placement, matches, histogram, hero_id):
         hero_name = asset_utils.get_card_name(hero_id)
-        pixmap = QPixmap(asset_utils.get_card_path(hero_id, False))
+        pixmap = QPixmap(asset_utils.get_card_path(hero_id))
         self.hero_label.setPixmap(pixmap)
         self.hero_name_label.setText(hero_name)
         self.placement.setText(tr("Avg Place") + ": " + str(placement))
