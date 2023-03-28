@@ -20,6 +20,7 @@ Get the installer for the latest release [here](https://github.com/SBBTracker/SB
 <img src="doc/sample-boardcomp.png">
 <img src="doc/sample-graph.png">
 <img src="doc/sample-stats.png">
+<img src="doc/sample-selection.png">
 
 ## Building from Source
 Instructions for building from source coming soon
