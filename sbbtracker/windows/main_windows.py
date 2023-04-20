@@ -1018,8 +1018,8 @@ class HeroSelection(QWidget):
             hero_name = asset_utils.get_card_name(hero_id)
             hero_names.append(hero_name)
             placement, matches, histogram = player_stats.get_stats_for_hero(*get_date_range(settings.get(settings.filter_)), hero_name)
-            win_list, to_win_list = player_stats.generate_around_the_world_stats()
             win_status = None
+            win_list, to_win_list = player_stats.generate_around_the_world_stats()
             for record in win_list:
                 if record[0] == hero_name:
                     win_status = f"{record[2]} wins"
