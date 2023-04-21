@@ -316,12 +316,12 @@ class OverlayWindow(QMainWindow):
         else:
             self.setWindowFlags(Qt.SubWindow)
 
-    def update_hero_rates(self, index, placement, matches):
+    def update_hero_rates(self, index, placement, matches, win_status = None):
         if settings.get(settings.enable_hero_stats):
-            self.hero_rates[index].update_info(placement, matches)
+            self.hero_rates[index].update_info(placement, matches, win_status)
             self.hero_rates[index].setVisible(True)
             if self.stream_overlay is not None:
-                self.stream_overlay.update_hero_rates(index, placement, matches)
+                self.stream_overlay.update_hero_rates(index, placement, matches, win_status)
 
     def hide_hero_rates(self):
         self.data_button.setVisible(False)
@@ -813,16 +813,22 @@ class WinrateWidget(QFrame):
         layout = QVBoxLayout(self)
         self.placement_label = QLabel("Avg Placement: 0.0")
         self.matches_label = QLabel("Matches: 0")
+        self.win_status_label = QLabel("NOWIN")
+        
         self.placement_label.setObjectName("WinLabel")
         self.matches_label.setObjectName("WinLabel")
+        self.win_status_label.setObjectName("WinLabel")
+        
         layout.addWidget(self.placement_label, alignment=Qt.AlignHCenter)
         layout.addWidget(self.matches_label, alignment=Qt.AlignHCenter)
+        layout.addWidget(self.win_status_label, alignment=Qt.AlignHCenter)
 
     def resizeEvent(self, event):
         w = event.size().width()
-        for  label in [self.matches_label, self.placement_label]:
-            label.setStyleSheet(f"QLabel#WinLabel{{font-size:{18 * w / 300}pt }}")
+        for  label in [self.matches_label, self.placement_label, self.win_status_label]:
+            label.setStyleSheet(f"QLabel#WinLabel{{font-size:{12 * w / 300}pt }}")
 
-    def update_info(self, placement, matches):
+    def update_info(self, placement, matches, win_status = None):
         self.placement_label.setText(tr("Avg Place")+ f": {placement}")
         self.matches_label.setText(tr("# Matches")+ f": {matches}")
+        self.win_status_label.setText(tr(f"{win_status}"))

@@ -78,6 +78,9 @@ streamable_scores = Setting("streamable-scores", [])
 export_comp_button = Setting("export-comp-button", False)
 show_ids = Setting("show-ids", False)
 show_id_window = Setting("show-id-window", False)
+# around the world
+atw_strict_mode = Setting("atw-strict-mode", False)
+atw_start_date = Setting("atw-start-date", "2020-12-31")
 
 
 def get(setting: Setting, default=None):
