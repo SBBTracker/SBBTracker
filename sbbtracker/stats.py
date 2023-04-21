@@ -197,6 +197,57 @@ class PlayerStats:
             stats.append(data)
         return stats
 
+    def generate_around_the_world_stats(self, df=None):
+        import settings
+        
+        if df is None:
+            df = self.df
+        
+        winners = list()
+        yet_to_win = list()
+
+        # Configuration
+        strict_mode = settings.get(settings.atw_strict_mode)
+        start_date = settings.get(settings.atw_start_date)
+
+        heroes = list(filter(lambda x:x['InPool'] == True, asset_utils.hero_list))
+        heroes.sort(key = lambda x:x["Name"])
+
+        # Filter to relevant timeframe
+        filtered_df = df[df["Timestamp"] >= start_date]
+        filtered_df.reset_index()
+
+        for hero_dict in heroes:
+            hero = hero_dict['Name']
+            if strict_mode:
+                if hero != "Mask":
+                    hero_games_df = filtered_df[
+                    ((filtered_df["StartingHero"] == hero) & (filtered_df["EndingHero"] == hero))]
+                else:
+                    hero_games_df = filtered_df[(filtered_df["StartingHero"] == "Mask")]
+            else:
+                hero_games_df = filtered_df[
+                    (filtered_df["StartingHero"] == hero)]
+            
+            
+            hero_games_df.reset_index()
+            wins = hero_games_df[hero_games_df["Placement"] == 1]
+            if len(wins) > 0:
+                first_win = int(wins.index[0].astype(int))+1
+                pre_win = hero_games_df.loc[0:first_win+1]
+                if strict_mode:
+                    attempts = len(pre_win.loc[(pre_win["StartingHero"] == hero) & (pre_win["EndingHero"] == hero)])
+                else:
+                    attempts = len(pre_win.loc[(pre_win["StartingHero"] == hero)])
+                winners.append([hero, len(hero_games_df), len(wins), first_win, attempts])
+            else:
+                yet_to_win.append([hero, len(hero_games_df)])
+        
+        #winners_df = pd.DataFrame(winners, columns = ['Hero', 'Total Plays', 'Wins', 'First Win', 'Attempts'])
+        #yet_to_win_df = pd.DataFrame(yet_to_win, columns = ['Hero', 'Attempts'])
+
+        return winners, yet_to_win
+
     def filter(self, start_date, end_date, sort_col: int, sort_asc: bool):
         df = self.df
         df['Timestamp'] = pd.to_datetime(df['Timestamp'], format="%Y-%m-%d")
