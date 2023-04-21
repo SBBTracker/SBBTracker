@@ -340,7 +340,7 @@ class SBBTracker(QMainWindow):
         main_tabs.addTab(self.live_graphs, tr("Live Graphs"))
         main_tabs.addTab(self.match_history, tr("Match History"))
         main_tabs.addTab(self.stats_graph, tr("Stats Graphs"))
-        main_tabs.addTab(self.around_the_world, tr("Around the World"))
+        main_tabs.addTab(self.around_the_world, tr("All Hero Challenge"))
 
 
         self.main_tabs = main_tabs
@@ -552,6 +552,7 @@ class SBBTracker(QMainWindow):
                 self.player_stats.save_match_info(match_data, session_id)
             self.match_history.update_history_table()
             self.match_history.update_stats_table()
+            self.around_the_world.update_tables()
             if settings.get(settings.streamable_score_list):
                 self.streamable_scores.add_score(place)
 
@@ -879,8 +880,18 @@ class AroundTheWorld(QWidget):
         self.winner_table_sort_asc = False
 
         tables_layout = QHBoxLayout(self)
-        tables_layout.addWidget(self.to_win_table,30)
-        tables_layout.addWidget(self.winner_table,70)
+
+        to_win = QWidget(self)
+        to_win_table_layout = QVBoxLayout(to_win)
+        to_win_table_layout.addWidget(QLabel("Remaining Heroes"))
+        to_win_table_layout.addWidget(self.to_win_table)
+
+        winner = QWidget(self)
+        winner_table_layout = QVBoxLayout(winner)
+        winner_table_layout.addWidget(QLabel("Completed Heroes"))
+        winner_table_layout.addWidget(self.winner_table)
+        tables_layout.addWidget(to_win,30)
+        tables_layout.addWidget(winner,70)
 
         table_font = QFont("Roboto")
         table_font.setPixelSize(14)
@@ -889,6 +900,11 @@ class AroundTheWorld(QWidget):
         #import code
         #code.interact(local=locals())
 
+    def update_tables(self):
+        self.winner_list, self.to_win_list = self.player_stats.generate_around_the_world_stats()
+        self.update_winner_table()
+        self.update_to_win_table()
+
     def update_to_win_table(self):
         update_table(self.to_win_table, self.to_win_list)
 
@@ -896,6 +912,7 @@ class AroundTheWorld(QWidget):
         update_table(self.winner_table, self.winner_list)
 
     def sort_winner_table(self, index: int):
+        self.winner_list, self.to_win_list = self.player_stats.generate_around_the_world_stats()
         # ▼ ▲
         self.winner_table_sort_asc = (self.winner_table_sort_col == index) and (not self.winner_table_sort_asc)
         self.winner_table_sort_col = index
@@ -1042,7 +1059,7 @@ class HeroStatsWidget(QWidget):
         self.placement.setFont(font)
         self.num_matches = QLabel("Matches: " + "0")
         self.num_matches.setFont(font)
-        self.atw_status = QLabel("ATW Status: " + "Winless")
+        self.atw_status = QLabel("AHC Status: " + "Winless")
         self.atw_status.setFont(font)
         self.hero_label = QLabel()
         self.hero_label.setFont(font)

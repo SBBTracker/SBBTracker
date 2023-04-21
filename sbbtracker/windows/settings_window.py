@@ -1,4 +1,5 @@
 import re
+from datetime import date
 
 import PySide6
 from PySide6.QtCore import QThread, Signal
@@ -297,16 +298,17 @@ and Lunco
         show_id_mode = SettingsCheckbox(settings.show_ids)
         show_id_window = SettingsCheckbox(settings.show_id_window)
         atw_strict_mode = SettingsCheckbox(settings.atw_strict_mode)
-        atw_start_date = QLineEdit()
+
+        atw_start_date = QPushButton("Reset")
         atw_start_date.setText(str(settings.get(settings.atw_start_date)))
-        atw_start_date.textChanged.connect(
-            lambda text: settings.set_(settings.atw_start_date, text) if text != '' else None)
+        atw_start_date.clicked.connect(
+            lambda: settings.set_(settings.atw_start_date, date.today().isoformat()))
 
         advanced_layout.addRow(tr("Enable export last comp button"), enable_export_comp_checkbox)
         advanced_layout.addRow(tr("Hide art and show template ids"), show_id_mode)
         advanced_layout.addRow(tr("Enable ID window"), show_id_window)
-        advanced_layout.addRow(tr("Around the World Strict Mode"), atw_strict_mode)
-        advanced_layout.addRow(tr("Around the World Start Date"), atw_start_date)
+        advanced_layout.addRow(tr("All Hero Challenge No Dream Mode"), atw_strict_mode)
+        advanced_layout.addRow(tr("Reset All Hero Challenge"), atw_start_date)
 
 
         streaming_layout = QFormLayout(streaming_tab)
