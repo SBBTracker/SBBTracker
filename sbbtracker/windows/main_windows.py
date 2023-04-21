@@ -332,6 +332,7 @@ class SBBTracker(QMainWindow):
         self.live_graphs = LiveGraphs()
         self.stats_graph = StatsGraph(self.player_stats)
         self.hero_selection = HeroSelection(self)
+        self.around_the_world = AroundTheWorld(self, self.player_stats)
 
         main_tabs = QTabWidget()
         main_tabs.addTab(comps_widget, tr("Board Comps"))
@@ -339,6 +340,8 @@ class SBBTracker(QMainWindow):
         main_tabs.addTab(self.live_graphs, tr("Live Graphs"))
         main_tabs.addTab(self.match_history, tr("Match History"))
         main_tabs.addTab(self.stats_graph, tr("Stats Graphs"))
+        main_tabs.addTab(self.around_the_world, tr("All Hero Challenge"))
+
 
         self.main_tabs = main_tabs
 
@@ -549,6 +552,7 @@ class SBBTracker(QMainWindow):
                 self.player_stats.save_match_info(match_data, session_id)
             self.match_history.update_history_table()
             self.match_history.update_stats_table()
+            self.around_the_world.update_tables()
             if settings.get(settings.streamable_score_list):
                 self.streamable_scores.add_score(place)
 
@@ -837,6 +841,101 @@ QTabBar::tab:right{
         self.stats_table.setHorizontalHeaderLabels(headings)
         self.update_stats_table()
 
+class AroundTheWorld(QWidget):
+    def __init__(self, parent, player_stats: stats.PlayerStats):
+        super().__init__()
+
+        self.parent = parent
+        self.player_stats = player_stats
+        
+        self.winner_list, self.to_win_list = player_stats.generate_around_the_world_stats()
+
+        self.to_win_table = QTableWidget(len(self.to_win_list), 2)       
+        self.to_win_table_headings = [tr("Hero"), tr("Tries")]
+        self.to_win_table.setHorizontalHeaderLabels(self.to_win_table_headings)
+        self.to_win_table.setColumnWidth(0, 140)
+        self.to_win_table.setColumnWidth(1, 100)
+        self.to_win_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.to_win_table.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.to_win_table.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.to_win_table.horizontalHeader().sectionClicked.connect(self.sort_to_win_table)
+        self.to_win_table_sort_col = 0
+        self.to_win_table_sort_asc = False
+
+        self.winner_table = QTableWidget(len(self.winner_list), 5)
+        
+        self.winner_table_headings = [tr("Hero"), tr("Plays"), tr("Wins"), tr("First"), tr("Tries")]
+        self.winner_table.setHorizontalHeaderLabels(self.winner_table_headings)
+        self.winner_table.setColumnWidth(0, 140)
+        self.winner_table.setColumnWidth(1, 100)
+        self.winner_table.setColumnWidth(2, 100)
+        self.winner_table.setColumnWidth(3, 100)
+        self.winner_table.setColumnWidth(4, 100)
+        
+        self.winner_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.winner_table.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.winner_table.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.winner_table.horizontalHeader().sectionClicked.connect(self.sort_winner_table)
+        self.winner_table_sort_col = 0
+        self.winner_table_sort_asc = False
+
+        tables_layout = QHBoxLayout(self)
+
+        to_win = QWidget(self)
+        to_win_table_layout = QVBoxLayout(to_win)
+        to_win_table_layout.addWidget(QLabel("Remaining Heroes"))
+        to_win_table_layout.addWidget(self.to_win_table)
+
+        winner = QWidget(self)
+        winner_table_layout = QVBoxLayout(winner)
+        winner_table_layout.addWidget(QLabel("Completed Heroes"))
+        winner_table_layout.addWidget(self.winner_table)
+        tables_layout.addWidget(to_win,30)
+        tables_layout.addWidget(winner,70)
+
+        table_font = QFont("Roboto")
+        table_font.setPixelSize(14)
+        self.update_to_win_table()
+        self.update_winner_table()
+        #import code
+        #code.interact(local=locals())
+
+    def update_tables(self):
+        self.winner_list, self.to_win_list = self.player_stats.generate_around_the_world_stats()
+        self.update_winner_table()
+        self.update_to_win_table()
+
+    def update_to_win_table(self):
+        update_table(self.to_win_table, self.to_win_list)
+
+    def update_winner_table(self):
+        update_table(self.winner_table, self.winner_list)
+
+    def sort_winner_table(self, index: int):
+        self.winner_list, self.to_win_list = self.player_stats.generate_around_the_world_stats()
+        # ▼ ▲
+        self.winner_table_sort_asc = (self.winner_table_sort_col == index) and (not self.winner_table_sort_asc)
+        self.winner_table_sort_col = index
+        headings = self.winner_table_headings.copy()
+        headings[index] = headings[index] + ("▼" if self.winner_table_sort_asc else "▲")
+        self.winner_table.setHorizontalHeaderLabels(headings)
+
+        self.winner_list.sort(key = lambda x:x[self.winner_table_sort_col], reverse = self.winner_table_sort_asc)
+
+        self.update_winner_table()
+    
+    def sort_to_win_table(self, index: int):
+        # ▼ ▲
+        self.to_win_table_sort_asc = (self.to_win_table_sort_col == index) and (not self.to_win_table_sort_asc)
+        self.to_win_table_sort_col = index
+        headings = self.to_win_table_headings.copy()
+        headings[index] = headings[index] + ("▼" if self.to_win_table_sort_asc else "▲")
+        self.to_win_table.setHorizontalHeaderLabels(headings)
+
+        self.to_win_list.sort(key = lambda x:x[self.to_win_table_sort_col], reverse = self.to_win_table_sort_asc)
+
+        self.update_to_win_table()
+
 
 class LiveGraphs(QWidget):
     def __init__(self):
@@ -936,8 +1035,18 @@ class HeroSelection(QWidget):
             hero_name = asset_utils.get_card_name(hero_id)
             hero_names.append(hero_name)
             placement, matches, histogram = player_stats.get_stats_for_hero(*get_date_range(settings.get(settings.filter_)), hero_name)
-            self.heroes[i].update_hero(placement, matches, histogram, hero_id)
-            overlay.update_hero_rates(i, placement, matches)
+            win_status = None
+            win_list, to_win_list = player_stats.generate_around_the_world_stats()
+            for record in win_list:
+                if record[0] == hero_name:
+                    win_status = f"{record[2]} wins"
+            if win_status == None:
+                for record in to_win_list:
+                    if record[0] == hero_name:
+                        win_status = f"{record[1]} attempts"
+
+            self.heroes[i].update_hero(placement, matches, histogram, hero_id, win_status)
+            overlay.update_hero_rates(i, placement, matches, win_status)
         overlay.update_data_url(hero_names)
 
 
@@ -950,6 +1059,8 @@ class HeroStatsWidget(QWidget):
         self.placement.setFont(font)
         self.num_matches = QLabel("Matches: " + "0")
         self.num_matches.setFont(font)
+        self.atw_status = QLabel("AHC Status: " + "Winless")
+        self.atw_status.setFont(font)
         self.hero_label = QLabel()
         self.hero_label.setFont(font)
         self.hero_name_label = QLabel()
@@ -962,16 +1073,19 @@ class HeroStatsWidget(QWidget):
         layout.addWidget(self.hero_label, alignment=Qt.AlignCenter)
         layout.addWidget(self.placement, alignment=Qt.AlignHCenter | Qt.AlignTop)
         layout.addWidget(self.num_matches, alignment=Qt.AlignCenter | Qt.AlignTop)
+        layout.addWidget(self.atw_status, alignment=Qt.AlignCenter | Qt.AlignTop)
         layout.addWidget(self.histogram, alignment=Qt.AlignCenter | Qt.AlignTop)
         layout.addStretch()
 
-    def update_hero(self, placement, matches, histogram, hero_id):
+    def update_hero(self, placement, matches, histogram, hero_id, win_status = None):
         hero_name = asset_utils.get_card_name(hero_id)
         pixmap = QPixmap(asset_utils.get_card_path(hero_id))
         self.hero_label.setPixmap(pixmap)
         self.hero_name_label.setText(hero_name)
         self.placement.setText(tr("Avg Place") + ": " + str(placement))
         self.num_matches.setText(tr("# Matches") + ": " + str(matches))
+        if win_status != None:
+            self.atw_status.setText(win_status)
         self.histogram.draw_hist(histogram)
 
 
