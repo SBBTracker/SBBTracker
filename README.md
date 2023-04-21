@@ -24,3 +24,6 @@ Get the installer for the latest release [here](https://github.com/SBBTracker/SB
 
 ## Building from Source
 Instructions for building from source coming soon
+
+## Contributing
+Please see [here](CONTRIBUTING.md)
